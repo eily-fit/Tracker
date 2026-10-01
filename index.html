@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <title>המעקב של עילאי</title>
+  <meta name="apple-mobile-web-app-title" content="המעקב של עילאי">
+  <script>
+window.__bootErr=function(m){try{var b=document.getElementById('bootError');if(!b){b=document.createElement('div');b.id='bootError';b.style.cssText='position:fixed;z-index:9999;left:10px;right:10px;top:10px;background:#8f3434;color:#fff;padding:12px;border-radius:12px;font:14px/1.45 -apple-system,sans-serif;direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word';(document.body||document.documentElement).appendChild(b)}b.textContent+=m+'\n'}catch(_){}};
+window.addEventListener('error',function(e){__bootErr('ERROR: '+e.message+' @ line '+(e.lineno||'?')+':'+(e.colno||'?'))});
+window.addEventListener('unhandledrejection',function(e){__bootErr('PROMISE: '+(e.reason&&e.reason.message||e.reason))});
+setTimeout(function(){if(!window.__booted)__bootErr('TIMEOUT: the app did not finish loading in 25s. stage = '+(window.__stage||'script never started'))},25000);
+</script>
+<style>
+    :root{--ink:#17211f;--muted:#6b7673;--bg:#f3f7f5;--card:#fff;--brand:#1c6b5c;--brand2:#dff2ea;--warn:#f0a44b;--danger:#b64545;--line:#dce6e2;--shadow:0 8px 28px rgba(24,61,53,.08)}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+    button,input,select,textarea{font:inherit} button{cursor:pointer}.app{max-width:760px;margin:auto;padding:env(safe-area-inset-top) 14px calc(92px + env(safe-area-inset-bottom))}
+    header{padding:22px 4px 12px;display:flex;align-items:center;justify-content:space-between}.brand h1{font-size:24px;margin:0}.brand small{color:var(--muted)}
+    .date-nav{display:flex;gap:6px;align-items:center}.icon-btn{border:0;background:#fff;border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin:10px 0;box-shadow:var(--shadow)}
+    .progress-wrap{display:grid;grid-template-columns:110px 1fr;gap:16px;align-items:center}.ring{width:108px;height:108px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--brand) var(--p,0%),#e7eeeb 0);position:relative}.ring:after{content:"";position:absolute;width:78px;height:78px;background:white;border-radius:50%}.ring strong{z-index:1;font-size:21px}.ring span{z-index:1;position:absolute;margin-top:34px;font-size:11px;color:var(--muted)}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#f6faf8;border-radius:14px;padding:12px}.stat b{display:block;font-size:20px}.stat span{font-size:12px;color:var(--muted)}
+    .quick{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btn{border:0;border-radius:14px;padding:13px 15px;font-weight:700;background:var(--brand);color:white}.btn.secondary{background:var(--brand2);color:var(--brand)}.btn.light{background:#f4f6f5;color:var(--ink)}.btn.danger{background:#feeaea;color:var(--danger)}.btn.full{width:100%}
+    h2{font-size:19px;margin:20px 4px 8px}h3{margin:0;font-size:17px}.muted{color:var(--muted);font-size:13px}.empty{text-align:center;color:var(--muted);padding:24px}
+    .entry{display:grid;grid-template-columns:1fr auto;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}.entry:last-child{border-bottom:0}.entry-title{font-weight:700}.entry-meta{font-size:12px;color:var(--muted);margin-top:4px}.entry-actions{display:flex;align-items:center;gap:7px}.qty{width:72px;border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}.trash{border:0;background:#fff0f0;color:var(--danger);border-radius:10px;padding:8px}
+    .meal-tabs{display:flex;gap:8px;overflow:auto;padding:2px 0 8px}.chip{white-space:nowrap;border:1px solid var(--line);background:white;border-radius:999px;padding:9px 15px}.chip.active{background:var(--brand);color:white;border-color:var(--brand)}
+    .meal-card{background:white;border:1px solid var(--line);border-radius:18px;margin:10px 0;overflow:hidden}.meal-head{padding:15px;display:flex;justify-content:space-between;gap:12px;align-items:center}.meal-body{padding:0 15px 15px}.ingredient{display:grid;grid-template-columns:1fr 95px;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}.ingredient input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center}.meal-total{font-weight:700;color:var(--brand);white-space:nowrap}
+    .field{margin:12px 0}.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:13px;padding:12px;background:white}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.search-row{display:grid;grid-template-columns:1fr auto;gap:8px}.result{padding:13px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}.result:last-child{border:0}.source{font-size:11px;color:var(--muted)}
+    .history-row{display:grid;grid-template-columns:95px 1fr 1fr;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}.history-row:last-child{border:0}.history-row b{font-size:14px}.history-row span{font-size:13px;color:var(--muted)}
+    .goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.goal-card{background:#f6faf8;border-radius:14px;padding:12px}.meter{height:8px;background:#e2ebe7;border-radius:99px;overflow:hidden;margin-top:8px}.meter i{display:block;height:100%;background:var(--brand);width:0}.goal-card small{color:var(--muted)}
+    .history-card{padding:14px 0;border-bottom:1px solid var(--line)}.history-card:last-child{border:0}.history-top{display:flex;justify-content:space-between;gap:8px}.macro-line{font-size:12px;color:var(--muted);margin-top:6px}.recent{display:flex;gap:8px;overflow:auto;padding:4px 0 10px}.recent button{white-space:nowrap}.custom-builder{border:2px solid var(--brand2)}.custom-ingredient{border:1px solid var(--line);border-radius:12px;padding:8px;margin:6px 0;background:#fbfdfc}.custom-ingredient.compact{display:grid;grid-template-columns:minmax(110px,1.5fr) 72px 70px minmax(125px,1fr) 34px;gap:6px;align-items:center}.custom-ingredient.compact input,.custom-ingredient.compact select{padding:7px 6px;font-size:13px}.custom-ingredient.compact .macro-mini{font-size:11px;color:var(--muted);white-space:nowrap}.custom-ingredient.compact .macro-short{display:none}@media(max-width:560px){.custom-ingredient.compact{grid-template-columns:minmax(0,1fr) 52px 56px 65px 25px;gap:3px;padding:5px;margin:3px 0}.custom-ingredient.compact>*{min-width:0}.custom-ingredient.compact input,.custom-ingredient.compact select{padding:5px 3px;font-size:11px}.custom-ingredient.compact .macro-mini{white-space:normal;font-size:9px;line-height:1.3}.custom-ingredient.compact .macro-wide{display:none}.custom-ingredient.compact .macro-short{display:inline}}.custom-ingredient-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.custom-values{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.custom-values input{min-width:0}.meal-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.meal-tools button{padding:7px 10px;font-size:12px}.meal-head h3{font-size:18px;line-height:1.35}.logged-meal-name{display:block;font-size:17px;margin:10px 0 4px}
+    nav{position:fixed;z-index:30;bottom:0;right:0;left:0;background:rgba(255,255,255,.96);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(12px)}nav .inner{width:min(760px,100%);display:grid;grid-template-columns:repeat(7,1fr)}nav button{border:0;background:transparent;padding:12px 1px 10px;color:var(--muted);font-size:9px}nav button b{display:block;font-size:18px;margin-bottom:2px}nav button.active{color:#1c6b5c;background:#dff2ea;border-radius:12px;font-weight:700}
+    .sets-head,.set-row{display:grid;grid-template-columns:34px 1fr 1fr 1fr 34px;gap:7px;align-items:center}.sets-head{font-size:11px;color:var(--muted);text-align:center;margin-top:12px}.set-row{margin:8px 0}.set-row input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center}.workout-item{padding:13px 0;border-bottom:1px solid var(--line)}.workout-item:last-child{border:0}.set-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.set-badge{background:#eff6f3;border-radius:9px;padding:5px 8px;font-size:12px}
+    .quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.quick-grid .btn{min-height:50px}.settings-section{background:#fff;border:1px solid var(--line);border-radius:18px;margin:10px 0;box-shadow:var(--shadow);overflow:hidden}.settings-section>summary{padding:17px;font-weight:800;cursor:pointer;list-style:none}.settings-section>summary:after{content:'＋';float:left;color:var(--brand)}.settings-section[open]>summary:after{content:'−'}.settings-body{padding:0 16px 16px}.manage-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}.manage-row:last-child{border:0}.inline-actions{display:flex;gap:6px}.smart-box{border:2px solid var(--brand2)}.smart-result{border:1px solid var(--line);border-radius:14px;padding:12px;margin:8px 0;background:#fbfdfc}.state-pill{display:inline-block;background:var(--brand2);color:var(--brand);border-radius:999px;padding:4px 8px;font-size:11px;margin-top:5px}.overlay{position:fixed;z-index:120;inset:0;background:rgba(10,24,20,.42);display:flex;align-items:flex-end;justify-content:center}.overlay.hide{display:none}.sheet{width:min(760px,100%);background:#fff;border-radius:24px 24px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}.sheet-head{display:flex;justify-content:space-between;align-items:center}.session-card{border:1px solid var(--line);border-radius:14px;margin:9px 0;overflow:hidden}.session-card summary{padding:13px;font-weight:700;cursor:pointer}.session-body{padding:0 13px 13px}.mini{padding:8px 10px;font-size:12px}.subtle{background:#f8faf9;border:1px solid var(--line);border-radius:12px;padding:10px}
+    .dish-row{border:1px solid var(--line);border-radius:13px;padding:11px;margin:8px 0}.dish-row select,.dish-row input{width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;background:white}.dish-amount{width:92px!important}.dish-total{font-weight:800;color:var(--brand);margin:12px 0}.video-link{display:inline-block;color:var(--brand);font-weight:700;padding:7px 4px}.video-list{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .plan-row{padding:12px;border:1px solid var(--line);border-radius:13px;margin:9px 0}.plan-line{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;margin:7px 0;background:white}.plan-line.active{border-color:var(--brand);background:#f0f9f5}.plan-done{color:var(--brand);font-weight:700}.plan-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.plan-builder-selects{display:grid;grid-template-columns:1fr 1fr;gap:8px}.plan-numbers{display:grid;grid-template-columns:1fr 1fr;gap:8px}.plan-builder-selects select,.plan-numbers input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px}.view{display:none}.view.active{display:block}.toast{position:fixed;z-index:100;bottom:100px;right:20px;left:20px;max-width:500px;margin:auto;background:#173d35;color:white;padding:13px 18px;border-radius:14px;text-align:center;opacity:0;transform:translateY(12px);pointer-events:none;transition:.25s}.toast.show{opacity:1;transform:none}.undo-bar{position:fixed;z-index:101;bottom:100px;right:20px;left:20px;max-width:500px;margin:auto;background:#173d35;color:#fff;padding:10px 14px;border-radius:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;opacity:0;transform:translateY(12px);pointer-events:none;transition:.25s}.undo-bar.show{opacity:1;transform:none;pointer-events:auto}.tap-row{cursor:pointer}.tap-row:active{background:#eef6f2}.tap-arrow{font-size:24px;color:var(--muted);align-self:center;padding:0 4px}[data-lp]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.lp-arm{background:#eef6f2!important;transition:background .45s}.item-actions{display:flex;flex-direction:column;gap:6px;min-width:104px}.item-actions .btn{padding:9px 12px;width:100%;font-size:15px}.last-perf{background:#eef6f2;border:2px solid var(--brand2);border-radius:14px;padding:10px 12px;margin:8px 0;color:var(--ink);font-size:16px;line-height:1.5}.last-perf b{display:block;font-size:14px;color:var(--brand);margin-bottom:4px}.last-perf .set-pill{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px 9px;margin:3px 0 3px 6px;font-weight:700}.pick-row{display:block;width:100%;text-align:right;border:1px solid var(--line);background:#fff;border-radius:14px;padding:12px 14px;margin:6px 0;font:inherit}.pick-row small{display:block;color:var(--muted)}.scan-video{width:100%;max-height:55vh;border-radius:16px;background:#000;object-fit:cover}.scan-frame{position:relative}.scan-frame:after{content:'';position:absolute;left:12%;right:12%;top:35%;bottom:35%;border:3px solid rgba(255,255,255,.9);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}.progress-bar{height:10px;background:#eef2f0;border-radius:99px;overflow:hidden;margin:8px 0}.progress-bar div{height:100%;width:0;background:var(--brand);transition:width .3s}@keyframes lpPop{0%{transform:scale(1)}40%{transform:scale(1.035)}100%{transform:scale(1)}}.lp-pop{animation:lpPop .3s ease}.plan-time{display:inline-block;margin-top:4px;background:var(--brand2);color:var(--brand);border-radius:999px;padding:3px 10px;font-weight:700;font-size:13px;cursor:pointer}.journal-day.flash{box-shadow:0 0 0 3px var(--brand);transition:box-shadow .3s}.last-perf .history-top{align-items:center}.select-row{display:flex;justify-content:flex-start;margin:4px 2px 8px}.select-mode .journal-day[data-sel]{position:relative;padding-right:46px;cursor:pointer}.select-mode .journal-day[data-sel]:before{content:'';position:absolute;right:12px;top:16px;width:22px;height:22px;border-radius:50%;border:2px solid var(--brand);background:#fff}.select-mode .journal-day.sel{background:#eef6f2}.select-mode .journal-day.sel:before{background:var(--brand);box-shadow:inset 0 0 0 4px #fff}.select-mode .journal-day button,.select-mode .journal-day .quick,.select-mode .journal-day .delete-action{display:none}.bulk-bar{position:fixed;z-index:102;bottom:100px;right:20px;left:20px;max-width:520px;margin:auto;background:#fff;border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.18);padding:10px 12px;border-radius:16px;display:flex;align-items:center;gap:8px}.bulk-bar.hide{display:none}.bulk-bar span{flex:1;font-weight:700}.sync-chip{margin-right:6px;background:var(--brand2);color:var(--brand);border-radius:99px;padding:1px 8px}.pick-line{display:flex;gap:8px;align-items:stretch}.pick-btn{flex:1;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px 12px;font:inherit;font-weight:700;text-align:right}.pick-plus{min-width:52px;font-size:22px;padding:0 12px}.plan-peek{background:#f6f9f8;border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin:-4px 0 10px;line-height:1.9}.plan-peek-toggle{cursor:pointer}.clear-wrap{position:relative;flex:1;display:flex}.clear-wrap input{flex:1;padding-left:38px}.clear-x{position:absolute;left:6px;top:50%;transform:translateY(-50%);border:0;background:#e9eeec;color:#455;width:26px;height:26px;border-radius:50%;font-size:13px;line-height:26px;padding:0}.clear-wrap input:placeholder-shown+.clear-x{display:none}#entries.select-mode .entry[data-sel]{position:relative;padding-right:40px;cursor:pointer}#entries.select-mode .entry[data-sel]:before{content:'';position:absolute;right:8px;top:50%;margin-top:-11px;width:20px;height:20px;border-radius:50%;border:2px solid var(--brand);background:#fff}#entries.select-mode .entry.sel{background:#eef6f2}#entries.select-mode .entry.sel:before{background:var(--brand);box-shadow:inset 0 0 0 4px #fff}#entries.select-mode .entry button,#entries.select-mode .entry input{pointer-events:none;opacity:.4}@media (display-mode: standalone){header{padding-top:calc(env(safe-area-inset-top) + 8px)}}.update-bar{position:fixed;z-index:103;top:calc(env(safe-area-inset-top) + 8px);right:12px;left:12px;max-width:520px;margin:auto;border:0;background:#1c6b5c;color:#fff;font:inherit;font-weight:700;padding:12px 14px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.2)}.update-bar.hide{display:none}.undo-bar button{border:0;background:#fff;color:#173d35;font-weight:700;border-radius:10px;padding:7px 16px;font:inherit}.loader{position:fixed;inset:0;background:rgba(243,247,245,.8);display:grid;place-items:center;z-index:130}.loader.hide{display:none}.spinner{width:38px;height:38px;border:4px solid #d7e6e1;border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:430px){.progress-wrap{grid-template-columns:96px 1fr}.ring{width:94px;height:94px}.ring:after{width:68px;height:68px}.stats{gap:7px}.stat{padding:10px}.app{padding-left:10px;padding-right:10px}}
+    .journal-filter{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.journal-filter label{font-size:12px;color:var(--muted)}.journal-filter select,.journal-filter input{display:block;width:100%;margin-top:5px;padding:11px;border:1px solid var(--line);border-radius:11px;background:white}.journal-summary{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.journal-summary span{background:var(--brand2);color:var(--brand);border-radius:12px;padding:9px 12px;font-weight:700;font-size:13px}.journal-month{font-size:15px;color:var(--brand);margin:20px 3px 8px}.journal-day{border:1px solid var(--line);border-radius:16px;background:white;margin:9px 0;padding:14px}.journal-day .history-top{align-items:center}.journal-day strong{font-size:18px}.journal-day .macro-line{line-height:1.6}.journal-day button{border:0;background:none;color:var(--brand);font-weight:700;padding:5px 0}.journal-day .delete-action{color:#a02b2b;background:#fff0f0;border-radius:9px;padding:7px 10px}.journal-back{border:0;background:var(--brand2);color:var(--brand);border-radius:12px;padding:10px 14px;font-weight:700;margin-bottom:10px}.dish-switches{display:flex;flex-wrap:wrap;gap:8px}.dish-switches label{display:flex;align-items:center;gap:5px;border:1px solid var(--line);padding:9px;border-radius:11px}
+  </style>
+</head>
+<body>
+<div class="loader" id="loader"><div class="spinner"></div></div>
+<main class="app">
+  <header><div class="brand"><h1>המעקב של עילאי</h1><small>גרסה 0.19.1</small><small id="syncChip" class="sync-chip" style="display:none">מתעדכן…</small><small id="prettyDate"></small></div><div class="date-nav"><button class="icon-btn" onclick="moveDate(-1)">›</button><button class="icon-btn" id="todayBtn" onclick="goToday()">היום</button><button class="icon-btn" onclick="moveDate(1)">‹</button></div></header>
+
+  <section id="today" class="view active">
+    <div class="card progress-wrap">
+      <div class="ring" id="calRing"><strong id="calories">0</strong><span>קלוריות</span></div>
+      <div class="stats"><div class="stat"><b id="remaining">0</b><span>נותרו</span></div><div class="stat"><b id="protein">0</b><span>גרם חלבון</span></div><div class="stat"><b id="carbs">0</b><span>פחמימות</span></div><div class="stat"><b id="fat">0</b><span>שומן</span></div></div>
+    </div>
+    <div class="quick-grid"><button class="btn" onclick="showView('add')">＋ הוסף אוכל</button><button class="btn secondary" onclick="toggleExtras()">＋ נוספים</button></div><div id="extrasPanel" style="display:none" class="card"><div class="quick-grid" id="quickActions"></div></div>
+    <div class="card goal-grid"><div class="goal-card"><b id="proteinGoalText">0 מתוך 0 ג׳ חלבון</b><div class="meter"><i id="proteinBar"></i></div></div><div class="goal-card"><b id="freeGoalText">0 מתוך 250 חופשי</b><div class="meter"><i id="freeBar"></i></div></div></div>
+    <details class="card"><summary><b>מה אכלתי</b> <span class="muted" id="foodCount"></span></summary><div class="select-row"><button class="btn light mini" id="selBtn-ent" onclick="toggleSelectMode('ent')">בחר פריטים</button></div><div id="entries"></div></details>
+    <details class="card"><summary><b>מדדים יומיים</b></summary><div><div class="row"><div class="field"><label>משקל (ק״ג)</label><input id="weight" type="number" step="0.1"></div><div class="field"><label>אחוז שומן</label><input id="bodyFat" type="number" step="0.1"></div></div><div class="field"><label>הערה</label><textarea id="dailyNote" rows="2"></textarea></div><button class="btn full" onclick="saveMetrics()">שמור מדדים</button></div></details>
+  </section>
+
+  <section id="meals" class="view"><h2>בחירת ארוחה</h2><p class="muted">אפשר להוסיף כמה ארוחות ביום. לפני השמירה ניתן לשנות כל כמות או להזין 0 כדי להסיר מרכיב.</p><button class="btn secondary full" onclick="openCustomMealBuilder()">＋ צור ארוחה חדשה</button><div class="card custom-builder" id="customMealBuilder" style="display:none"><div class="history-top"><h3 id="customMealHeading">ארוחה חדשה</h3><button class="trash" onclick="closeCustomMealBuilder()">✕</button></div><div class="row"><div class="field"><label>קטגוריה</label><select id="customMealCategory"><option>בוקר</option><option>צהריים</option><option>ערב</option></select></div><div class="field"><label>שם הארוחה</label><input id="customMealName" placeholder="לדוגמה: כריך טונה שלי"></div></div><div class="field"><label>חיפוש מרכיב</label><div class="search-row"><div class="clear-wrap"><input id="customFoodQuery" placeholder="אורז, קישוא, שוקולד..."><button type="button" class="clear-x" aria-label="נקה" onclick="clearField('customFoodQuery')">✕</button></div><button class="btn" onclick="searchCustomIngredient()">חפש</button></div><div id="customFoodStateChips" class="meal-tabs"></div><div id="customFoodResults"></div></div><h3>מרכיבי הארוחה</h3><div id="customIngredients"></div><button class="btn light full" onclick="addBlankCustomIngredient()">＋ הוסף מרכיב ידנית</button><p class="muted">למרכיב שלא נמצא: פתח ״ערכים״ והזן לפי האריזה. בדוק במיוחד שמן לטיגון.</p><div class="field" style="margin-top:10px"><label><input id="customSavePermanent" type="checkbox"> שמור גם כארוחה קבועה</label></div><div class="row"><button class="btn secondary full" onclick="saveCustomMeal(false,true)">שמור כארוחה קבועה</button><button class="btn full" onclick="saveCustomMeal(true)">הוסף להיום</button></div></div><div class="meal-tabs" id="mealTabs"></div><div id="mealList"></div></section>
+
+  <section id="add" class="view"><button class="journal-back" onclick="showView('today')">→ חזרה להיום</button><h2>מה אכלת?</h2><div class="card smart-box"><div class="search-row"><div class="clear-wrap"><input id="foodQuery" placeholder="למשל: 2 ביצים, קוטג׳ 5%, חטיף חלבון"><button type="button" class="clear-x" aria-label="נקה" onclick="clearField('foodQuery')">✕</button></div><button class="btn" onclick="searchFood()">מצא</button></div><div class="muted" style="margin-top:8px">כתוב מה אכלת ובחר מהרשימה. אחר כך בוחרים כמות ויחידה — גרם, יחידה, כף, כוס — והערכים מחושבים לבד.</div><div class="meal-tabs" id="foodStateChips"></div><div id="foodResults"></div><div class="field"><label>מה עוד היה במנה? אפשר לציין כמויות ולהפריד בפסיקים</label><textarea id="dishExtras" rows="2" oninput="scheduleDishEstimate()" placeholder="לדוגמה: 30 גרם חומוס, 50 גרם סלט, כף טחינה"></textarea></div><button class="btn secondary full" onclick="estimateDishFromText()">חשב אומדן מחדש מהמאגר</button><button class="btn light full" style="margin-top:8px" onclick="estimateWithOpenAI()">חשב בעזרת AI — פנייה בתשלום</button><div id="dishPreview"></div></div><details class="settings-section"><summary>מוצר ארוז? חיפוש לפי ברקוד</summary><div class="settings-body"><p class="muted">צלם את הברקוד מקרוב, ישר ובאור טוב. מוצר שסרקת פעם אחת נשמר, ובפעם הבאה מספיק לכתוב את שמו או את שם החברה בחיפוש למעלה.</p><div class="search-row"><div class="clear-wrap"><input id="barcode" inputmode="numeric" placeholder="מספר ברקוד"><button type="button" class="clear-x" aria-label="נקה" onclick="clearField('barcode')">✕</button></div><button class="btn secondary" onclick="barcodeLookup()">חפש</button></div><input id="barcodePhoto" type="file" accept="image/*" capture="environment" style="display:none" onchange="scanBarcodePhoto(this)"><button class="btn full" style="margin-top:8px" onclick="startLiveScan()">📷 סרוק ברקוד</button><button class="btn light full" style="margin-top:8px" onclick="$('barcodePhoto').click()">צלם תמונה של ברקוד</button></div></details><h2>מזונות אחרונים</h2><div class="recent" id="recentFoods"></div><details class="settings-section"><summary>הזנה ידנית או תיקון ערכים</summary><div class="settings-body" id="foodForm"><div class="field"><label>שם המזון</label><input id="foodName"></div><div class="row"><div class="field"><label>כמות שאכלתי</label><input id="foodAmount" type="number" value="100" step="1"></div><div class="field"><label>יחידה</label><select id="foodUnit"><option>גרם</option><option>מ״ל</option><option>יחידה</option><option>מנה</option><option>פרוסה</option><option>פחית</option></select></div></div><div class="field"><label>הערכים הבאים הם עבור כמות בסיס</label><input id="foodBase" type="number" value="100"></div><div class="row"><div class="field"><label>קלוריות</label><input id="foodCalories" type="number" step="0.1"></div><div class="field"><label>חלבון</label><input id="foodProtein" type="number" step="0.1"></div></div><div class="row"><div class="field"><label>פחמימות</label><input id="foodCarbs" type="number" step="0.1"></div><div class="field"><label>שומן</label><input id="foodFat" type="number" step="0.1"></div></div><div class="field"><label><input id="saveFood" type="checkbox"> שמור ב״מזונות שלי״ לפעם הבאה</label></div><button class="btn full" onclick="saveFood()">הוסף ליום</button></div></details></section>
+
+  <section id="history" class="view"><h2>יומן תזונה</h2><div class="card"><div class="journal-filter"><label>תקופה<select id="nutritionPeriod" onchange="renderHistory()"><option value="all">כל התקופות</option><option value="week">השבוע</option><option value="month">החודש</option><option value="custom">תאריכים לבחירה</option></select></label><label>סידור לפי<select id="nutritionGroup" onchange="renderHistory()"><option value="month">חודשים</option><option value="week">שבועות</option></select></label><label>מצב יום<select id="nutritionStatus" onchange="renderHistory()"><option value="">הכול</option><option value="פתוח">פתוח</option><option value="נסגר">סגור</option></select></label><label>מתאריך<input id="nutritionFrom" type="date" oninput="renderHistory()"></label><label>עד תאריך<input id="nutritionTo" type="date" oninput="renderHistory()"></label></div><p class="muted">ימים נשמרים לפי התאריך באפליקציה; סינון לא מוחק נתונים.</p></div><div class="select-row"><button class="btn light mini" id="selBtn-nut" onclick="toggleSelectMode('nut')">בחר כמה ימים</button></div><div class="journal-summary" id="nutritionJournalSummary"></div><div id="historyList"></div></section>
+
+  <section id="workouts" class="view"><h2>תוכניות אימון</h2><div class="meal-tabs" id="planFilterChips"></div><div id="workoutPlans"></div><button class="btn secondary full" onclick="openWorkoutPlanBuilder()">＋ צור תוכנית אימון</button><div class="card custom-builder" id="workoutPlanBuilder" style="display:none"><div class="history-top"><h3 id="workoutPlanHeading">תוכנית חדשה</h3><button class="trash" onclick="closeWorkoutPlanBuilder()">✕</button></div><div class="field"><label>סוג התוכנית</label><div class="meal-tabs" id="planCategoryChips"></div><input id="workoutPlanCategory" placeholder="כתוב את סוג התוכנית" style="display:none"></div><div class="field"><label>שם התוכנית</label><input id="workoutPlanName" placeholder="לדוגמה: רגליים"></div><div id="workoutPlanItems"></div><button class="btn light full" onclick="addWorkoutPlanItem()">＋ הוסף תרגיל לתוכנית</button><button class="btn full" style="margin-top:9px" onclick="saveWorkoutPlan()">שמור תוכנית</button></div><div class="card" id="activeWorkoutPlan" style="display:none"></div><h2>אימון נוכחי</h2><div class="card"><div class="row"><div class="field"><label>סוג האימון</label><select id="workoutStartType"><option value="">בחר משיכה או דחיפה</option><option>משיכה</option><option>דחיפה</option></select></div><div class="field"><label>תאריך האימון</label><input id="workoutStartDate" type="date" onchange="this.dataset.touched='1'"></div><div class="field"><label>איפה מתאמנים</label><select id="workoutStartEquip"><option value="מכונה">חדר כושר (מכונות)</option><option value="משקולות חופשיות">משקולות חופשיות</option><option value="משולב">משולב</option></select></div><div class="field"><label>שם נוסף (לא חובה)</label><input id="workoutStartSuffix" placeholder="לדוגמה: רגליים או ידיים"></div></div><button class="btn light full" onclick="startFreestyleWorkout()">＋ צור אימון חדש</button></div><div id="activeSessionBanner" class="card muted"></div><div class="card"><div class="field"><label>שם האימון</label><input id="sessionName" placeholder="לדוגמה: גב ויד קדמית"></div></div><div class="meal-tabs" id="muscleTabs"></div><div class="meal-tabs" id="equipmentTabs"></div><div class="card"><div class="field"><label>תרגיל</label><div class="pick-line"><button type="button" class="pick-btn" id="exercisePickBtn" onclick="openExercisePicker()"><span id="exercisePickName">בחר תרגיל</span><span>▾</span></button><button type="button" class="btn secondary pick-plus" onclick="openNewExerciseSheet()" aria-label="תרגיל חדש">＋</button></div><select id="exerciseSelect" onchange="exerciseChanged()" style="display:none"></select></div><div id="lastPerformance"></div><div class="sets-head"><span>סט</span><span>משקל</span><span>חזרות</span><span>RIR</span><span></span></div><div id="setRows"></div><div class="quick"><button class="btn secondary" onclick="addSetRow()">＋ הוסף סט</button><button class="btn secondary" onclick="addSetRowSameWeight()">＋ הוסף סט עם אותו משקל</button></div><div class="field"><label>הערה לתרגיל</label><input id="workoutNote" placeholder="אופציונלי"></div><div class="quick"><button class="btn full" id="saveWorkoutBtn" onclick="saveWorkout()">שמור תרגיל</button><button class="btn light" onclick="finishCurrentWorkout()">סיים אימון</button></div><button class="btn light full" id="cancelEditBtn" style="display:none;margin-top:8px" onclick="cancelWorkoutEdit();renderWorkouts(false)">בטל עריכה</button></div><div class="quick"><button class="btn light" onclick="addCustomExercise()">＋ תרגיל חדש</button><button class="btn light" onclick="showProgress()">ציר התקדמות</button></div><details class="settings-section"><summary>ניהול תרגילים קבועים</summary><div class="settings-body" id="exerciseManager"></div></details></section>
+
+  <section id="workoutDiary" class="view"><h2>יומן אימונים</h2><div class="card"><div class="journal-filter"><label>תקופה<select id="workoutPeriod" onchange="renderWorkoutHistory()"><option value="all">כל התקופות</option><option value="week">השבוע</option><option value="month">החודש</option><option value="custom">תאריכים לבחירה</option></select></label><label>סידור לפי<select id="workoutGroup"><option value="month">חודשים ושבועות</option></select></label><label>סוג האימון<select id="workoutTypeFilter" onchange="renderWorkoutHistory()"><option value="">כל הסוגים</option><option value="משיכה">משיכה</option><option value="דחיפה">דחיפה</option></select></label><label>שם האימון<select id="workoutCategoryFilter" onchange="renderWorkoutHistory()"><option value="">כל האימונים</option></select></label><label>קבוצת שרירים<select id="workoutMuscleFilter" onchange="renderWorkoutHistory()"><option value="">כל הקבוצות</option></select></label><label>תרגיל<select id="workoutExerciseFilter" onchange="renderWorkoutHistory()"><option value="">כל התרגילים</option></select></label><label>מתאריך<input id="workoutFrom" type="date" oninput="renderWorkoutHistory()"></label><label>עד תאריך<input id="workoutTo" type="date" oninput="renderWorkoutHistory()"></label></div></div><div class="select-row"><button class="btn light mini" id="selBtn-work" onclick="toggleSelectMode('work')">בחר כמה אימונים</button></div><div class="journal-summary" id="workoutJournalSummary"></div><div id="workoutHistory"></div><div class="card" id="progressCard" style="display:none"></div></section>
+
+  <section id="process" class="view">
+    <h2>מעקב התהליך שלי</h2>
+    <p class="muted">היעד ארוך הטווח: להתקרב לכ־70 ק״ג עם יותר שריר ובטן שטוחה יותר. כרגע אין חובה שהמשקל יעלה: ירידה בהיקף הטבור ושיפור באימונים חשובים יותר מהמספר על המשקל.</p>
+    <div class="card" id="processAssessment"></div>
+    <div class="card">
+      <h3>הוסף שקילה או מדידות</h3>
+      <p class="muted">משקל פעמיים בשבוע בבוקר, אחרי שירותים. היקפים פעם בשבוע בבוקר: סרט מדידה באותה נקודה, בלי למשוך את הבטן. היד והרגל באותו צד בכל פעם.</p>
+      <div class="field"><label>תאריך המדידה</label><input id="processDate" type="date" onchange="loadProcessFormDate()"></div>
+      <div class="row">
+        <div class="field"><label>משקל (ק״ג)</label><input id="processWeight" type="number" min="1" step="0.1" placeholder="בשקילה"></div>
+        <div class="field"><label>היקף בטבור (ס״מ)</label><input id="processWaist" type="number" min="1" step="0.1" placeholder="פעם בשבוע"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>היקף יד (ס״מ)</label><input id="processArm" type="number" min="1" step="0.1"></div>
+        <div class="field"><label>היקף חזה (ס״מ)</label><input id="processChest" type="number" min="1" step="0.1"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>היקף ירך (ס״מ)</label><input id="processThigh" type="number" min="1" step="0.1"></div>
+        <div class="field"><label>נפיחות בערב (לא חובה)</label><select id="processBloating"><option value="">לא נמדד</option><option value="0">אין</option><option value="1">קלה</option><option value="2">בינונית</option><option value="3">חזקה</option></select></div>
+      </div>
+      <div class="field"><label>הערה: אוכל, עיכול או תנאי מדידה</label><textarea id="processNote" rows="2"></textarea></div>
+      <button class="btn full" onclick="saveProcess()">שמור מדידה</button>
+      <p class="muted">אפשר לרשום רק משקל או רק היקפים. שמירה חוזרת באותו תאריך מעדכנת את המדדים; משקל ריק אינו מוחק שקילה קודמת.</p>
+    </div>
+    <div class="card"><h3>מגמות ב־6 השבועות האחרונים</h3><div id="processTrends"></div></div>
+    <div class="card"><h3>היסטוריית מדידות</h3><div id="processHistory"></div></div>
+  </section>
+
+  <section id="settings" class="view"><h2>הגדרות</h2><details class="settings-section"><summary>אפליקציה אמיתית (מסך הבית)</summary><div class="settings-body"><p class="muted">כדי להשתמש באפליקציה המהירה, הגדר כאן סיסמה פעם אחת. אחר כך תתחבר בה עם הכתובת שמופיעה למטה.</p><div class="field"><label>סיסמה חדשה (לפחות 6 תווים)</label><input id="apiPassword" type="password" dir="ltr"></div><button class="btn full" onclick="saveApiPassword()">שמור סיסמה</button><p class="muted" id="apiInfo"></p><button class="btn light full" id="copyApiUrlBtn" style="display:none" onclick="copyApiUrl()">העתק כתובת שרת</button><button class="btn light full" id="logoutBtn" style="display:none" onclick="logoutApp()">התנתק מהמכשיר הזה</button></div></details><details class="settings-section"><summary>מאגר מזון — צמרת (משרד הבריאות)</summary><div class="settings-body"><p class="muted">המאגר הלאומי: יותר מ-4,600 מזונות בעברית, עם משקל של יחידה, כף, כוס ופרוסה. פעם אחת: העלה ל-Google Drive את שלושת הקבצים moh_mitzrachim.csv, moh_yehidot_mida.csv ו-moh_yehidot_mida_lemitzrachim.csv, ולחץ על הכפתור. אחרי זה החיפוש עובד מיד וללא עלות.</p><p class="muted" id="tzStatus"></p><button class="btn full" onclick="importTzameretUI()">טען / עדכן את מאגר צמרת</button></div></details><details class="settings-section"><summary>יעדים יומיים</summary><div class="settings-body"><div class="row"><div class="field"><label>יעד קלוריות</label><input id="calorieGoal" type="number"></div><div class="field"><label>יעד חלבון</label><input id="proteinGoal" type="number"></div></div><div class="field"><label>מסגרת קלוריות חופשיות</label><input id="freeGoal" type="number"></div><button class="btn full" onclick="saveSettings()">שמור יעדים</button></div></details><details class="settings-section"><summary>שייק חלבון</summary><div class="settings-body"><div class="row"><div class="field"><label>קלוריות</label><input id="shakeCalories" type="number"></div><div class="field"><label>חלבון</label><input id="shakeProtein" type="number"></div></div><div class="row"><div class="field"><label>פחמימות</label><input id="shakeCarbs" type="number"></div><div class="field"><label>שומן</label><input id="shakeFat" type="number"></div></div><button class="btn full" onclick="saveSettings()">שמור שייק</button></div></details><details class="settings-section"><summary>קיצורי דרך במסך הראשי</summary><div class="settings-body"><div id="quickActionManager"></div><div class="field"><label>שם הקיצור</label><input id="quickName" placeholder="לדוגמה: קפה עם חלב"></div><div class="row"><div class="field"><label>קלוריות</label><input id="quickCalories" type="number"></div><div class="field"><label>חלבון</label><input id="quickProtein" type="number"></div></div><div class="row"><div class="field"><label>פחמימות</label><input id="quickCarbs" type="number"></div><div class="field"><label>שומן</label><input id="quickFat" type="number"></div></div><button class="btn full" onclick="saveQuickAction()">הוסף קיצור</button></div></details><details class="settings-section"><summary>ארוחות שהוסתרו</summary><div class="settings-body" id="hiddenMeals"></div></details><details class="settings-section"><summary>מאגר מזון USDA</summary><div class="settings-body"><p class="muted">מפתח USDA מאפשר חיפוש ערכים תזונתיים והערכת מנות. <a href="https://fdc.nal.usda.gov/api-key-signup/" target="_blank" rel="noopener">הפק מפתח באתר הרשמי</a>; הוא יגיע אליך בדוא״ל. שמור אותו כאן ולא בצ׳אט.</p><div class="field"><label>מפתח USDA</label><input id="usdaKey" type="password" placeholder="השאר ריק כדי לשמור את הקיים"><small id="usdaStatus" class="muted"></small></div><label class="muted"><input id="clearUsda" type="checkbox"> מחק את המפתח הקיים</label><button class="btn full" onclick="saveSettings()">שמור חיבור</button><button class="btn light full" style="margin-top:8px" onclick="testUsdaConnection()">בדוק שהחיבור עובד</button></div></details><details class="settings-section"><summary>OpenAI — הערכת מנות</summary><div class="settings-body"><p class="muted">חיוב API נפרד ממנוי ChatGPT. רק לחיצה על ״חשב בעזרת AI״ שולחת בקשה. עד 30 בקשות ביום; מנות שמורות ושינוי כמויות לא שולחים בקשה.</p><div class="field"><label>מפתח OpenAI API</label><input id="openaiKey" type="password" autocomplete="off" placeholder="השאר ריק כדי לשמור את הקיים"><small id="openaiStatus" class="muted"></small></div><label class="muted"><input id="clearOpenai" type="checkbox"> מחק את מפתח OpenAI השמור</label><button class="btn full" onclick="saveSettings()">שמור חיבור OpenAI</button></div></details></section>
+</main>
+
+<nav><div class="inner"><button class="active" data-view="today" onclick="showView('today',this)"><b>◉</b>היום</button><button data-view="meals" onclick="showView('meals',this)"><b>🍽</b>ארוחות</button><button data-view="history" onclick="showView('history',this)"><b>▦</b>יומן תזונה</button><button data-view="workouts" onclick="showView('workouts',this)"><b>🏋</b>אימונים</button><button data-view="workoutDiary" onclick="showView('workoutDiary',this)"><b>▤</b>יומן אימונים</button><button data-view="process" onclick="showView('process',this)"><b>◎</b>תהליך</button><button data-view="settings" onclick="showView('settings',this)"><b>⚙</b>הגדרות</button></div></nav>
+<div class="toast" id="toast"></div>
+<button type="button" class="update-bar hide" id="updateBar" onclick="applyAppUpdate()">✨ גרסה חדשה זמינה — לחץ לרענון</button>
+<div class="bulk-bar hide" id="bulkBar"><span id="bulkCount">0 נבחרו</span><button class="btn" id="bulkGroupBtn" style="display:none" onclick="openGroupSheet()">אחד לארוחה</button><button class="btn danger" onclick="bulkDelete()">מחק נבחרים</button><button class="btn light" onclick="exitSelectMode()">ביטול</button></div>
+<div class="overlay hide" id="exerciseSheet"><div class="sheet"><div class="sheet-head"><h3>תרגיל חדש</h3><button class="trash" onclick="closeSheet('exerciseSheet')">✕</button></div><div class="field"><label>קבוצת שרירים</label><div class="meal-tabs" id="newExGroups" style="flex-wrap:wrap"></div><input id="newExGroupName" placeholder="שם האזור החדש" style="display:none;margin-top:6px"></div><div class="field"><label>ציוד</label><div class="meal-tabs" id="newExEquip"></div></div><div class="field"><label>שם התרגיל</label><input id="newExName" placeholder="לדוגמה: לחיצת חזה בשיפוע"></div><button class="btn full" onclick="saveNewExercise()">הוסף תרגיל</button></div></div>
+<div class="overlay hide" id="timingSheet"><div class="sheet"><div class="sheet-head"><h3 id="timingTitle">זמן אימון משוער</h3><button class="trash" onclick="closeSheet('timingSheet')">✕</button></div><p class="muted" id="timingInfo"></p><div class="row"><div class="field"><label>זמן סט (דקות)</label><input id="timingSet" type="number" min="0.25" step="0.25" inputmode="decimal" oninput="previewPlanTiming()"></div><div class="field"><label>מנוחה בין סטים (דקות)</label><input id="timingRest" type="number" min="0" step="0.25" inputmode="decimal" oninput="previewPlanTiming()"></div></div><p id="timingPreview" style="font-weight:700"></p><button class="btn full" onclick="savePlanTiming()">שמור</button><button class="btn light full" style="margin-top:8px" onclick="resetPlanTiming()">חזור לברירת מחדל (דקה וחצי מנוחה)</button></div></div>
+<div class="overlay hide" id="exPickSheet"><div class="sheet"><div class="sheet-head"><h3 id="exPickTitle">בחר תרגיל</h3><button class="trash" onclick="closeSheet('exPickSheet')">✕</button></div><p class="muted">לחיצה בוחרת · לחיצה ארוכה מוחקת</p><div id="exPickList"></div><button class="btn secondary full" style="margin-top:8px" onclick="closeSheet('exPickSheet');openNewExerciseSheet(state.pickMode&&state.pickMode.group)">＋ תרגיל חדש</button></div></div>
+<div class="overlay hide" id="entryEditSheet"><div class="sheet"><div class="sheet-head"><h3 id="entryEditTitle">עריכה</h3><button class="trash" onclick="closeSheet('entryEditSheet')">✕</button></div><div class="row"><div class="field"><label>כמות</label><input id="entryEditAmount" type="number" min="0.1" step="0.1" inputmode="decimal" oninput="updateEntryEditTotals()"></div><div class="field"><label>יחידה</label><select id="entryEditUnit" onchange="changeEntryEditUnit()"></select></div></div><p id="entryEditTotals" style="font-weight:700"></p><p class="muted" id="entryEditNote"></p><button class="btn full" onclick="saveEntryEdit()">שמור שינוי</button></div></div>
+<div class="overlay hide" id="groupSheet"><div class="sheet"><div class="sheet-head"><h3>אחד לארוחה אחת</h3><button class="trash" onclick="closeSheet('groupSheet')">✕</button></div><p class="muted" id="groupInfo"></p><div class="field"><label>שם הארוחה</label><input id="groupName" placeholder="לדוגמה: על האש"></div><div class="field"><label>קטגוריה</label><div class="meal-tabs" id="groupCats"></div></div><label class="muted" style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="groupSavePermanent" style="width:auto"> שמור גם כארוחה קבועה</label><button class="btn full" onclick="saveGroup()">אחד</button></div></div>
+<div class="overlay hide" id="sessionDateSheet"><div class="sheet"><div class="sheet-head"><h3>תאריך האימון</h3><button class="trash" onclick="closeSheet('sessionDateSheet')">✕</button></div><p class="muted" id="sessionDateInfo"></p><div class="field"><label>תאריך חדש</label><input id="sessionDateInput" type="date"></div><button class="btn full" onclick="saveSessionDate()">העבר לתאריך</button></div></div>
+<div class="overlay hide" id="loginSheet" style="z-index:300"><div class="sheet"><div class="sheet-head"><h3>התחברות למעקב</h3></div><p class="muted">פעם אחת במכשיר: הדבק את כתובת השרת (מ-Apps Script) ואת הסיסמה שהגדרת בהגדרות.</p><div class="field"><label>כתובת השרת</label><input id="loginUrl" placeholder="https:‌/‌/script.google.com/macros/s/.../exec" dir="ltr"></div><div class="field"><label>סיסמה</label><input id="loginPass" type="password" dir="ltr"></div><p class="muted" id="loginMsg"></p><button class="btn full" onclick="doLogin()">התחבר</button></div></div>
+<div class="overlay hide" id="moveSheet"><div class="sheet"><div class="sheet-head"><h3>להעביר לאיזה אימון?</h3><button class="trash" onclick="closeSheet('moveSheet')">✕</button></div><div id="moveList"></div></div></div>
+<div class="overlay hide" id="lpSheet"><div class="sheet"><div class="sheet-head"><h3 id="lpTitle"></h3></div><button class="btn full" id="lpEdit" style="display:none;margin-bottom:8px">ערוך</button><button class="btn danger full" id="lpDelete">מחק</button><button class="btn light full" style="margin-top:8px" onclick="closeSheet('lpSheet')">ביטול</button></div></div>
+<div class="overlay hide" id="scanSheet"><div class="sheet"><div class="sheet-head"><h3>סריקת ברקוד</h3><button class="trash" onclick="stopLiveScan()">✕</button></div><div class="scan-frame" id="scanFrame"><video id="scanVideo" class="scan-video" playsinline muted autoplay></video></div><p class="muted" id="scanHint">כוון את הברקוד לתוך המסגרת — הסריקה תזהה אותו לבד.</p><button class="btn light full" onclick="stopLiveScan();$('barcodePhoto').click()">📷 צלם תמונה במקום</button></div></div>
+<div class="overlay hide" id="foodChoiceSheet"><div class="sheet"><div class="sheet-head"><h3>כמות וערכים</h3><button class="trash" onclick="closeFoodChoice()">✕</button></div><div id="foodChoice"></div></div></div>
+<div class="overlay hide" id="freeSheet"><div class="sheet"><div class="sheet-head"><h3>קלוריות חופשיות</h3><button class="trash" onclick="closeFreeCalories()">✕</button></div><div class="field"><label>מה אכלת? (לא חובה)</label><input id="freeName" value="קלוריות חופשיות"></div><div class="row"><div class="field"><label>קלוריות</label><input id="freeCaloriesInput" type="number" value="250"></div><div class="field"><label>חלבון</label><input id="freeProtein" type="number" value="0"></div></div><div class="row"><div class="field"><label>פחמימות</label><input id="freeCarbs" type="number" value="0"></div><div class="field"><label>שומן</label><input id="freeFat" type="number" value="0"></div></div><button class="btn full" onclick="saveFreeCalories()">הוסף ליום</button></div></div>
+<div class="overlay hide" id="videoSheet"><div class="sheet"><div class="sheet-head"><h3>סרטון לתרגיל</h3><button class="trash" onclick="closeWorkoutVideo()">✕</button></div><p class="muted" id="videoWorkoutLabel"></p><form id="workoutVideoForm"><input type="hidden" name="workoutId" id="videoWorkoutId"><div class="field"><label>צלם סרטון או בחר מהגלריה</label><input type="file" name="video" id="workoutVideoFile" accept="video/*" required></div></form><button class="btn full" id="uploadVideoBtn" onclick="uploadWorkoutVideo()">שמור סרטון</button><div class="progress-bar" id="videoProgress" style="display:none"><div></div></div><p id="videoUploadStatus" class="muted"></p><p class="muted">הסרטון נשמר בתיקייה פרטית ב־Google Drive. צפייה ביומן האימונים ובציר ההתקדמות.</p></div></div>
+
+<div class="overlay hide" id="playerSheet"><div class="sheet"><div class="sheet-head"><h3>צפייה בסרטון</h3><button class="trash" onclick="closeVideoPlayer()">✕</button></div><video id="videoLocal" controls playsinline style="display:none;width:100%;max-height:65vh;border-radius:12px;background:#000"></video><iframe id="videoFrame" title="סרטון האימון" allow="autoplay" style="width:100%;height:min(65vh,500px);border:0"></iframe><p class="muted" id="videoHint">אם מופיעה הודעה שהסרטון "בתהליך עיבוד" — Google עדיין מכין אותו לצפייה, זה לוקח בדרך כלל כמה דקות. הסרטון כבר שמור.</p><div class="quick"><button class="btn light" onclick="reloadVideoFrame()">נסה שוב</button><a id="videoFallback" target="_blank" rel="noopener" class="btn light" style="text-align:center;text-decoration:none">פתח ב־Drive</a></div></div></div>
+
+<script>
+  let state={data:null,date:'',category:'בוקר',selectedFood:null,smartResults:[],smartParsed:null,muscleGroup:'חזה',equipment:'משקולות חופשיות',sessionId:'',foodState:'',customFoodState:'',showAllFoods:false,setCount:1,editingWorkoutId:'',editingSessionId:'',editingPlanItemIndex:'',editingMealId:'',customIngredients:[],customSearchResults:[],dishEstimate:null,videoWorkoutId:'',activePlan:null,activePlanIndex:null,activePlanDone:[],planEditingId:'',planItems:[]};
+  const $=id=>document.getElementById(id);
+  const IS_GAS=!!(window.google&&google.script&&google.script.run);
+  const gasCall=(fn,...args)=>new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(new Error(e.message||e)))[fn](...args));
+  const rawCall=(fn,...args)=>IS_GAS?gasCall(fn,...args):httpCall(fn,args);
+  const call=async(fn,...args)=>{if(state.bootPromise&&fn!=='getBootstrapData'){try{await state.bootPromise}catch(_){}}return rawCall(fn,...args)};
+  async function init(){if(!IS_GAS&&!apiConf()){loading(false);showLogin();return}try{try{const eq=localStorage.getItem('elaiEquipment');if(eq)state.equipment=eq}catch(_){}const cached=readCachedState();if(cached){try{state.data=cached;state.date=cached.date;state.todayDate=cached.date;renderAll();loading(false);showSyncChip(true);setupUiOnce()}catch(_){state.data=null}}window.__stage='calling server (getBootstrapData)';state.bootPromise=rawCall('getBootstrapData');const fresh=await state.bootPromise;state.bootPromise=null;state.data=fresh;window.__stage='rendering';state.date=state.data.date;state.todayDate=state.data.date;state.bootRefresh=!!cached;try{renderAll()}finally{state.bootRefresh=false}showSyncChip(false);saveCachedState();window.__stage='after render';setupUiOnce();window.__booted=true;}catch(e){window.__booted=true;state.bootPromise=null;showSyncChip(false);toast(e.message,true);window.__bootErr&&__bootErr('INIT: '+e.message)}finally{loading(false)}}
+  function loading(on=true){$('loader').classList.toggle('hide',!on)}
+  function toast(msg,bad=false){const el=$('toast');el.textContent=msg;el.style.background=bad?'#8f3434':'#173d35';el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2600)}
+  function showView(id,btn){if(state.select&&state.select.mode)exitSelectMode();document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));const tab=btn||document.querySelector(`[data-view="${id}"]`);if(tab)tab.classList.add('active');if(id==='meals')renderMeals();if(id==='workouts')renderWorkouts();if(id==='workoutDiary')renderWorkoutHistory();if(id==='history')loadNutritionJournal();if(id==='process')refreshProcess()}
+  function renderAll(){renderDate();renderTotals();renderEntries();renderQuickActions();renderMeals();renderHistory();renderSettings();renderMetrics();renderRecentFoods();restoreWorkoutPlanDraft();renderWorkouts(!!state.bootRefresh);renderHiddenMeals();renderQuickActionManager();renderFoodStateChips();restoreActiveSession();renderSessionBanner();renderProcess(true)}
+  function renderDate(){const d=new Date(state.date+'T12:00:00');$('prettyDate').textContent=new Intl.DateTimeFormat('he-IL',{weekday:'long',day:'numeric',month:'long'}).format(d);if($('todayBtn'))$('todayBtn').textContent=relativeDayLabel(state.date)}
+  function renderTotals(){const t=state.data.totals,s=state.data.settings,goal=Number(s.calorie_goal)||2200,proteinGoal=Number(s.protein_goal)||130,freeGoal=Number(s.free_calories_goal)||250,p=Math.max(0,Math.min(100,t.calories/goal*100));$('calories').textContent=Math.round(t.calories);$('remaining').textContent=Math.round(t.remaining);$('protein').textContent=Math.round(t.protein);$('carbs').textContent=Math.round(t.carbs);$('fat').textContent=Math.round(t.fat);$('calRing').style.setProperty('--p',p+'%');$('proteinGoalText').textContent=`${fmt(t.protein)} מתוך ${proteinGoal} ג׳ חלבון`;$('proteinBar').style.width=Math.min(100,t.protein/proteinGoal*100)+'%';$('freeGoalText').textContent=`${fmt(t.freeUsed||0)} מתוך ${freeGoal} קל׳ חופשי`;$('freeBar').style.width=Math.min(100,(t.freeUsed||0)/freeGoal*100)+'%'}
+  function renderEntries(){
+    const el=$('entries'),entries=state.data.entries||[];
+    $('foodCount').textContent=entries.length?'('+entries.length+' פריטים)':'';
+    if(!entries.length){el.innerHTML='<div class="empty">עדיין לא הוזן אוכל ביום הזה</div>';return}
+    const known=['בוקר','צהריים','ערב','נשנושים','נוסף','קבוע','שייק','חופשי'];
+    const cats=[...known,...new Set(entries.map(x=>x.category||'נוסף'))].filter((c,i,a)=>a.indexOf(c)===i);
+    el.innerHTML=cats.filter(c=>entries.some(x=>x.category===c)).map(c=>{
+      const list=entries.filter(x=>x.category===c),groups={};
+      list.forEach(x=>{const k=x.groupId||x.id;(groups[k]||(groups[k]=[])).push(x)});
+      const sum=(group,key)=>fmt(group.reduce((n,x)=>n+Number(x[key]||0),0));
+      if(c==='נוסף')return Object.values(groups).map(group=>{
+        const first=group[0],label=first.sourceType==='dish'?(first.mealOption||first.name):(first.name||'מזון');
+        return `<details class="session-card" open><summary>${esc(label)} · ${sum(group,'calories')} קל׳ · ${sum(group,'protein')} ג׳ חלבון</summary><div class="session-body">${group.length>1?`<button class="trash mini" onclick="removeGroup('${esc(first.groupId)}')">מחק מנה</button>`:''}${group.map(entryHtml).join('')}</div></details>`;
+      }).join('');
+      return `<details class="session-card" open><summary>${esc(c)} · ${sum(list,'calories')} קל׳ · ${sum(list,'protein')} ג׳ חלבון</summary><div class="session-body">${Object.values(groups).map(group=>`<div${['meal','dish'].includes(group[0].sourceType)?` data-lp="group:${esc(group[0].groupId)}" data-lp-title="${esc(group[0].mealOption||group[0].name||'ארוחה')}"`:''}>${['meal','dish'].includes(group[0].sourceType)?`<b class="logged-meal-name">${esc(group[0].mealOption||group[0].name||'ארוחה')}</b><button class="trash mini" onclick="removeGroup('${esc(group[0].groupId)}')">מחק ארוחה מהיום</button>`:''}${group.map(entryHtml).join('')}</div>`).join('')}</div></details>`;
+    }).join('');
+  }
+
+  function renderQuickActions(){const rows=state.data.quickActions||[];$('quickActions').innerHTML=`<button class="btn secondary" onclick="quickShake()">＋ שייק חלבון</button><button class="btn secondary" onclick="freeCalories()">＋ קלוריות חופשיות</button>`+rows.map(x=>`<button class="btn secondary" onclick="runQuickAction('${esc(x.id)}')">＋ ${esc(x.name)}</button>`).join('')}
+
+  function entryHtml(x){return `<div class="entry${selHas('ent',x.id)?' sel':''}" data-sel="${esc(x.id)}" data-lp="entry:${esc(x.id)}" data-lp-title="${esc(x.name)}"><div><div class="entry-title">${esc(x.name)}</div><div class="entry-meta">${fmt(x.calories)} קל׳ · ${fmt(x.protein)} חלבון · ${esc(x.category)}</div></div><div class="entry-actions"><input class="qty" type="number" min="0" step="0.1" value="${x.amount}" onchange="changeAmount('${esc(x.id)}',this.value)"><span class="muted">${esc(x.unit)}</span><button class="trash" onclick="removeEntry('${esc(x.id)}')">✕</button></div></div>`}
+  function renderMeals(){const tabs=$('mealTabs');tabs.innerHTML=['בוקר','צהריים','ערב'].map(c=>`<button class="chip ${state.category===c?'active':''}" onclick="chooseCategory('${c}')">${c}</button>`).join('');const meals=(state.data.meals||{})[state.category]||[];$('mealList').innerHTML=meals.map((m,i)=>`<div class="meal-card" data-lp="${m.isCustom?'meal:'+esc(m.id):'builtin:'+esc(m.key)}" data-lp-title="${esc(m.title||'ארוחה')}"><div class="meal-head" onclick="toggleMeal(${i})"><div><h3>${esc(m.title||m.ingredients.map(x=>x.name).join(' + '))}</h3><div class="muted">${m.isCustom?'ארוחה אישית':esc(m.ingredients.map(x=>x.name).join(' + '))}</div><div class="meal-tools">${m.isCustom?`<button class="chip" onclick="editCustomMeal(event,'${esc(m.id)}')">ערוך</button><button class="chip" onclick="duplicateCustomMeal(event,'${esc(m.id)}')">שכפל</button><button class="trash" onclick="removeCustomMeal(event,'${esc(m.id)}')">מחק</button>`:`<button class="chip" onclick="editBuiltinMeal(event,'${esc(m.key)}')">ערוך</button><button class="chip" onclick="duplicateBuiltinMeal(event,'${esc(m.key)}')">שכפל</button><button class="trash" onclick="deleteBuiltinMeal(event,'${esc(m.key)}')">מחק</button>`}</div></div><div class="meal-total" id="meal-total-${i}">${fmt(m.calories)} קל׳ · ${fmt(m.protein)} חלבון<div class="source">${fmt(m.carbs)} פחמ׳ · ${fmt(m.fat)} שומן</div></div></div><div class="meal-body" id="meal-${i}" style="display:none">${m.ingredients.map((x,j)=>`<div class="ingredient"><div><b>${esc(x.name)}</b><div class="muted" id="meal-values-${i}-${j}">${fmt(x.calories)} קל׳ · ${fmt(x.protein)} חלבון · ${fmt(x.carbs)} פחמ׳ · ${fmt(x.fat)} שומן</div></div><div><input id="meal-${i}-${j}" type="number" min="0" step="0.1" value="${x.amount}" oninput="updateMealPreview(${i})"><div class="muted" style="text-align:center">${esc(x.unit)}</div></div></div>`).join('')}<button class="btn full" onclick="addMeal(${i})">הוסף את הארוחה</button></div></div>`).join('')}
+  async function loadNutritionJournal(){
+    $('historyList').innerHTML='<div class="card empty">טוען יומן…</div>';
+    try{state.nutritionJournal=await call('getNutritionJournal');renderHistory()}
+    catch(e){state.nutritionJournal=null;renderHistory();toast('לא ניתן לטעון יומן מלא: '+e.message,true)}
+  }
+  function renderHistory(){
+    const all=state.nutritionJournal||state.data.history||[],period=$('nutritionPeriod').value,from=$('nutritionFrom').value,to=$('nutritionTo').value,status=$('nutritionStatus').value;
+    const rows=all.filter(x=>periodAllows(x.date,period,from,to)&&(!status||x.status===status));
+    const calories=rows.reduce((sum,x)=>sum+(Number(x.calories)||0),0),protein=rows.reduce((sum,x)=>sum+(Number(x.protein)||0),0);
+    $('nutritionJournalSummary').innerHTML=`<span>${rows.length} ימים</span><span>ממוצע ${rows.length?fmt(calories/rows.length):0} קל׳ ליום</span><span>ממוצע ${rows.length?fmt(protein/rows.length):0} ג׳ חלבון</span>`;
+    $('historyList').innerHTML=rows.length?journalGroups(rows,x=>`<div class="journal-day${selHas('nut',x.date)?' sel':''}" data-sel="${esc(x.date)}" data-date="${esc(x.date)}" data-lp="day:${esc(x.date)}" data-lp-title="${displayDate(x.date)}"><div class="history-top"><b>${displayDate(x.date)}</b><span class="muted">${esc(x.status||'פתוח')}</span></div><div><strong>${fmt(x.calories)} קל׳</strong> · ${fmt(x.protein)} ג׳ חלבון</div><div class="macro-line">${fmt(x.carbs)} ג׳ פחמימות · ${fmt(x.fat)} ג׳ שומן${x.weight!==''?` · ${fmt(x.weight)} ק״ג`:''}${x.bodyFat!==''?` · ${fmt(x.bodyFat)}% שומן`:''}</div>${x.note?`<p class="muted">${esc(x.note)}</p>`:''}<div class="quick"><button class="btn light" onclick="loadDate('${esc(x.date)}').then(()=>showView('today'))">פתח יום ←</button><button class="btn danger" onclick="removeDay('${esc(x.date)}')">מחק יום</button></div></div>`,$('nutritionGroup').value):'<div class="card empty">אין ימים שמתאימים לסינון</div>';
+  }
+
+  function renderSettings(){const s=state.data.settings||{};$('calorieGoal').value=s.calorie_goal||2200;$('proteinGoal').value=s.protein_goal||130;$('freeGoal').value=s.free_calories_goal||250;$('shakeCalories').value=s.shake_calories||140;$('shakeProtein').value=s.shake_protein||25;$('shakeCarbs').value=s.shake_carbs||0;$('shakeFat').value=s.shake_fat||0;$('usdaKey').value='';$('usdaStatus').textContent=s.has_usda_key?'מפתח פעיל ושמור באופן מוגן':'לא הוגדר מפתח — חיפוש ניסיון מוגבל פעיל. לחיפוש קבוע הוסף מפתח חינמי';$('openaiKey').value='';$('openaiStatus').textContent=s.has_openai_key?'מפתח שמור':'לא הוגדר מפתח';renderTzStatus()}
+  function renderHiddenMeals(){const rows=state.data.hiddenMeals||[];$('hiddenMeals').innerHTML=rows.length?rows.map(x=>`<div class="manage-row"><span>${esc(x.category)} — ${esc(x.title)}</span><button class="btn light mini" onclick="restoreMeal('${esc(x.key)}')">שחזר</button></div>`).join(''):'<div class="empty">אין ארוחות מוסתרות</div>'}
+  function renderQuickActionManager(){const rows=state.data.quickActions||[];$('quickActionManager').innerHTML=rows.length?rows.map(x=>`<div class="manage-row" data-lp="quick:${esc(x.id)}" data-lp-title="${esc(x.name)}"><span><b>${esc(x.name)}</b><div class="muted">${fmt(x.calories)} קל׳ · ${fmt(x.protein)} חלבון</div></span><button class="trash" onclick="deleteQuickAction('${esc(x.id)}')">מחק</button></div>`).join(''):'<div class="empty">אין עדיין קיצורים אישיים</div>'}
+  function renderRecentFoods(){const el=$('recentFoods'),rows=state.data.recentFoods||[];el.innerHTML=rows.length?rows.map((x,i)=>`<button class="chip" onclick="repeatFood(${i})">＋ ${esc(x.name)}</button>`).join(''):'<span class="muted">לאחר שתוסיף מזונות הם יופיעו כאן</span>'}
+  function repeatFood(i){const x=state.data.recentFoods[i];if(/USDA/i.test(x.source||'')){state.foodState='';$('foodQuery').value=x.name;searchFood();toast('בדוק התאמה וכמות לפני הוספה חוזרת');return}selectFood({name:x.name,baseQty:x.baseQty||x.amount||1,unit:x.unit,calories:x.calories,protein:x.protein,carbs:x.carbs,fat:x.fat,source:x.source});$('foodAmount').value=x.amount||x.baseQty||1}
+  function renderMetrics(){const row=(state.data.history||[]).find(x=>x.date===state.date);$('weight').value=row&&row.weight!==''?row.weight:'';$('bodyFat').value=row&&row.bodyFat!==''?row.bodyFat:'';$('dailyNote').value=row?row.note||'':''}
+  function renderWorkouts(preserve=true){if(!state.data.workout)return;const catalog=state.data.workout.exercises||{},base=['חזה','גב','כתפיים','יד קדמית','יד אחורית','רגליים','בטן'],groups=[...base,...Object.keys(catalog).filter(g=>!base.includes(g))];$('muscleTabs').innerHTML=groups.map(g=>`<button class="chip ${state.muscleGroup===g?'active':''}" onclick="chooseMuscle('${esc(g)}')">${esc(g)}</button>`).join('')+`<button class="chip" onclick="addMuscleGroup()">＋ אזור</button>`;$('equipmentTabs').innerHTML=[['מכונה','מכונות'],['משקולות חופשיות','משקולות חופשיות'],['משולב','משולב']].map(([v,l])=>`<button class="chip ${state.equipment===v?'active':''}" onclick="setEquipment('${v}')">${l}</button>`).join('');const list=(catalog[state.muscleGroup]||[]).filter(x=>state.equipment==='משולב'||x.equipment===state.equipment),selected=$('exerciseSelect').value;$('exerciseSelect').innerHTML=list.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');if(list.some(x=>x.id===selected))$('exerciseSelect').value=selected;renderSetRows(preserve);renderExerciseManager();renderWorkoutPlans();renderWorkoutHistory();renderSessionBanner();exerciseChanged();const wsd=$('workoutStartDate');if(wsd&&!wsd.dataset.touched)wsd.value=state.date;saveCachedStateSoon()}
+
+  async function addMuscleGroup(){const name=prompt('איזה אזור בגוף להוסיף?');if(!name?.trim())return;const exercise=prompt('תרגיל ראשון באזור '+name);if(!exercise?.trim())return;state.muscleGroup=name.trim();if(state.equipment!=='משולב')state.equipment='משקולות חופשיות';loading();try{state.data.workout=await call('saveExercise',{muscleGroup:state.muscleGroup,name:exercise.trim(),equipment:state.equipment});renderWorkouts(false)}catch(e){toast(e.message,true)}finally{loading(false)}}
+  function chooseMuscle(g){state.muscleGroup=g;state.activePlanIndex=null;state.setCount=1;renderWorkouts(false)}
+  function renderSetRows(preserve=true){
+    const old=preserve?[...$('setRows').children].map(card=>({weight:card.querySelector('.set-weight')?.value||'',reps:card.querySelector('.set-reps')?.value||'',rir:card.querySelector('.set-rir')?.value||'',side:card.querySelector('.set-side')?.value||'',note:card.querySelector('.set-note')?.value||'',segments:[...card.querySelectorAll('.subsegment')].map(row=>({side:row.querySelector('.sub-side').value,weight:row.querySelector('.sub-weight').value,reps:row.querySelector('.sub-reps').value,note:row.querySelector('.sub-note').value}))})):[];
+    const leg=state.muscleGroup==='רגליים',options=leg?['שתי רגליים','רגל ימין','רגל שמאל']:['שתי ידיים','יד ימין','יד שמאל'];
+    $('setRows').innerHTML=Array.from({length:state.setCount},(_,i)=>{const v=old[i]||{};return `<div class="card" style="padding:9px"><div class="set-row"><b>${i+1}</b><input class="set-weight" type="number" min="0" step="0.5" value="${esc(v.weight)}" placeholder="ק״ג"><input class="set-reps" type="number" min="1" step="1" value="${esc(v.reps)}" placeholder="חזרות"><input class="set-rir" type="number" min="0" step="1" value="${esc(v.rir)}" placeholder="RIR"><button class="trash" onclick="removeSetRow(${i})">✕</button></div><div class="field"><label>ביצוע הסט</label><select class="set-side">${options.map(opt=>`<option ${v.side===opt?'selected':''}>${opt}</option>`).join('')}</select></div><details><summary class="muted">הערה / שינוי משקל בתוך הסט</summary><input class="set-note" style="width:100%;margin:6px 0" value="${esc(v.note)}" placeholder="הערה לסט"><div class="subsegments">${(v.segments||[]).map(renderSubsegment).join('')}</div><button class="btn light mini" onclick="addSegment(this)">＋ שינוי משקל / יד</button></details></div>`}).join('')}
+  function renderSubsegment(v={}){return `<div class="subsegment" style="display:grid;grid-template-columns:60px 1fr 1fr 1fr 25px;gap:4px;margin:5px 0"><select class="sub-side"><option value="" ${!v.side?'selected':''}>שתי ידיים</option><option ${v.side==='שמאל'?'selected':''}>שמאל</option><option ${v.side==='ימין'?'selected':''}>ימין</option></select><input class="sub-weight" type="number" step="0.5" min="0" value="${esc(v.weight??'')}" placeholder="ק״ג"><input class="sub-reps" type="number" min="1" value="${esc(v.reps??'')}" placeholder="חזרות"><input class="sub-note" value="${esc(v.note||'')}" placeholder="הערה"><button class="trash" onclick="this.closest('.subsegment').remove()">✕</button></div>`}
+  function addSegment(button){button.closest('details').querySelector('.subsegments').insertAdjacentHTML('beforeend',renderSubsegment())}
+
+
+  function addSetRow(){state.setCount++;renderSetRows()}function removeSetRow(i){const cards=[...$('setRows').children];if(cards.length<=1)return;cards[i].remove();state.setCount--;renderSetRows(true)}
+
+  function exerciseChanged(){const select=$('exerciseSelect');if($('exercisePickName'))$('exercisePickName').textContent=select&&select.options.length?select.options[select.selectedIndex].text:'אין תרגילים — לחץ ＋';if(!select||!select.options.length){if($('lastPerformance'))$('lastPerformance').innerHTML='';return}const name=select.options[select.selectedIndex].text;const last=(state.data.workout.history||[]).find(x=>x.exercise===name);$('lastPerformance').innerHTML=last?`<div class="last-perf"><div class="history-top"><b>בפעם הקודמת · ${displayDate(last.date)}</b><button class="btn light mini" onclick="goToPreviousWorkout('${esc(last.sessionId||'')}','${esc(last.id)}')">לאימון הקודם ←</button></div>${last.sets.map((s,i)=>`<span class="set-pill">סט ${Number(s.set)||i+1}: ${s.weight===null?'ללא משקל':fmt(s.weight)+' ק״ג'} × ${s.reps}</span>`).join('')}</div>`:'<div class="muted">אין עדיין ביצוע קודם לתרגיל הזה</div>'}
+  async function saveWorkout(){const select=$('exerciseSelect');if(!select.value)return toast('יש לבחור תרגיל',true);const sets=[...document.querySelectorAll('.set-row')].map(r=>({weight:r.querySelector('.set-weight').value,reps:r.querySelector('.set-reps').value,rir:r.querySelector('.set-rir').value,note:r.closest('.card').querySelector('.set-note').value,side:r.closest('.card').querySelector('.set-side').value,segments:[...r.closest('.card').querySelectorAll('.subsegment')].filter(z=>Number(z.querySelector('.sub-reps').value)>0).map(z=>({side:z.querySelector('.sub-side').value,weight:Number(z.querySelector('.sub-weight').value)||0,reps:Number(z.querySelector('.sub-reps').value)||0,note:z.querySelector('.sub-note').value}))})).filter(s=>Number(s.reps)>0),sessionName=$('sessionName').value.trim();if(!sessionName)return toast('יש להזין שם לאימון',true);if(!state.sessionId&&!state.activePlan&&!state.editingWorkoutId)return toast('תחילה לחץ על צור אימון חדש',true);const wasEditing=!!state.editingWorkoutId,selectedItem=state.activePlan?.items[state.activePlanIndex],planIndex=selectedItem&&selectedItem.exerciseId===select.value&&selectedItem.group===state.muscleGroup?state.activePlanIndex:null;loading();try{state.data.workout=await call('saveWorkout',{date:sessionDateFor(state.editingSessionId||state.activePlan?.sessionId||state.sessionId),muscleGroup:state.muscleGroup,exerciseId:select.value,exercise:select.options[select.selectedIndex].text,sets,notes:$('workoutNote').value,sessionName,sessionId:state.editingSessionId||state.activePlan?.sessionId||state.sessionId||'',workoutId:state.editingWorkoutId||'',planItemIndex:wasEditing?state.editingPlanItemIndex:planIndex});cancelWorkoutEdit();if(state.sessionId===state.data.workout.sessions?.find(x=>x.id===state.sessionId)?.id)localStorage.setItem('elaiWorkoutSession',JSON.stringify({id:state.sessionId,name:sessionName,date:state.date}));if(!wasEditing&&state.activePlan&&planIndex!==null){reconcileWorkoutPlan();persistWorkoutPlanDraft();const next=state.activePlan.items.findIndex((_,i)=>!state.activePlanDone.includes(i));if(next>=0)selectPlanExercise(next);else{state.activePlanIndex=null;renderWorkouts(false);toast('כל תרגילי התוכנית נשמרו')}}else{renderWorkouts(false);toast('התרגיל נשמר — השדות נוקו')}}catch(e){toast(e.message,true)}finally{loading(false)}}
+  function addCustomExercise(){openNewExerciseSheet()}
+
+  function planList(){return state.data?.workout?.plans||[]}
+  function persistWorkoutPlanDraft(){try{if(state.activePlan)localStorage.setItem('elaiActiveWorkoutPlan',JSON.stringify({date:state.date,planId:state.activePlan.id,sessionId:state.activePlan.sessionId}));else localStorage.removeItem('elaiActiveWorkoutPlan')}catch(e){}}
+  function restoreWorkoutPlanDraft(){
+    if(state.activePlan?.date===state.date){reconcileWorkoutPlan();return}
+    state.activePlan=null;state.activePlanIndex=null;state.activePlanDone=[];
+    try{const saved=JSON.parse(localStorage.getItem('elaiActiveWorkoutPlan')||'null');if(!saved||saved.date!==state.date)return;const plan=planList().find(p=>p.id===saved.planId);if(!plan)return;state.activePlan={...plan,sessionId:saved.sessionId,date:saved.date};$('sessionName').value=plan.name;reconcileWorkoutPlan()}catch(e){}
+  }
+  function reconcileWorkoutPlan(){
+    if(!state.activePlan)return;
+    state.activePlanDone=[...new Set((state.data.workout.history||[]).filter(x=>x.sessionId===state.activePlan.sessionId&&x.date===state.date&&Number.isInteger(x.planItemIndex)&&x.planItemIndex>=0&&x.planItemIndex<state.activePlan.items.length).map(x=>x.planItemIndex))];
+  }
+  function renderWorkoutPlans(){
+    const plans=planList(),pf=state.planFilter||'';$('planFilterChips').innerHTML=['','משיכה','דחיפה','רגליים','אחר'].map(c=>`<button class="chip ${pf===c?'active':''}" onclick="state.planFilter='${c}';renderWorkoutPlans()">${c||'הכול'}</button>`).join('');const shownPlans=plans.map((p,i)=>[p,i]).filter(([p])=>!pf||(pf==='אחר'?!['משיכה','דחיפה','רגליים'].includes(p.category):p.category===pf));$('workoutPlans').innerHTML=!plans.length?'<div class="card muted">אין תוכנית שמורה עדיין. אפשר ליצור אחת או להתחיל אימון חופשי.</div>':!shownPlans.length?'<div class="card muted">אין תוכניות מהסוג הזה עדיין.</div>':shownPlans.map(([p,i])=>`<div class="plan-line" data-lp="plan:${i}" data-lp-title="${esc(p.name)}"><span class="plan-peek-toggle" role="button" onclick="togglePlanPeek('${esc(p.id)}')"><b>${state.planPeek===p.id?'▾':'◂'} ${esc(p.name)}</b><span class="muted" style="display:block">${esc(p.category||'כללי')} · ${p.items.length} תרגילים</span><span class="plan-time" role="button" data-lp="plantime:${i}" data-lp-title="${esc(p.name)}" onclick="event.stopPropagation();openPlanTiming(${i})">⏱ כ-${planMinutes(p)} דק׳</span></span><span class="inline-actions"><button class="btn secondary mini" onclick="startWorkoutPlan(${i})">התחל</button><button class="btn light mini" onclick="openWorkoutPlanBuilder(${i})">ערוך</button><button class="trash mini" onclick="removeWorkoutPlan(${i})">✕</button></span></div>${state.planPeek===p.id?`<div class="plan-peek">${p.items.map((x,k)=>`<div><b>${k+1}. ${esc(x.name||'תרגיל')}</b> <span class="muted">${esc(x.group||'')} · ${Number(x.sets)||3} סטים${x.reps?' · '+esc(String(x.reps))+' חזרות':''}</span></div>`).join('')||'<div class="muted">אין תרגילים בתוכנית</div>'}</div>`:''}`).join('');
+    const card=$('activeWorkoutPlan');if(!state.activePlan){card.style.display='none';return}reconcileWorkoutPlan();card.style.display='block';const p=state.activePlan;card.innerHTML=`<div class="history-top"><h3>${esc(p.name)}</h3><button class="btn light mini" onclick="finishPlanWorkout()">סיים אימון</button></div><p class="muted">${state.activePlanDone.length} מתוך ${p.items.length} תרגילים נשמרו · אפשר לבחור כל תרגיל ברשימה</p>`+p.items.map((x,i)=>`<button class="plan-line ${state.activePlanIndex===i?'active':''}" style="width:100%;text-align:right" onclick="selectPlanExercise(${i})"><span><b>${i+1}. ${esc(x.name)}</b><small class="muted" style="display:block">${esc(x.group)} · ${x.sets} סטים${x.reps?' · יעד '+x.reps+' חזרות':''}${x.removed?' · הוסר מרשימת התרגילים':''}</small></span><span class="${state.activePlanDone.includes(i)?'plan-done':'muted'}">${state.activePlanDone.includes(i)?'✓ נשמר':'פתח'}</span></button>`).join('');
+  }
+  async function startWorkoutPlan(i){
+    const plan=planList()[i];if(!plan)return;
+    if(state.activePlan&&state.activePlanDone.length<state.activePlan.items.length&&!confirm('לעבור לתוכנית אחרת? מה ששמרת יישאר ביומן.'))return;
+    const wDate=workoutStartDateValue();loading();try{const result=await call('createWorkoutSession',{date:wDate,name:plan.name,type:plan.category});state.data.workout=result.workout;state.activePlan={...plan,date:wDate,sessionId:result.id};state.activePlanDone=[];state.activePlanIndex=null;$('sessionName').value=plan.name;cancelWorkoutEdit();persistWorkoutPlanDraft();selectPlanExercise(0);$('activeWorkoutPlan').scrollIntoView({behavior:'smooth'})}catch(e){toast(e.message,true)}finally{loading(false)}
+  }
+  function selectPlanExercise(i){
+    if(!state.activePlan||!state.activePlan.items[i])return;
+    const x=state.activePlan.items[i];state.activePlanIndex=i;state.muscleGroup=x.group;if(state.equipment!=='משולב')state.equipment=(state.data.workout.exercises[x.group]||[]).find(e=>e.id===x.exerciseId)?.equipment||'משקולות חופשיות';state.setCount=1;renderWorkouts(false);
+    const select=$('exerciseSelect');if(![...select.options].some(o=>o.value===x.exerciseId))select.add(new Option(x.name,x.exerciseId));select.value=x.exerciseId;
+    if(x.reps)[...document.querySelectorAll('.set-reps')].forEach(input=>input.value=x.reps);
+    exerciseChanged();$('setRows').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  function finishWorkoutPlan(){state.activePlan=null;state.activePlanIndex=null;state.activePlanDone=[];persistWorkoutPlanDraft();renderWorkoutPlans()}
+  async function finishPlanWorkout(){if(!state.activePlan)return;const id=state.activePlan.sessionId,minutes=prompt('כמה דקות נמשך האימון? השאר ריק לחישוב אוטומטי','');if(minutes===null)return;loading();try{state.data.workout=await call('finishWorkoutSession',{id,minutes});finishWorkoutPlan();state.openWorkoutSessionId=id;renderWorkouts(false);showView('workoutDiary');toast('האימון הסתיים ונשמר ביומן')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function startFreestyleWorkout(){
+    const type=$('workoutStartType').value,suffix=$('workoutStartSuffix').value.trim();
+    if(!type)return toast('בחר משיכה או דחיפה',true);
+    const wDate=workoutStartDateValue(),name=type+(suffix?' · '+suffix:'')+' · '+wDate;
+    if(state.sessionId&&state.data.workout?.sessions?.some(x=>x.id===state.sessionId&&x.status==='active')&&!confirm('יש אימון פעיל. לפתוח אימון חדש?'))return;
+    setEquipment($('workoutStartEquip').value,true);loading();try{finishWorkoutPlan();cancelWorkoutEdit();const result=await call('createWorkoutSession',{date:wDate,name,type});state.data.workout=result.workout;state.sessionId=result.id;try{localStorage.setItem('elaiWorkoutSession',JSON.stringify({id:result.id,name,date:state.date}))}catch(_){}$('sessionName').value=name;$('workoutStartSuffix').value='';renderWorkouts(false);toast('האימון התחיל — כל התרגילים יישמרו יחד')}catch(e){toast(e.message,true)}finally{loading(false)}
+  }
+  function openWorkoutPlanBuilder(i){
+    const p=Number.isInteger(i)?planList()[i]:null;state.planEditingId=p?.id||'';state.planItems=p?p.items.map(x=>({group:x.group,exerciseId:x.exerciseId,sets:x.sets,reps:x.reps})):[];
+    $('workoutPlanName').value=p?.name||'';$('workoutPlanCategory').value=p?.category||'';state.planCategoryOther=!!(p?.category&&!['משיכה','דחיפה','רגליים'].includes(p.category));renderPlanCategoryChips();$('workoutPlanHeading').textContent=p?'עריכת תוכנית':'תוכנית חדשה';$('workoutPlanBuilder').style.display='block';renderWorkoutPlanItems();$('workoutPlanBuilder').scrollIntoView({behavior:'smooth'});
+  }
+  function closeWorkoutPlanBuilder(){state.planEditingId='';state.planItems=[];$('workoutPlanBuilder').style.display='none'}
+  function addWorkoutPlanItem(){const catalog=state.data.workout.exercises||{};const group=state.planItems.at(-1)?.group||state.muscleGroup;state.planItems.push({group,exerciseId:catalog[group]?.[0]?.id||'',sets:3,reps:''});renderWorkoutPlanItems()}
+  function changeWorkoutPlanGroup(i,g){const x=state.planItems[i];x.group=g;x.exerciseId=state.data.workout.exercises[g]?.[0]?.id||'';renderWorkoutPlanItems()}
+  function updateWorkoutPlanItem(i,key,value){state.planItems[i][key]=value}
+  function moveWorkoutPlanItem(i,offset){const next=i+offset;if(next<0||next>=state.planItems.length)return;const [x]=state.planItems.splice(i,1);state.planItems.splice(next,0,x);renderWorkoutPlanItems()}
+  function removeWorkoutPlanItem(i){state.planItems.splice(i,1);renderWorkoutPlanItems()}
+  function renderWorkoutPlanItems(){
+    const catalog=state.data.workout.exercises||{},groups=['חזה','גב','כתפיים','יד קדמית','יד אחורית','רגליים',...Object.keys(catalog).filter(g=>!['חזה','גב','כתפיים','יד קדמית','יד אחורית','רגליים'].includes(g))];
+    $('workoutPlanItems').innerHTML=state.planItems.length?state.planItems.map((x,i)=>`<div class="plan-row"><div class="history-top"><b>תרגיל ${i+1}</b><span class="inline-actions"><button class="btn light mini" onclick="moveWorkoutPlanItem(${i},-1)">↑</button><button class="btn light mini" onclick="moveWorkoutPlanItem(${i},1)">↓</button><button class="trash mini" onclick="removeWorkoutPlanItem(${i})">✕</button></span></div><div class="plan-builder-selects"><div class="field"><label>קבוצת שרירים</label><select onchange="changeWorkoutPlanGroup(${i},this.value)">${groups.map(g=>`<option value="${esc(g)}" ${x.group===g?'selected':''}>${esc(g)}</option>`).join('')}</select></div><div class="field"><label>תרגיל</label><button type="button" class="pick-btn" onclick="openPlanExercisePicker(${i})"><span>${esc(((catalog[x.group]||[]).find(e=>e.id===x.exerciseId)||{}).name||'בחר תרגיל')}</span><span>▾</span></button></div></div>${true?`<button class="btn light mini" onclick="addPlanExercise(${i})">＋ צור תרגיל לקבוצה</button>`:''}<div class="plan-numbers"><div class="field"><label>כמה סטים</label><input type="number" min="1" max="10" step="1" value="${x.sets}" onchange="updateWorkoutPlanItem(${i},'sets',this.value)"></div><div class="field"><label>יעד חזרות (לא חובה)</label><input type="number" min="1" max="50" step="1" value="${x.reps}" placeholder="למלא באימון" onchange="updateWorkoutPlanItem(${i},'reps',this.value)"></div></div></div>`).join(''):'<p class="muted">הוסף את התרגילים לפי סדר האימון שלך.</p>';
+  }
+  async function addPlanExercise(i){const x=state.planItems[i],name=prompt('שם התרגיל החדש');if(!x||!name?.trim())return;loading();try{state.data.workout=await call('saveExercise',{muscleGroup:x.group,name:name.trim(),equipment:state.equipment});x.exerciseId=(state.data.workout.exercises[x.group]||[]).find(e=>e.name===name.trim())?.id||'';renderWorkoutPlanItems();renderWorkouts(false);toast('התרגיל נוסף לתוכנית')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function saveWorkoutPlan(){const name=$('workoutPlanName').value.trim();if(!name||!state.planItems.length)return toast('יש לתת שם ולהוסיף לפחות תרגיל אחד',true);loading();try{state.data.workout=await call('saveWorkoutPlan',{id:state.planEditingId,name,category:$('workoutPlanCategory').value.trim()||'כללי',items:state.planItems});closeWorkoutPlanBuilder();renderWorkouts(false);toast('התוכנית נשמרה')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function removeWorkoutPlan(i,skipConfirm){const p=planList()[i];if(!p||(!skipConfirm&&!confirm('למחוק את התוכנית? האימונים הקודמים יישארו ביומן.')))return;loading();try{state.data.workout=await call('deleteWorkoutPlan',p.id);if(state.activePlan?.id===p.id)finishWorkoutPlan();renderWorkouts(false);undoToast('התוכנית נמחקה',()=>workoutUndo('restoreWorkoutPlan',p.id,'התוכנית הוחזרה'))}catch(e){toast(e.message,true)}finally{loading(false)}}
+  function periodAllows(date,period,from,to){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return false;
+    const today=state.date||new Date().toISOString().slice(0,10),ref=new Date(today+'T12:00:00');
+    if(period==='week'){ref.setDate(ref.getDate()-ref.getDay());return date>=ref.toISOString().slice(0,10)&&date<=today}
+    if(period==='month')return date.slice(0,7)===today.slice(0,7);
+    if(period==='custom')return (!from||date>=from)&&(!to||date<=to);
+    return true;
+  }
+  function monthTitle(date){return new Intl.DateTimeFormat('he-IL',{month:'long',year:'numeric'}).format(new Date(date+'T12:00:00'))}
+  function journalGroups(rows,render,mode){let previous='';return rows.map(row=>{const date=new Date(row.date+'T12:00:00');date.setDate(date.getDate()-date.getDay());const key=mode==='week'?date.toISOString().slice(0,10):row.date.slice(0,7),heading=key!==previous?`<h3 class="journal-month">${mode==='week'?'שבוע '+displayDate(key):monthTitle(row.date)}</h3>`:'';previous=key;return heading+render(row)}).join('')}
+  function syncJournalSelect(id,choices,label){const el=$(id);if(!el)return;const previous=el.value;el.innerHTML=`<option value="">${label}</option>`+[...new Set(choices.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'he')).map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');el.value=[...el.options].some(o=>o.value===previous)?previous:''}
+  function renderWorkoutHistory(){
+    const all=state.data?.workout?.sessions||[];
+    syncJournalSelect('workoutCategoryFilter',all.map(s=>s.name),'כל האימונים');
+    const fixedGroups=['חזה','גב','כתפיים','יד קדמית','יד אחורית','רגליים','בטן'];
+    syncJournalSelect('workoutMuscleFilter',[...fixedGroups,...Object.keys(state.data?.workout?.exercises||{}),...all.flatMap(s=>s.items.map(x=>x.muscleGroup))],'כל הקבוצות');
+    syncJournalSelect('workoutExerciseFilter',all.flatMap(s=>s.items.map(x=>x.exercise)),'כל התרגילים');
+    const name=$('workoutCategoryFilter').value,type=$('workoutTypeFilter').value,muscle=$('workoutMuscleFilter').value,exercise=$('workoutExerciseFilter').value;
+    const period=$('workoutPeriod').value,from=$('workoutFrom').value,to=$('workoutTo').value;
+    const diary=$('workoutHistory');
+    const openIds=new Set([...diary.querySelectorAll('details[data-session][open]')].map(d=>d.dataset.session));
+    if(state.openWorkoutSessionId)openIds.add(state.openWorkoutSessionId);
+    const openGroups=new Set([...diary.querySelectorAll('details[data-journal-group][open]')].map(d=>d.dataset.journalGroup));
+    const hadGroups=diary.querySelector('details[data-journal-group]')!==null;
+    const sessions=all.filter(s=>periodAllows(s.date,period,from,to)&&(!type||s.type===type)&&(!name||s.name===name)&&
+      (!muscle||s.items.some(x=>x.muscleGroup===muscle))&&(!exercise||s.items.some(x=>x.exercise===exercise)))
+      .sort((a,b)=>b.date.localeCompare(a.date)||String(b.startedAt||'').localeCompare(String(a.startedAt||'')));
+    $('workoutJournalSummary').innerHTML=`<span>${sessions.length} אימונים</span><span>${sessions.reduce((n,s)=>n+s.items.length,0)} תרגילים</span>`;
+    const renderSession=s=>`<div class="journal-day${selHas('work',s.id)?' sel':''}" data-sel="${esc(s.id)}" data-lp="session:${esc(s.id)}" data-lp-title="${displayDate(s.date)} · ${esc(s.name)}"><div class="history-top"><b>${displayDate(s.date)} · ${esc(s.name)}</b>${s.status==='finished'?`<button class="chip mini" onclick="reopenSession('${esc(s.id)}')">פתח מחדש</button>`:''}<button class="delete-action" onclick="removeWorkoutSession(decodeURIComponent('${encodeURIComponent(s.id).replace(/'/g,'%27')}'))">מחק אימון</button></div><details class="session-card" data-session="${esc(s.id)}" ${openIds.has(s.id)?'open':''}><summary>הצג תרגילים וסטים${s.durationMinutes!==''&&s.durationMinutes!=null?' · '+s.durationMinutes+' דקות':''}</summary><div class="session-body"><span class="inline-actions"><button class="btn light mini" onclick="renameSession('${esc(s.id)}')">שנה שם</button><button class="btn light mini" onclick="openSessionDate('${esc(s.id)}')">שנה תאריך</button></span>${s.items.map(x=>`<div class="workout-item" data-lp="workout:${esc(x.id)}" data-lp-title="${esc(x.exercise)}"><div class="history-top"><b>${esc(x.exercise)}</b><div class="item-actions"><button class="btn light" onclick="editWorkout('${esc(x.id)}');showView('workouts')">ערוך</button><button class="btn light" onclick="moveWorkoutToSession('${esc(x.id)}')">העבר</button><button class="btn danger" onclick="removeWorkout('${esc(x.id)}')">מחק</button></div></div><div class="set-badges">${x.sets.map((v,i)=>`<span class="set-badge"><strong>סט ${Number(v.set)||i+1}</strong> · ${v.side?esc(v.side)+' · ':''}${v.weight===null?'ללא משקל':fmt(v.weight)+' ק״ג'} × ${v.reps}${v.rir!==''?` · RIR ${v.rir}`:''}${v.note?' · '+esc(v.note):''}${v.segments?.length?' · '+esc(v.segments.map(x=>[x.side,x.weight+' ק״ג',x.reps+' חזרות',x.note].filter(Boolean).join(' ')).join(' → ')):''}</span>`).join('')}</div>${x.notes?`<div class="muted">${esc(x.notes)}</div>`:''}<div class="video-list"><button class="btn secondary mini" onclick="openWorkoutVideo('${esc(x.id)}')">＋ סרטון לתרגיל</button>${(x.videos||[]).map((v,i)=>`<button class="video-link" data-lp="video:${esc(v.id)}" data-lp-title="סרטון ${i+1} · ${esc(x.exercise)}" onclick="openVideoPlayer('${esc(v.previewUrl)}','${esc(v.url)}','${esc(v.id)}')">▶ סרטון ${i+1}</button><button class="trash mini" onclick="removeWorkoutVideo('${esc(v.id)}')">✕</button>`).join('')}</div></div>`).join('')}</div></details></div>`;
+    if(!sessions.length){diary.innerHTML='<div class="card empty">אין אימונים שמתאימים לסינון</div>';return}
+    const months=new Map();
+    sessions.forEach(session=>{
+      const month=session.date.slice(0,7),day=new Date(session.date+'T12:00:00Z'),monday=new Date(day);
+      monday.setUTCDate(day.getUTCDate()-(day.getUTCDay()+6)%7);
+      const week=monday.toISOString().slice(0,10);
+      if(!months.has(month))months.set(month,new Map());
+      const weeks=months.get(month);if(!weeks.has(week))weeks.set(week,[]);weeks.get(week).push(session);
+    });
+    diary.innerHTML=[...months.entries()].map(([month,weeks],i)=>{
+      const monthSessions=[...weeks.values()].flat(),monthKey='month:'+month,opened=monthSessions.some(x=>openIds.has(x.id))||openGroups.has(monthKey)||(!hadGroups&&i===0);
+      const title=monthTitle(month+'-15');
+      return `<details class="card" data-journal-group="${monthKey}" ${opened?'open':''}><summary><b>${esc(title)}</b> · ${monthSessions.length} אימונים</summary>`+
+        [...weeks.entries()].map(([week,items],j)=>{
+          const monday=new Date(week+'T12:00:00Z'),sunday=new Date(monday);sunday.setUTCDate(sunday.getUTCDate()+6);
+          const monthStart=new Date(month+'-01T12:00:00Z'),monthEnd=new Date(Date.UTC(monthStart.getUTCFullYear(),monthStart.getUTCMonth()+1,0,12));
+          const minDay=new Date(Math.max(monday.getTime(),monthStart.getTime())).getUTCDate(),maxDay=new Date(Math.min(sunday.getTime(),monthEnd.getTime())).getUTCDate();
+          const weekKey='week:'+month+':'+week,open=items.some(x=>openIds.has(x.id))||openGroups.has(weekKey)||(!hadGroups&&i===0&&j===0);
+          return `<details class="card" data-journal-group="${weekKey}" ${open?'open':''}><summary>שבוע ${minDay}–${maxDay} בחודש · ${items.length} אימונים</summary>${items.map(renderSession).join('')}</details>`;
+        }).join('')+'</details>';
+    }).join('');
+    state.openWorkoutSessionId='';
+  }
+
+  function renderExerciseManager(){const rows=(state.data.workout.exercises||{})[state.muscleGroup]||[];$('exerciseManager').innerHTML=rows.map(x=>`<div class="manage-row" data-lp="exercise:${esc(x.id)}" data-lp-title="${esc(x.name)}"><span>${esc(x.name)}</span><span class="inline-actions"><button class="btn light mini" onclick="renameExercise('${esc(x.id)}')">ערוך</button><button class="trash" onclick="removeExercise('${esc(x.id)}')">מחק</button></span></div>`).join('')+removedExercisesHtml()}
+  async function renameExercise(id){const oldName=Object.values(state.data.workout.exercises||{}).flat().find(x=>x.id===id)?.name||'';const name=prompt('שם התרגיל',oldName);if(!name||name===oldName)return;loading();try{state.data.workout=await call('updateExercise',{id,name});renderWorkouts(false);toast('התרגיל עודכן')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function removeExercise(id,skipConfirm){if(!skipConfirm&&!confirm('להסיר את התרגיל מהרשימה הקבועה? אימונים קודמים יישארו.'))return;loading();try{state.data.workout=await call('deleteExercise',id);renderWorkouts(false);undoToast('התרגיל הוסר מהרשימה',()=>workoutUndo('restoreExercise',id,'התרגיל הוחזר לרשימה'))}catch(e){toast(e.message,true)}finally{loading(false)}}
+  function editWorkout(id){state.activePlanIndex=null;const x=(state.data.workout.history||[]).find(v=>v.id===id);if(!x)return;state.editingWorkoutId=x.id;state.editingSessionId=x.sessionId||'';state.editingPlanItemIndex=x.planItemIndex;state.muscleGroup=x.muscleGroup;if(state.equipment!=='משולב')state.equipment=(state.data.workout.exercises[x.muscleGroup]||[]).find(e=>e.id===x.exerciseId)?.equipment||'משקולות חופשיות';state.setCount=Math.max(1,x.sets.length);renderWorkouts(false);$('sessionName').value=x.sessionName||'אימון';const select=$('exerciseSelect');[...select.options].forEach((o,i)=>{if(o.text===x.exercise)select.selectedIndex=i});[...document.querySelectorAll('.set-row')].forEach((r,i)=>{const v=x.sets[i];if(v){r.querySelector('.set-weight').value=v.weight===null?'':v.weight;r.querySelector('.set-reps').value=v.reps;r.querySelector('.set-rir').value=v.rir;r.closest('.card').querySelector('.set-side').value=v.side|| (x.muscleGroup==='רגליים'?'שתי רגליים':'שתי ידיים');r.closest('.card').querySelector('.set-note').value=v.note||'';r.closest('.card').querySelector('.subsegments').innerHTML=(v.segments||[]).map(renderSubsegment).join('')}});$('workoutNote').value=x.notes||'';$('saveWorkoutBtn').textContent='עדכן תרגיל';$('cancelEditBtn').style.display='block';window.scrollTo({top:0,behavior:'smooth'})}
+  function cancelWorkoutEdit(){state.editingWorkoutId='';state.editingSessionId='';state.editingPlanItemIndex='';state.setCount=1;$('workoutNote').value='';$('saveWorkoutBtn').textContent='שמור תרגיל';$('cancelEditBtn').style.display='none'}
+  async function removeWorkout(id,skipConfirm){if(!skipConfirm&&!confirm('למחוק את התרגיל מהאימון?'))return;loading();try{state.data.workout=await call('deleteWorkout',id);renderWorkouts();undoToast('התרגיל נמחק מהאימון',()=>workoutUndo('restoreWorkout',id,'התרגיל הוחזר'))}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function removeWorkoutSession(id,skipConfirm){if(!skipConfirm&&!confirm('למחוק את כל האימון?'))return;const workoutIds=((state.data.workout.sessions||[]).find(s=>s.id===id)?.items||[]).map(x=>x.id);loading();try{state.data.workout=await call('deleteWorkoutSession',id);if(state.sessionId===id){state.sessionId='';localStorage.removeItem('elaiWorkoutSession')}if(state.activePlan?.sessionId===id){state.activePlan=null;state.activePlanIndex=null;persistWorkoutPlanDraft()}renderWorkouts(false);undoToast('האימון נמחק',()=>workoutUndo('restoreWorkoutSession',{id,workoutIds},'האימון הוחזר'))}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function showProgress(){const select=$('exerciseSelect');if(!select.value)return;loading();try{const rows=await call('getExerciseProgress',select.options[select.selectedIndex].text),card=$('progressCard');card.style.display='block';card.innerHTML=`<h3>התקדמות — ${esc(select.options[select.selectedIndex].text)}</h3>`+(rows.length?rows.map(x=>`<div class="history-card"><div class="history-top"><b>${displayDate(x.date)}</b><span>שיא ${fmt(x.maxWeight)} ק״ג · נפח ${fmt(x.volume)}</span></div><div class="video-list">${(x.videos||[]).map((v,i)=>`<button class="video-link" data-lp="video:${esc(v.id)}" data-lp-title="סרטון ${i+1} · ${esc(x.exercise)}" onclick="openVideoPlayer('${esc(v.previewUrl)}','${esc(v.url)}','${esc(v.id)}')">▶ סרטון ${i+1}</button>`).join('')}</div></div>`).join(''):'<div class="empty">אין עדיין נתונים</div>');card.scrollIntoView({behavior:'smooth'})}catch(e){toast(e.message,true)}finally{loading(false)}}
+  function openWorkoutVideo(id){const workout=(state.data.workout.history||[]).find(x=>x.id===id);if(!workout)return toast('התרגיל לא נמצא',true);state.videoWorkoutId=id;$('videoWorkoutId').value=id;$('videoWorkoutLabel').textContent=`${workout.exercise} · ${displayDate(workout.date)}`;$('workoutVideoFile').value='';$('videoSheet').classList.remove('hide')}
+  function closeWorkoutVideo(){state.videoWorkoutId='';$('videoSheet').classList.add('hide')}
+  async function uploadWorkoutVideo(){const file=$('workoutVideoFile').files[0];if(!file)return toast('בחר סרטון',true);if(!/^video[/]/.test(file.type||'')&&!/\.(mov|mp4|m4v|3gp|webm)$/i.test(file.name||''))return toast('בחר קובץ וידאו',true);if(file.size>500*1024*1024)return toast('הסרטון גדול מ-500MB. בחר קטע קצר יותר.',true);$('uploadVideoBtn').disabled=true;const bar=$('videoProgress');bar.style.display='block';bar.firstElementChild.style.width='2%';$('videoUploadStatus').textContent=`מעלה ${fmt(file.size/1048576)}MB… אל תסגור את המסך`;try{const totalMb=fmt(file.size/1048576),uploadWid=$('videoWorkoutId').value,beforeIds=new Set(((state.data.workout.history||[]).find(x=>x.id===uploadWid)?.videos||[]).map(v=>v.id));state.data.workout=await uploadVideoSmart(file,$('videoWorkoutId').value,(p,bytes,relay)=>{bar.firstElementChild.style.width=Math.max(2,Math.round(p*100))+'%';$('videoUploadStatus').textContent=relay?'עובר לשיטת העלאה חלופית…':`מעלה… ${Math.round(p*100)}% (${fmt((bytes||0)/1048576)} מתוך ${totalMb}MB)`});try{const nv=((state.data.workout.history||[]).find(x=>x.id===uploadWid)?.videos||[]).find(v=>!beforeIds.has(v.id));if(nv){state.localVideos=state.localVideos||{};state.localVideos[nv.id]=URL.createObjectURL(file)}}catch(_){}closeWorkoutVideo();renderWorkoutHistory();toast('הסרטון נשמר בתרגיל — אפשר לצפות בו מיד')}catch(e){toast(e.message,true)}finally{$('uploadVideoBtn').disabled=false;$('videoUploadStatus').textContent='';bar.style.display='none'}}
+
+  async function removeWorkoutVideo(id,skipConfirm){if(!skipConfirm&&!confirm('למחוק את הסרטון מהתרגיל?'))return;loading();try{state.data.workout=await call('deleteWorkoutVideo',id);renderWorkoutHistory();undoToast('הסרטון נמחק',()=>workoutUndo('restoreWorkoutVideo',id,'הסרטון הוחזר'))}catch(e){toast(e.message,true)}finally{loading(false)}}
+  function chooseCategory(c){state.category=c;renderMeals()} function toggleMeal(i){const e=$('meal-'+i);e.style.display=e.style.display==='none'?'block':'none'}
+  function mealPreviewValues(meal,amounts){
+    const items=meal.ingredients.map((x,j)=>{
+      const amount=Math.max(0,Number(amounts[j])||0);
+      const ratio=Number(x.amount)>0?amount/Number(x.amount):0;
+      return Object.fromEntries(['calories','protein','carbs','fat'].map(k=>[k,fmt((Number(x[k])||0)*ratio)]));
+    });
+    const total=Object.fromEntries(['calories','protein','carbs','fat'].map(k=>[k,fmt(items.reduce((sum,x)=>sum+x[k],0))]));
+    return {items,total};
+  }
+  function updateMealPreview(i){
+    const meal=(state.data.meals[state.category]||[])[i];if(!meal)return;
+    const amounts=meal.ingredients.map((x,j)=>$(`meal-${i}-${j}`).value);
+    const preview=mealPreviewValues(meal,amounts),t=preview.total;
+    meal.ingredients.forEach((x,j)=>{const el=$(`meal-values-${i}-${j}`),v=preview.items[j];if(el)el.textContent=`${v.calories} קל׳ · ${v.protein} חלבון · ${v.carbs} פחמ׳ · ${v.fat} שומן`});
+    const el=$(`meal-total-${i}`);if(el)el.innerHTML=`${t.calories} קל׳ · ${t.protein} חלבון<div class="source">${t.carbs} פחמ׳ · ${t.fat} שומן</div>`;
+  }
+  async function addMeal(i){const meal=state.data.meals[state.category][i],overrides={};meal.ingredients.forEach((x,j)=>overrides[j]=Number($(`meal-${i}-${j}`).value));await mutate('saveMeal',{date:state.date,category:state.category,option:meal.option,mealId:meal.id,overrides},'הארוחה נוספה')}
+  function openCustomMealBuilder(mealId='',duplicate=false){const all=Object.values(state.data.meals||{}).flat(),meal=mealId?(all.find(x=>x.isCustom&&x.id===mealId)||all.find(x=>!x.isCustom&&x.key===mealId)||all.find(x=>x.id===mealId)):null;state.editingMealId=meal&&!duplicate&&meal.isCustom?meal.id:'';state.replaceBuiltinKey=meal&&!duplicate&&!meal.isCustom?meal.key:'';state.customIngredients=meal?meal.ingredients.map(x=>enrichIngredient({name:x.name,amount:x.amount,unit:x.unit,calories:x.calories,protein:x.protein,carbs:x.carbs,fat:x.fat})):[];$('customMealCategory').value=meal?meal.category:state.category;$('customMealName').value=meal?(meal.title+(duplicate?' — עותק':'')):'';$('customMealHeading').textContent=meal?(duplicate?'שכפול ארוחה':'עריכת ארוחה'):'ארוחה חדשה';$('customSavePermanent').checked=!!meal;$('customMealBuilder').style.display='block';$('customFoodResults').innerHTML='';state.customFoodState='';renderCustomFoodStateChips();renderCustomIngredients();$('customMealBuilder').scrollIntoView({behavior:'smooth'})}
+  function closeCustomMealBuilder(){state.editingMealId='';state.replaceBuiltinKey='';state.customIngredients=[];state.customSearchResults=[];$('customMealBuilder').style.display='none'}
+  function editCustomMeal(e,id){e.stopPropagation();openCustomMealBuilder(id,false)}
+  function duplicateCustomMeal(e,id){e.stopPropagation();openCustomMealBuilder(id,true)}
+  function renderCustomIngredients(){const el=$('customIngredients');el.innerHTML=state.customIngredients.length?state.customIngredients.map((x,i)=>`<div class="custom-ingredient compact" data-lp="ingredient:${i}" data-lp-title="${esc(x.name||'מרכיב')}"><input aria-label="שם מרכיב" value="${esc(x.name)}" placeholder="שם" oninput="updateCustomIngredient(${i},'name',this.value)"><input aria-label="כמות" type="number" min="0" step="0.1" value="${x.amount}" onchange="scaleCustomIngredient(${i},this.value)"><select aria-label="יחידה" onchange="changeCustomUnit(${i},this.value)">${customUnitOptions(x).map(u=>`<option value="${esc(u)}" ${u===x.unit?'selected':''}>${esc(x.per?unitLabel(x,u):u)}</option>`).join('')}</select><div class="macro-mini" title="${fmt(x.calories)} קל׳ · ${fmt(x.protein)} חלבון · ${fmt(x.carbs)} פחמ׳ · ${fmt(x.fat)} שומן"><span class="macro-wide">${fmt(x.calories)} קל׳ · ${fmt(x.protein)} חלבון · ${fmt(x.carbs)} פחמ׳ · ${fmt(x.fat)} שומן</span><span class="macro-short">${fmt(x.calories)} קל׳<br>${fmt(x.protein)} חלבון</span></div><button class="trash" onclick="removeCustomIngredient(${i})">✕</button><details style="grid-column:1/-1"><summary class="muted">ערכים / תיקון</summary><div class="custom-values">${[['קל׳','calories'],['חלבון','protein'],['פחמ׳','carbs'],['שומן','fat']].map(([t,k])=>`<label>${t}<input type="number" min="0" step="0.1" value="${x[k]||0}" onchange="updateCustomIngredient(${i},'${k}',this.value);renderCustomIngredients()"></label>`).join('')}</div></details></div>`).join(''):'<div class="empty">חפש מרכיב או הוסף אותו ידנית</div>'}
+  function updateCustomIngredient(i,key,value){const x=state.customIngredients[i];x[key]=['name','unit'].includes(key)?value:Number(value)||0;if(['calories','protein','carbs','fat'].includes(key))delete x.per}
+  function changeCustomUnit(i,unit){const x=state.customIngredients[i],old=x.unit;if(old===unit)return;if(x.per){const fx={...x.per,units:x.units,name:x.name},g=foodUnitGrams(fx,old);x.amount=unit==='גרם'&&old!=='גרם'&&g?Math.round(x.amount*g):unit==='גרם'?100:1;x.unit=unit;recalcCustomIngredient(x);renderCustomIngredients();return}const oldMass=['יחידה','פרוסה','מנה'].includes(old)?x.amount*estimatedGrams(x.name,old):x.amount;const next=['יחידה','פרוסה','מנה'].includes(unit)?1:100;const newMass=['יחידה','פרוסה','מנה'].includes(unit)?next*estimatedGrams(x.name,unit):next;const ratio=oldMass?newMass/oldMass:1;['calories','protein','carbs','fat'].forEach(k=>x[k]=fmt(x[k]*ratio));x.amount=next;x.unit=unit;renderCustomIngredients()}
+  function scaleCustomIngredient(i,value){const x=state.customIngredients[i],next=Math.max(0,Number(value)||0);if(x.per){x.amount=next;recalcCustomIngredient(x);renderCustomIngredients();return}const ratio=x.amount?next/x.amount:1;['calories','protein','carbs','fat'].forEach(k=>x[k]=fmt(x[k]*ratio));x.amount=next;renderCustomIngredients()}
+  function addBlankCustomIngredient(){state.customIngredients.push({name:'',amount:1,unit:'יחידה',calories:0,protein:0,carbs:0,fat:0});renderCustomIngredients()}
+  function removeCustomIngredient(i){state.customIngredients.splice(i,1);renderCustomIngredients()}
+  function renderCustomFoodStateChips(){
+    const el=$('customFoodStateChips');if(!el)return;if(tz.ready){el.innerHTML='';state.customFoodState='';return}
+    el.innerHTML=['','נא','מבושל','אפוי','על המחבת','מטוגן','לפני בישול'].map(v=>`<button class="chip ${state.customFoodState===v?'active':''}" onclick="chooseCustomFoodState('${v}')">${v||'כל צורות ההכנה'}</button>`).join('');
+  }
+  function chooseCustomFoodState(v){state.customFoodState=v;renderCustomFoodStateChips();if($('customFoodQuery').value.trim())searchCustomIngredient()}
+  async function searchCustomIngredient(){
+    const q=$('customFoodQuery').value.trim();if(!q){$('customFoodQuery').focus();return}if(q.length<2)return toast('כתוב לפחות שתי אותיות',true);
+    if(!tz.ready&&state.data.tzameret?.count)await loadTzameret();
+    state.customSearchLocal=tz.ready;
+    if(tz.ready){const r=localFoodSearch(q,40);state.customSearchResults=r.results;state.customSearchParsed=r.parsed;state.customShowAll=false;renderCustomLocalResults();return}
+    $('customFoodResults').innerHTML='<div class="empty">מחפש…</div>';
+    try{
+      const found=await call('smartFoodSearch',q+(state.customFoodState?' '+state.customFoodState:''));
+      state.customSearchResults=(found.results||[]).slice(0,1).map(x=>({...x,hebrewName:x.hebrewName||x.name}));
+      state.customSearchParsed=found.parsed;
+      $('customFoodResults').innerHTML=state.customSearchResults.length?state.customSearchResults.map((x,i)=>`<div class="result"><div><b>${esc(x.hebrewName||x.name)}</b><div class="source">${x.englishName?esc(x.englishName):''}</div><div class="muted">${esc(x.assumption||'')} · ${fmt(x.calories)} קל׳ · ${fmt(x.protein)} חלבון ל-${fmt(x.baseQty)} ${esc(x.unit)}</div></div><button class="btn secondary" onclick="chooseCustomIngredient(${i})">הוסף</button></div>`).join(''):'<div class="empty">לא נמצאה התאמה ברורה. ציין צורת הכנה או הזן רכיב וערכים ידנית.</div>';
+    }catch(e){toast(e.message,true);$('customFoodResults').innerHTML='<div class="empty">החיפוש נכשל — אפשר להזין ידנית.</div>'}
+  }
+  function chooseCustomIngredient(i){const x=state.customSearchResults[i];if(!x)return;if(state.customSearchLocal){const d=defaultPortion(x,state.customSearchParsed),ing={name:x.name,src:x.source,amount:d.amount,unit:d.unit,per:{baseQty:Number(x.baseQty)||100,unit:x.unit||'גרם',calories:Number(x.calories)||0,protein:Number(x.protein)||0,carbs:Number(x.carbs)||0,fat:Number(x.fat)||0},units:x.units||[]};recalcCustomIngredient(ing);state.customIngredients.push(ing)}else{const parsed=state.customSearchParsed||{},amount=Number(parsed.amount)||x.baseQty||100,unit=parsed.unit||x.unit||'גרם',ratio=amount*(x.unit==='גרם'&&['יחידה','פרוסה','מנה','פחית'].includes(unit)?estimatedGrams(x.name,unit):1)/(Number(x.baseQty)||100);state.customIngredients.push({name:x.hebrewName||x.name,amount,unit,calories:fmt((Number(x.calories)||0)*ratio),protein:fmt((Number(x.protein)||0)*ratio),carbs:fmt((Number(x.carbs)||0)*ratio),fat:fmt((Number(x.fat)||0)*ratio)})}renderCustomIngredients();$('customFoodResults').innerHTML='';$('customFoodQuery').value=''}
+  async function saveCustomMeal(addToToday=false,forcePermanent=false){const replaceKey=state.replaceBuiltinKey||'';const name=$('customMealName').value.trim(),category=$('customMealCategory').value,savePermanent=forcePermanent||$('customSavePermanent').checked||!!state.editingMealId;if(!name)return toast('יש להזין שם לארוחה',true);if(!state.customIngredients.some(x=>x.name.trim()&&x.amount>0))return toast('יש להוסיף לפחות מרכיב אחד',true);const missing=state.customIngredients.find(x=>x.name.trim()&&x.amount>0&&!['calories','protein','carbs','fat'].some(k=>Number(x[k])>0));if(missing)return toast('חסרים ערכים תזונתיים עבור '+missing.name,true);loading();try{state.data=await call('saveCustomMeal',{date:state.date,mealId:state.editingMealId,category,name,ingredients:state.customIngredients,savePermanent,addToToday});if(replaceKey&&savePermanent){try{const d=await call('hideMeal',{key:replaceKey});state.data.meals=d.meals;state.data.hiddenMeals=d.hiddenMeals}catch(_){}}state.category=category;closeCustomMealBuilder();renderAll();if(addToToday)showView('today');toast(addToToday?(savePermanent?'הארוחה נשמרה ונוספה להיום':'הארוחה נוספה להיום'):(savePermanent?'הארוחה הקבועה נשמרה':'הארוחה נשמרה'))}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function removeCustomMeal(e,id,skipConfirm){e&&e.stopPropagation&&e.stopPropagation();if(!skipConfirm&&!confirm('למחוק את הארוחה הקבועה? היומן הקודם לא יימחק.'))return;loading();try{state.data=await call('deleteCustomMeal',id,state.date);renderAll();undoToast('הארוחה נמחקה',async()=>{loading();try{state.data=await call('restoreCustomMeal',id,state.date);renderAll();toast('הארוחה הוחזרה')}catch(err){toast(err.message,true)}finally{loading(false)}})}catch(err){toast(err.message,true)}finally{loading(false)}}
+  async function quickShake(){await mutate('addProteinShake',state.date,'השייק נוסף')}
+  function freeCalories(){$('freeSheet').classList.remove('hide');setTimeout(()=>$('freeCaloriesInput').focus(),50)}
+  function closeFreeCalories(){$('freeSheet').classList.add('hide')}
+  async function saveFreeCalories(){const payload={date:state.date,name:$('freeName').value.trim()||'קלוריות חופשיות',calories:Number($('freeCaloriesInput').value),protein:Number($('freeProtein').value),carbs:Number($('freeCarbs').value),fat:Number($('freeFat').value)};if(!payload.calories&&!payload.protein&&!payload.carbs&&!payload.fat)return toast('יש להזין לפחות ערך אחד',true);if(await mutate('addFreeCalories',payload,'נוסף ליומן')){closeFreeCalories();['freeCaloriesInput','freeProtein','freeCarbs','freeFat'].forEach(id=>$(id).value=0);$('freeName').value=''}}
+  async function runQuickAction(id){await mutate('addQuickAction',{id,date:state.date},'נוסף ליומן')}
+  async function saveQuickAction(){const payload={name:$('quickName').value.trim(),calories:Number($('quickCalories').value),protein:Number($('quickProtein').value),carbs:Number($('quickCarbs').value),fat:Number($('quickFat').value)};if(!payload.name)return toast('יש להזין שם לקיצור',true);loading();try{state.data.quickActions=await call('saveQuickAction',payload);renderQuickActions();renderQuickActionManager();['quickName','quickCalories','quickProtein','quickCarbs','quickFat'].forEach(id=>$(id).value='');toast('קיצור הדרך נוסף')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function deleteQuickAction(id,skipConfirm){if(!skipConfirm&&!confirm('למחוק את קיצור הדרך?'))return;const item=(state.data.quickActions||[]).find(x=>x.id===id);loading();try{state.data.quickActions=await call('deleteQuickAction',id);renderQuickActions();renderQuickActionManager();undoToast('קיצור הדרך נמחק',async()=>{if(!item)return;loading();try{state.data.quickActions=await call('saveQuickAction',item);renderQuickActions();renderQuickActionManager();toast('קיצור הדרך הוחזר')}catch(e){toast(e.message,true)}finally{loading(false)}})}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function hideMeal(e,key){e.stopPropagation();if(!confirm('להסתיר את הארוחה הקבועה? אפשר לשחזר אותה בהגדרות.'))return;loading();try{const data=await call('hideMeal',{key});state.data.meals=data.meals;state.data.hiddenMeals=data.hiddenMeals;renderMeals();renderHiddenMeals();toast('הארוחה הוסתרה')}catch(err){toast(err.message,true)}finally{loading(false)}}
+  async function restoreMeal(key){loading();try{const data=await call('restoreMeal',key);state.data.meals=data.meals;state.data.hiddenMeals=data.hiddenMeals;renderMeals();renderHiddenMeals();toast('הארוחה הוחזרה')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function changeAmount(id,amount){await mutate('updateEntry',{entryId:id,amount:Number(amount)},'הכמות עודכנה')}
+  async function removeEntry(id,skipConfirm){if(!skipConfirm&&!confirm('להסיר את הפריט?'))return;if(await mutate('deleteEntry',id,''))undoToast('הפריט הוסר',()=>mutate('restoreEntry',id,'הפריט הוחזר'))}
+  async function removeGroup(id,skipConfirm){if(!skipConfirm&&!confirm('להסיר את כל הארוחה?'))return;if(await mutate('deleteMealGroup',id,''))undoToast('הארוחה הוסרה',()=>mutate('restoreMealGroup',id,'הארוחה הוחזרה'))}
+  async function saveMetrics(){loading();try{const day=await call('saveDailyMetrics',{date:state.date,weight:$('weight').value,bodyFat:$('bodyFat').value,note:$('dailyNote').value});applyDay(day);renderDay();state.data.process=await call('getProcessData');renderProcess(false);toast('המדדים נשמרו')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  function applyDay(day){state.data.entries=day.entries;state.data.totals=day.totals;state.data.history=day.history;state.nutritionJournal=null;state.data.recentFoods=day.recentFoods||state.data.recentFoods;if(day.myFoods)state.data.myFoods=day.myFoods}
+  function renderDay(){renderDate();renderTotals();renderEntries();renderHistory();renderRecentFoods();renderMetrics();saveCachedStateSoon()}
+  async function mutate(fn,payload,msg){loading();try{applyDay(await call(fn,payload));renderDay();if(msg)toast(msg);return true}catch(e){toast(e.message,true);return false}finally{loading(false)}}
+  async function testUsdaConnection(){loading();try{toast(await call('testUsdaConnection'))}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function estimateDishFromText(){const name=$('foodQuery').value.trim();if(name.length<2)return toast('כתוב את שם המנה למעלה',true);loading();try{state.dishEstimate=await call('estimateDish',name,$('dishExtras').value.trim(),{skin:!!state.dishSkin,bone:!!state.dishBone});renderDishEstimate()}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function estimateWithOpenAI(){
+    const name=$('foodQuery').value.trim();if(name.length<2)return toast('כתוב תחילה מה אכלת',true);
+    loading();try{
+      state.dishEstimate=await call('estimateFoodWithOpenAI',name,$('dishExtras').value.trim());
+      state.dishSkin=false;state.dishBone=false;renderDishEstimate();
+      toast(state.dishEstimate.fromCache?'אומדן קודם נטען בלי בקשה נוספת':'התקבל אומדן AI — בדוק כמויות לפני הוספה');
+    }catch(e){toast(e.message,true)}finally{loading(false)}
+  }
+  function dishValues(x){const food=x.manualOverride?x.manual:(x.choices.length?x.choices[x.choice||0]:x.manual||{});const scale=(Number(x.amount)||0)/100;return {calories:fmt((Number(food.calories)||0)*scale),protein:fmt((Number(food.protein)||0)*scale),carbs:fmt((Number(food.carbs)||0)*scale),fat:fmt((Number(food.fat)||0)*scale)}}
+  function dishTotals(){return (state.dishEstimate?.items||[]).reduce((sum,x)=>{const v=dishValues(x);for(const k of ['calories','protein','carbs','fat'])sum[k]=fmt(sum[k]+v[k]);return sum},{calories:0,protein:0,carbs:0,fat:0})}
+  function dishMeasureGrams(x,measure){
+    if(measure==='כף')return /סלט/.test(x.label)?30:15;
+    if(measure==='כפית')return 5;
+    if(measure==='מעט')return 10;
+    if(measure==='הרבה')return 30;
+    if(measure==='יחידה')return /פית/.test(x.label)?90:100;
+    return 1; 
+  }
+  function renderDishEstimate(){
+    const result=state.dishEstimate,el=$('dishPreview');if(!result){el.innerHTML='';return}
+    const missing=result.items.some(x=>!x.choices.length&&!Object.values(x.manual||{}).some(v=>Number(v)>0)),t=dishTotals();
+    const animal=result.source!=='ai'&&/עוף|chicken|סלמון|דג|fish|salmon/.test(result.name);
+    el.innerHTML=`<h3 style="margin-top:16px">${esc(result.name)} — רכיבי המנה</h3><p class="muted">${esc(result.note)}</p>${animal?`<div class="dish-switches"><label><input type="checkbox" ${state.dishSkin?'checked':''} onchange="state.dishSkin=this.checked;estimateDishFromText()"> עם עור</label><label><input type="checkbox" ${state.dishBone?'checked':''} onchange="state.dishBone=this.checked;estimateDishFromText()"> המשקל כולל עצם</label></div>`:''}`+
+      result.items.map((x,i)=>{
+        const mode=x.measure||(/פית/.test(x.label)?'יחידה':'גרם'),factor=dishMeasureGrams(x,mode),shown=mode==='מעט'||mode==='הרבה'?1:fmt(x.amount/factor);
+        return `<div class="dish-row"><div class="history-top"><b>${esc(x.label)}</b><button class="trash mini" onclick="removeDishPart(${i})">✕</button></div>
+          <small class="muted">${esc(x.assumption)}${x.choices.length?' · מקור: '+esc(x.choices[0].name):''}</small>
+          <div class="row"><div class="field"><label>כמות</label><input class="dish-amount" type="number" min="0.1" step="0.1" value="${shown}" oninput="setDishAmount(${i},this.value,false)" onchange="setDishAmount(${i},this.value,true)"></div><div class="field"><label>מידה</label><select onchange="setDishMeasure(${i},this.value)">${['גרם','מ״ל','יחידה','מעט','כפית','כף','הרבה'].map(v=>`<option ${mode===v?'selected':''}>${v}</option>`).join('')}</select></div></div>
+          <div class="muted">${fmt(x.amount)} גרם חלק אכיל בחישוב${mode==='גרם'||mode==='יחידה'?'':' (המרת מידה משוערת)'}</div>
+          <div>${x.choices.length?`<b>${esc(x.label)} · ערך תזונתי מומלץ</b>`:'<span class="muted">לא נמצא — הזן ערכים ל־100 גרם</span>'}</div>
+          <details><summary class="muted">ערכים / תיקון ל־100 גרם</summary><div class="custom-values">${[['קל׳','calories'],['חלבון','protein'],['פחמ׳','carbs'],['שומן','fat']].map(([label,key])=>`<div class="field"><label>${label} ל־100</label><input type="number" min="0" step="0.1" value="${Number(x.manual?.[key]??x.choices[0]?.[key])||0}" onchange="setDishManual(${i},'${key}',this.value)"></div>`).join('')}</div></details>
+          <div class="muted">לכמות שבחרת: ${fmt(dishValues(x).calories)} קל׳ · ${fmt(dishValues(x).protein)} חלבון · ${fmt(dishValues(x).carbs)} פחמ׳ · ${fmt(dishValues(x).fat)} שומן</div></div>`
+      }).join('')+`<div class="dish-total">סה״כ משוער: ${fmt(t.calories)} קל׳ · ${fmt(t.protein)} ג׳ חלבון · ${fmt(t.carbs)} ג׳ פחמימות · ${fmt(t.fat)} ג׳ שומן</div>${missing?'<p class="muted">כדי לשמור, מלא את ערכי הרכיבים שלא נמצאו או הסר אותם.</p>':''}<div class="field"><label>שמירת המנה גם בארוחות הקבועות</label><select id="dishSaveCategory">${['בוקר','צהריים','ערב'].map(c=>`<option ${c===(state.dishCategory||((new Date()).getHours()<11?'בוקר':(new Date()).getHours()<17?'צהריים':'ערב'))?'selected':''}>${c}</option>`).join('')}</select></div><button class="btn full" onclick="saveDishEstimate()">הוסף את המנה ליום ושמור לשימוש חוזר</button>`;
+  }
+  function setDishAmount(i,value,render=true){const x=state.dishEstimate.items[i],n=Number(value);if(!Number.isFinite(n)||n<=0)return;const mode=x.measure||(/פית/.test(x.label)?'יחידה':'גרם');x.amount=n*dishMeasureGrams(x,mode);if(render)renderDishEstimate();else{const total=dishTotals();$('dishPreview').querySelector('.dish-total').textContent=`סה״כ משוער: ${fmt(total.calories)} קל׳ · ${fmt(total.protein)} ג׳ חלבון · ${fmt(total.carbs)} ג׳ פחמימות · ${fmt(total.fat)} ג׳ שומן`}}
+  function setDishMeasure(i,mode){const x=state.dishEstimate.items[i];x.measure=mode;renderDishEstimate()}
+  function chooseDishFood(i,value){state.dishEstimate.items[i].choice=Number(value)||0;renderDishEstimate()}
+  function setDishManual(i,key,value){const n=Number(value);if(!Number.isFinite(n)||n<0)return toast('ערך לא תקין',true);const x=state.dishEstimate.items[i];x.manual=x.manual||{calories:x.choices[0]?.calories||0,protein:x.choices[0]?.protein||0,carbs:x.choices[0]?.carbs||0,fat:x.choices[0]?.fat||0};x.manual[key]=n;x.manualOverride=true;renderDishEstimate()}
+  function removeDishPart(i){state.dishEstimate.items.splice(i,1);renderDishEstimate()}
+  async function saveDishEstimate(){
+    const result=state.dishEstimate;if(!result||!result.items.length)return toast('יש להוסיף לפחות רכיב אחד',true);
+    if(result.items.some(x=>!x.choices.length&&!Object.values(x.manual||{}).some(v=>Number(v)>0)))return toast('חסרים ערכים לרכיב. מלא ערכים או הסר אותו.',true);
+    state.dishCategory=$('dishSaveCategory')?.value||state.category;
+    const items=result.items.map(x=>({label:x.label,amount:x.amount,unit:'גרם',...dishValues(x),
+      source:x.source||(x.manualOverride?'ערכים שתוקנו ידנית':x.choices.length?'USDA FoodData Central · '+x.choices[0].name:'ערכים שהוזנו ידנית'),
+      notes:x.assumption+(x.measure&&x.measure!=='גרם'?' · מידה שנבחרה: '+x.measure:'')}));
+    const total=dishTotals();if(!total.calories&&!total.protein&&!total.carbs&&!total.fat)return toast('לא נמצאו ערכים תזונתיים',true);
+    if(!await mutate('saveDishEntries',{date:state.date,name:result.name,items,category:state.dishCategory},'המנה ורכיביה נוספו ליומן ולארוחות הקבועות'))return;
+    state.data=await call('getBootstrapData',state.date);renderAll();
+    state.dishEstimate=null;state.dishSkin=false;state.dishBone=false;$('dishPreview').innerHTML='';$('foodQuery').value='';$('dishExtras').value='';document.activeElement?.blur?.();showView('today');
+  }
+  let foodSearchTimer, foodSearchSerial=0;
+  function scheduleDishEstimate(){clearTimeout(foodSearchTimer);if(!$('dishExtras').value.trim()||!state.data.settings?.has_usda_key)return;foodSearchTimer=setTimeout(()=>{if($('foodQuery').value.trim().length>=2)estimateDishFromText()},1400)}
+  function isMixedDish(q){return (/\s+עם\s+|שווארמה.*פית|פית.*שווארמה|עוף.*תפוחי? אדמה/.test(q))&&!/^(קפה|coffee|espresso)/i.test(q.trim())}
+  async function searchFood(silent=false){
+    const q=$('foodQuery').value.trim();if(q.length<2){if(!silent)toast('כתוב לפחות שתי אותיות',true);return}
+    if(!tz.ready&&state.data.tzameret?.count)await loadTzameret();
+    if(tz.ready){const r=localFoodSearch(q,40);if(state.localQuery!==q)state.showAllFoods=false;state.localQuery=q;state.localResults=r.results;state.localParsed=r.parsed;renderLocalFoodResults();return}
+    if(isMixedDish(q)){state.smartResults=[];$('foodResults').innerHTML='';if(state.data.settings?.has_usda_key)await estimateDishFromText();else $('foodResults').innerHTML='<div class="empty">למנה מעורבת אפשר ללחוץ ״חשב בעזרת AI״, או להזין רכיבים ידנית. בקשת AI תישלח רק בלחיצה.</div>';return}
+    const serial=++foodSearchSerial;
+    $('foodResults').innerHTML='<div class="empty">מחפש ערכים…</div>';
+    try{
+      const data=await call('smartFoodSearch',q+(state.foodState?' '+state.foodState:''));
+      if(serial!==foodSearchSerial||q!==$('foodQuery').value.trim())return;
+      state.smartParsed=data.parsed;state.smartResults=(data.results||[]).map(x=>({...x,hebrewName:x.hebrewName||x.name}));
+      const amount=Number(data.parsed.amount)||1,unit=data.parsed.unit||'גרם',shown=state.showAllFoods?state.smartResults:state.smartResults.slice(0,1);
+      $('foodResults').innerHTML=`<div class="muted" style="margin-top:12px">${fmt(amount)} ${esc(unit)} ${esc(data.parsed.name)} — תוצאות מהמאגר; בדוק שם וצורת הכנה${shown.length>1?' ואפשרויות נוספות':''}:</div>`+
+        (shown.length?shown.map((x,i)=>{const ratio=amount*(x.unit==='גרם'&&['יחידה','פרוסה','מנה','פחית'].includes(unit)?estimatedGrams(x.name,unit):1)/(Number(x.baseQty)||100);
+          return `<div class="smart-result"><div class="history-top"><div><b>${esc(x.hebrewName)}</b><div class="source">${esc(x.source)}${x.englishName?' · '+esc(x.englishName):''}</div><div class="muted">${esc(x.assumption||'')}</div></div><button class="btn secondary mini" onclick="selectSmartFood(${i})">בחר</button></div><div class="muted">לכמות שבחרת: ${fmt(x.calories*ratio)} קל׳ · ${fmt(x.protein*ratio)} חלבון · ${fmt(x.carbs*ratio)} פחמ׳ · ${fmt(x.fat*ratio)} שומן</div></div>`}).join('')+(state.smartResults.length>1&&!state.showAllFoods?'<button class="btn light full" onclick="state.showAllFoods=true;searchFood()">הצג עוד תוצאות</button>':''):
+          '<div class="empty">לא נמצאה התאמה מדויקת. נסה שם אחר או הזן ערכים ידנית.</div>');
+    }catch(e){if(serial!==foodSearchSerial)return;toast(e.message,true);$('foodResults').innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+  }
+
+  function closeFoodChoice(){$('foodChoiceSheet').classList.add('hide')}
+  function selectSmartFood(i){const x=state.smartResults[i],p=state.smartParsed;if(!x)return;state.selectedFood=x;$('foodName').value=x.hebrewName||x.name;$('foodBase').value=x.baseQty||100;$('foodUnit').value=p?.unit||x.unit||'גרם';$('foodAmount').value=p?.amount||x.baseQty||100;state.foodGramsPerUnit=estimatedGrams(x.name,$('foodUnit').value);$('foodCalories').value=x.calories||0;$('foodProtein').value=x.protein||0;$('foodCarbs').value=x.carbs||0;$('foodFat').value=x.fat||0;updateFoodChoice();$('foodChoiceSheet').classList.remove('hide')}
+
+  function updateFoodChoice(){const x=state.selectedFood;if(!x)return;const amount=Number($('foodAmount').value)||0,unit=$('foodUnit').value,isProduct=/^\d{8,14}$/.test(String(x.sourceId||''));$('foodChoice').innerHTML=`<div class="dish-total"><b>${esc(x.hebrewName||x.name)}</b>${isProduct?`<div class="field"><label>שם המוצר — כך תמצא אותו בפעם הבאה</label><input id="quickFoodName" value="${esc($('foodName').value)}" oninput="$('foodName').value=this.value"></div>`:''}<div class="row"><div class="field"><label>כמות</label><input id="quickFoodAmount" type="number" min="0.1" step="0.1" inputmode="decimal" value="${amount}" oninput="$('foodAmount').value=this.value;updateFoodChoiceTotals()"></div><div class="field"><label>יחידה</label><select id="quickFoodUnit" onchange="changeFoodChoiceUnit(this.value)">${foodUnitOptions(x).map(u=>`<option value="${esc(u)}" ${unit===u?'selected':''}>${esc(unitLabel(x,u))}</option>`).join('')}</select></div></div><div class="field" id="foodWeightField"><label>משקל יחידה בגרמים — אפשר לתקן</label><input id="quickFoodGrams" type="number" min="1" step="1" value="${fmt(Number(state.foodGramsPerUnit)||foodUnitGrams(x,unit)||100)}" oninput="state.foodGramsPerUnit=Number(this.value);updateFoodChoiceTotals()"></div><div id="quickFoodTotals" class="muted"></div><button class="btn full" onclick="saveFood()">הוסף ליום</button><button class="btn light full" style="margin-top:8px" onclick="closeFoodChoice();$('foodForm').closest('details').open=true;$('foodForm').scrollIntoView({behavior:'smooth'})">תיקון ערכים</button></div>`;updateFoodChoiceTotals()}
+
+  function updateFoodChoiceTotals(){const x=state.selectedFood;if(!x||!$('quickFoodTotals'))return;const unit=$('foodUnit').value,needsWeight=x.unit==='גרם'&&unit!=='גרם'&&unit!=='מ״ל',known=(x.units||[]).some(u=>u[0]===unit);if(needsWeight&&!(Number(state.foodGramsPerUnit)>0))state.foodGramsPerUnit=foodUnitGrams(x,unit)||100;if($('foodWeightField'))$('foodWeightField').style.display=needsWeight?'block':'none';const m=portionMacros(x,$('foodAmount').value,unit,needsWeight?Number(state.foodGramsPerUnit):0);$('quickFoodTotals').textContent=`סה״כ: ${fmt(m.calories)} קל׳ · ${fmt(m.protein)} ג׳ חלבון · ${fmt(m.carbs)} ג׳ פחמימות · ${fmt(m.fat)} ג׳ שומן${needsWeight&&!known?' (משקל יחידה משוער)':''}`}
+
+
+  function selectFood(x,parsed){state.selectedFood=x;$('foodName').value=x.name;$('foodBase').value=x.baseQty||100;$('foodUnit').value=[...$('foodUnit').options].some(o=>o.value===(parsed&&parsed.unit||x.unit))?(parsed&&parsed.unit||x.unit):'גרם';$('foodAmount').value=parsed&&parsed.amount||x.baseQty||100;$('foodCalories').value=x.calories||0;$('foodProtein').value=x.protein||0;$('foodCarbs').value=x.carbs||0;$('foodFat').value=x.fat||0;const details=$('foodForm').closest('details');if(details)details.open=true;$('foodAmount').focus();$('foodForm').scrollIntoView({behavior:'smooth'})}
+  async function saveFood(){const p={date:state.date,category:'נוסף',name:$('foodName').value,amount:Number($('foodAmount').value),baseQty:Number($('foodBase').value),unit:$('foodUnit').value,calories:Number($('foodCalories').value),protein:Number($('foodProtein').value),carbs:Number($('foodCarbs').value),fat:Number($('foodFat').value),saveToMyFoods:$('saveFood').checked,source:state.selectedFood?state.selectedFood.source:'הזנה ידנית',sourceId:state.selectedFood?state.selectedFood.sourceId:'',sourceBaseUnit:state.selectedFood?state.selectedFood.unit:$('foodUnit').value,gramsPerUnit:Number(state.foodGramsPerUnit)||undefined,brand:state.selectedFood&&state.selectedFood.brand||'',units:state.selectedFood&&state.selectedFood.source!=='צמרת'?(state.selectedFood.units||[]):[]};if(!p.calories&&!p.protein&&!p.carbs&&!p.fat&&!state.selectedFood?.sourceId)return toast('אין למזון ערכים תזונתיים. בחר תוצאה או מלא ערכים ידנית.',true);if(!await mutate('saveFood',p,'המזון נוסף'))return;['foodName','foodCalories','foodProtein','foodCarbs','foodFat','foodQuery'].forEach(id=>$(id).value='');$('foodResults').innerHTML='';$('foodChoice').innerHTML='';state.selectedFood=null;state.smartParsed=null;closeFoodChoice();showView('today')}
+  async function barcodeLookup(){const code=String($('barcode').value||'').replace(/\D/g,'');loading();try{const x=await call('lookupBarcode',code);showView('add');openFoodChoice(x,null);toast(x.source==='המזונות שלי'?'המוצר נמצא במוצרים ששמרת':'המוצר נמצא — בדוק מול האריזה')}catch(e){if(/לא נמצא/.test(e.message)){manualBarcodeProduct(code)}else toast(e.message,true)}finally{loading(false)}}
+  
+  function manualBarcodeProduct(code){showView('add');state.selectedFood={name:'',brand:'',baseQty:100,unit:'גרם',calories:0,protein:0,carbs:0,fat:0,source:'הזנה ידנית',sourceId:code};$('foodName').value='';$('foodBase').value=100;setFoodUnit('גרם');$('foodAmount').value=100;['foodCalories','foodProtein','foodCarbs','foodFat'].forEach(id=>$(id).value='');const details=$('foodForm').closest('details');if(details)details.open=true;$('foodForm').scrollIntoView({behavior:'smooth'});$('foodName').focus();toast('המוצר לא נמצא במאגר. הזן פעם אחת את השם והערכים ל-100 גרם מהאריזה — בפעם הבאה הוא יעלה לבד')}
+  async function scanBarcodePhoto(input){const file=input.files&&input.files[0];if(!file)return;loading();try{const code=await decodeBarcodeFile(file);if(!code)throw new Error('לא זוהה ברקוד. צלם מקרוב, ישר ובאור טוב, כך שהברקוד ימלא את רוב התמונה');$('barcode').value=code;loading(false);await barcodeLookup()}catch(e){toast(e.message||'לא ניתן לקרוא את הברקוד',true)}finally{loading(false);input.value=''}}
+  async function saveSettings(){loading();try{state.data=await call('saveSettings',{calorie_goal:Number($('calorieGoal').value),protein_goal:Number($('proteinGoal').value),free_calories_goal:Number($('freeGoal').value),shake_calories:Number($('shakeCalories').value),shake_protein:Number($('shakeProtein').value),shake_carbs:Number($('shakeCarbs').value),shake_fat:Number($('shakeFat').value),usda_api_key:$('usdaKey').value.trim(),clear_usda_key:$('clearUsda').checked,openai_api_key:$('openaiKey').value.trim(),clear_openai_key:$('clearOpenai').checked});state.date=state.data.date;$('clearUsda').checked=false;$('clearOpenai').checked=false;renderAll();toast('ההגדרות נשמרו')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function moveDate(n){const d=new Date(state.date+'T12:00:00');d.setDate(d.getDate()+n);await loadDate(d.toISOString().slice(0,10))}async function goToday(){loading();try{const day=await call('getDayView','');state.todayDate=day.date;showDay(day)}catch(e){toast(e.message,true)}finally{loading(false)}}async function loadDate(date){loading();try{showDay(await call('getDayView',date))}catch(e){toast(e.message,true)}finally{loading(false)}}function showDay(day){state.date=day.date;applyDay(day);renderDay()}
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));const fmt=n=>Math.round((Number(n)||0)*10)/10;const displayDate=d=>new Intl.DateTimeFormat('he-IL',{day:'2-digit',month:'2-digit'}).format(new Date(d+'T12:00:00'));
+
+  function toggleExtras(){const p=$('extrasPanel');p.style.display=p.style.display==='none'?'block':'none'}
+  function estimatedGrams(name,unit){const n=String(name).toLowerCase();if(unit==='פחית')return 330;if(unit==='פרוסה')return /לחם|bread|טוסט/.test(n)?30:/עוגה|cake/.test(n)?90:25;if(unit==='יחידה'){if(/בננ|banana/.test(n))return 120;if(/תפוז|orange/.test(n))return 130;if(/קלמנטינ|clementine/.test(n))return 75;if(/תפוח|apple/.test(n))return 180;if(/ביצ|egg/.test(n))return 50;if(/מעדן|יוגורט/.test(n))return 150;if(/סופגני|donut/.test(n))return 85;if(/לחמני|bun/.test(n))return 75;if(/פית|pita/.test(n))return 80;if(/טורטי|tortilla/.test(n))return 45;if(/פריכי|rice cake/.test(n))return 9;}return 100}
+  function renderFoodStateChips(){const el=$('foodStateChips');if(!el)return;const q=$('foodQuery').value.trim();if(tz.ready||/^(בננה|תפוז|קלמנטינה|תפוח|banana|orange|apple|clementine)(?:\s|$)/i.test(q)||/עוגה|cake/.test(q)){el.innerHTML='';state.foodState='';return}el.innerHTML=['','נא','מבושל','אפוי','על המחבת','מטוגן','לפני בישול'].map(v=>`<button class="chip ${state.foodState===v?'active':''}" onclick="chooseFoodState('${v}')">${v||'כל צורות ההכנה'}</button>`).join('')}
+
+  function chooseFoodState(v){state.foodState=v;renderFoodStateChips();if($('foodQuery').value.trim())searchFood()}
+  function copyWeightToSets(){const first=$('setRows').querySelector('.set-weight')?.value;document.querySelectorAll('.set-weight').forEach(x=>x.value=first)}
+  function restoreActiveSession(){state.sessionId='';try{const x=JSON.parse(localStorage.getItem('elaiWorkoutSession')||'null');if(x?.date===state.date&&state.data.workout?.sessions?.some(s=>s.id===x.id&&s.status==='active')){state.sessionId=x.id;$('sessionName').value=x.name}}catch(e){}}
+  function renderSessionBanner(){const e=$('activeSessionBanner');if(!e)return;const id=state.activePlan?.sessionId||state.sessionId,s=state.data.workout?.sessions?.find(x=>x.id===id);e.innerHTML=s?`אימון פעיל: <b>${esc(s.name)}</b> · ${displayDate(s.date)} · ${s.items.length} תרגילים נשמרו${s.items.length?'<div class="muted">'+s.items.map(x=>esc(x.exercise)).join(' · ')+'</div>':''}`:'לחץ ״צור אימון חדש״ כדי לשמור תרגילים לאותו אימון.'}
+  async function finishActiveWorkout(){if(!state.sessionId)return;const id=state.sessionId,minutes=prompt('כמה דקות נמשך האימון? השאר ריק לחישוב אוטומטי','');if(minutes===null)return;loading();try{state.data.workout=await call('finishWorkoutSession',{id,minutes});state.sessionId='';localStorage.removeItem('elaiWorkoutSession');state.openWorkoutSessionId=id;renderWorkouts(false);showView('workoutDiary');toast('האימון הסתיים ונשמר ביומן')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  function finishCurrentWorkout(){if(state.activePlan)return finishPlanWorkout();return finishActiveWorkout()}
+  async function removeSelectedExercise(){const id=$('exerciseSelect').value;if(!id)return toast('בחר תרגיל להסרה',true);await removeExercise(id)}
+  async function renameSession(id){const s=state.data.workout.sessions.find(x=>x.id===id),name=prompt('שם האימון',s?.name||'');if(!name?.trim())return;loading();try{state.data.workout=await call('renameWorkoutSession',{id,name:name.trim()});if(state.sessionId===id){$('sessionName').value=name.trim();localStorage.setItem('elaiWorkoutSession',JSON.stringify({id,date:state.date,name:name.trim()}))}renderWorkoutHistory();renderSessionBanner()}catch(e){toast(e.message,true)}finally{loading(false)}}
+  function moveWorkoutToSession(id){const from=state.data.workout.history.find(x=>x.id===id)?.sessionId,sessions=(state.data.workout.sessions||[]).filter(s=>s.id!==from).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,40);if(!sessions.length)return toast('אין אימון אחר להעברה',true);$('moveList').innerHTML=sessions.map(s=>`<button class="pick-row" onclick="moveWorkoutTo('${esc(id)}','${esc(s.id)}')"><b>${displayDate(s.date)} · ${esc(s.name)}</b><small>${s.items.length} תרגילים${s.status==='active'?' · אימון פעיל':''}</small></button>`).join('');$('moveSheet').classList.remove('hide')}
+  function openVideoPlayer(preview,url,id){const local=id&&state.localVideos&&state.localVideos[id];$('videoLocal').style.display=local?'block':'none';$('videoFrame').style.display=local?'none':'block';$('videoHint').style.display=local?'none':'block';if(local){$('videoLocal').src=local;$('videoFrame').src='about:blank'}else{$('videoLocal').removeAttribute('src');$('videoFrame').src=preview}$('videoFallback').href=url;$('playerSheet').classList.remove('hide')}
+  function reloadVideoFrame(){const f=$('videoFrame'),s=f.src;f.src='about:blank';setTimeout(()=>{f.src=s},50)}
+  function closeVideoPlayer(){$('videoFrame').src='about:blank';$('playerSheet').classList.add('hide')}
+
+  async function refreshProcess(){
+    try{state.data.process=await call('getProcessData');renderProcess(false)}
+    catch(e){toast('לא ניתן לטעון את המעקב: '+e.message,true)}
+  }
+  function loadProcessFormDate(){
+    const row=(state.data.process?.rows||[]).find(x=>x.date===$('processDate').value)||{};
+    [['Weight','weight'],['Waist','waist'],['Arm','arm'],['Chest','chest'],['Thigh','thigh'],['Bloating','bloating'],['Note','note']].forEach(([id,key])=>{
+      $('process'+id).value=row[key]===undefined||row[key]===null?'':row[key];
+    });
+  }
+  function processSparkline(rows,key){
+    const points=rows.filter(x=>typeof x[key]==='number'&&isFinite(x[key]));
+    if(points.length<2)return '';
+    const vals=points.map(x=>x[key]),min=Math.min(...vals),max=Math.max(...vals),range=Math.max(1,max-min);
+    const coords=vals.map((v,i)=>[8+i*284/(vals.length-1),60-48*(v-min)/range]);
+    return `<svg viewBox="0 0 300 68" role="img" aria-label="מגמת ${key==='weight'?'משקל':'היקף טבור'}" style="width:100%;height:68px;display:block"><polyline fill="none" stroke="#267c67" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${coords.map(p=>p.map(n=>n.toFixed(1)).join(',')).join(' ')}"/>${coords.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="#267c67"/>`).join('')}</svg>`;
+  }
+  function renderProcess(resetDate=false){
+    const p=state.data?.process;if(!p)return;
+    if(resetDate||!$('processDate').value)$('processDate').value=p.today||state.data.date;
+    $('processDate').max=p.today||state.data.date;
+    const a=p.assessment||{},rows=p.rows||[];
+    $('processAssessment').innerHTML=`<h3>${esc(a.title||'מעקב תהליך')}</h3><p>${esc(a.message||'')}</p><p><b>מה לעשות:</b> ${esc(a.action||'להמשיך למדוד בעקביות.')}</p>${a.bloatingTip?'<p class="subtle">'+esc(a.bloatingTip)+'</p>':''}${a.proteinTip?'<p class="subtle">'+esc(a.proteinTip)+'</p>':''}<div class="journal-summary"><span>שקילות ב־7 הימים האחרונים: ${a.weightThisWeek||0}/2</span><span>מדידות טבור ב־7 הימים האחרונים: ${a.measureThisWeek||0}/1</span></div>${a.missing?.length?'<p class="muted">כדי להסיק מגמה: '+a.missing.map(esc).join(' · ')+'</p>':''}<p class="muted">70 ק״ג הוא יעד ארוך טווח, ללא יעד זמן או המלצה אוטומטית לעלות קלוריות. הערכה זו אינה מודדת ישירות מסת שריר או אחוז שומן.</p>`;
+    const val=(n,unit,signed=false)=>n==null?'אין עדיין השוואה':(signed&&n>0?'+':'')+fmt(n)+' '+unit;
+    const recent=rows.filter(x=>x.date>=new Date(new Date((p.today||state.data.date)+'T12:00:00').getTime()-42*86400000).toISOString().slice(0,10));
+    const other=p.otherTrends||{};
+    $('processTrends').innerHTML=`<div class="journal-summary"><span>משקל: ${val(a.weightRate,'ק״ג לשבוע',true)}</span><span>טבור: ${val(a.waistDelta,'ס״מ',true)}</span><span>ביצועים חוזרים: ${val(a.strengthChange,'%',true)} (${a.matchedExercises||0} תרגילים)</span></div><div class="muted">משקל</div>${processSparkline(recent,'weight')}<div class="muted">היקף טבור</div>${processSparkline(recent,'waist')}<div class="journal-summary"><span>יד: ${val(other.arm,'ס״מ',true)}</span><span>חזה: ${val(other.chest,'ס״מ',true)}</span><span>ירך: ${val(other.thigh,'ס״מ',true)}</span></div><p class="muted">נפיחות: ${other.bloatingAverage==null?'אין דיווחים':fmt(other.bloatingAverage)+'/3 בממוצע על פני '+other.bloatingCount+' דיווחים'}. רישום חלבון: ${p.nutrition?.loggedDays||0}/14 ימים, ${p.nutrition?.averageProtein==null?'אין ממוצע':fmt(p.nutrition.averageProtein)+' גרם ביום מתועד'}. שינוי בהיקפים לבדו אינו מוכיח עלייה בשריר; נפיחות שנמדדת בערב מופרדת מהיקף הטבור בבוקר.</p>`;
+    $('processHistory').innerHTML=rows.length?[...rows].reverse().map(x=>`<div class="history-card" data-lp="measure:${esc(x.date)}" data-lp-title="מדידה · ${displayDate(x.date)}"><div class="history-top"><b>${displayDate(x.date)}</b><span class="inline-actions"><button class="btn light mini" onclick="editProcessDate('${esc(x.date)}')">ערוך</button><button class="trash" onclick="removeProcessDate('${esc(x.date)}')">מחק</button></span></div><div class="macro-line">${[['weight','ק״ג'],['waist','טבור'],['arm','יד'],['chest','חזה'],['thigh','ירך']].filter(([k])=>x[k]!==undefined&&x[k]!=='').map(([k,u])=>k==='weight'?fmt(x[k])+' ק״ג':u+' '+fmt(x[k])+' ס״מ').join(' · ')}${x.bloating!==undefined&&x.bloating!==''?' · נפיחות '+x.bloating+'/3':''}</div>${x.note?'<p class="muted">'+esc(x.note)+'</p>':''}</div>`).join(''):'<p class="muted">אין עדיין מדידות. התחל בשקילה הראשונה.</p>';
+    loadProcessFormDate();
+  }
+  function editProcessDate(date){$('processDate').value=date;loadProcessFormDate();$('processDate').scrollIntoView({behavior:'smooth',block:'center'})}
+  async function saveProcess(){
+    const payload={date:$('processDate').value,weight:$('processWeight').value,waist:$('processWaist').value,arm:$('processArm').value,chest:$('processChest').value,thigh:$('processThigh').value,bloating:$('processBloating').value,note:$('processNote').value};
+    loading();try{
+      state.data.process=await call('saveProcessCheckin',payload);
+      const row=state.data.process.rows.find(x=>x.date===payload.date),day=(state.data.history||[]).find(x=>x.date===payload.date);
+      if(row&&row.weight!==undefined){
+        if(day)day.weight=row.weight;
+        else state.data.history.unshift({date:payload.date,weight:row.weight,bodyFat:'',note:'',calories:0,protein:0,carbs:0,fat:0,status:'פתוח'});
+      }
+      renderMetrics();renderProcess(false);toast('המדידה נשמרה');
+    }catch(e){toast(e.message,true)}finally{loading(false)}
+  }
+
+  
+  const TZ_STORE_KEY='elaiTzameretData';
+  const tz={ready:false,loading:null,version:'',foods:[]};
+  const TZ_SKIP_WORDS=new Set(['גרם','גר','ג','גרמים','קל','יחידה','יחידות','כף','כפות','כפית','כפיות','כוס','כוסות','פרוסה','פרוסות','מנה','מנות','של','עם','חצי','רבע']);
+  function normHe(s){return String(s||'').toLowerCase().replace(/[\u0591-\u05C7]/g,'').replace(/["'׳״`]/g,'').replace(/[^0-9a-z\u05d0-\u05ea%.]+/g,' ').replace(/\s+/g,' ').trim()}
+  function tzIngest(raw){
+    const d=typeof raw==='string'?JSON.parse(raw):raw;if(!d||!Array.isArray(d.foods))throw new Error('bad data');
+    tz.foods=d.foods.map(f=>{const units=[];for(let i=0;i+1<f[6].length;i+=2){const u=d.units[f[6][i]];if(u)units.push([u,Number(f[6][i+1])])}
+      return {code:f[0],name:f[1],n:' '+normHe(f[1])+' ',head:normHe(String(f[1]).split(',')[0]),calories:f[2],protein:f[3],carbs:f[4],fat:f[5],baseQty:100,unit:'גרם',units,source:'צמרת',sourceId:'tz:'+f[0]}});
+    tzInferUnits();
+    tz.version=d.v;tz.ready=true;
+  }
+  
+  
+  const TZ_PACK=/אריזה|חבילה|חפיסה|שקית|קרטון|בקבוק|קופסה|שפורפרת|צנצנת|פחית|פאוץ|קילוגרם/;
+  function tzInferUnits(){
+    const fam={};
+    tz.foods.forEach(f=>{const k=f.n.trim().split(' ')[0]||'';(fam[k]||(fam[k]=[])).push(f)});
+    const famUnits={};
+    Object.keys(fam).forEach(k=>{
+      const withU=fam[k].filter(f=>f.units.length);if(withU.length<3)return;
+      const grams={};withU.forEach(f=>f.units.forEach(([u,g])=>{if(!TZ_PACK.test(u))(grams[u]||(grams[u]=[])).push(g)}));
+      const out=[];Object.keys(grams).forEach(u=>{if(grams[u].length/withU.length>=0.3){const s=grams[u].sort((a,b)=>a-b),m=s[Math.floor(s.length/2)];out.push([u,Math.round(m)])}});
+      if(out.length)famUnits[k]=out;
+    });
+    const firstWord=u=>u.split(' ')[0];
+    tz.foods.forEach(f=>f.units.sort((a,b)=>a[1]-b[1]));
+    tz.foods.forEach(f=>{
+      const k=f.n.trim().split(' ')[0]||'',fu=famUnits[k];if(!fu)return;
+      const own=f.units.filter(([u])=>!TZ_PACK.test(u)),kinds=new Set(own.map(([u])=>firstWord(u))),names=new Set(f.units.map(([u])=>u));
+      const add=fu.filter(([u])=>!names.has(u)&&(!own.length||kinds.has(firstWord(u))));
+      if(!add.length)return;
+      const all=[...f.units,...add.map(([u,g])=>[u,g,true])];
+      const sized=new Set(all.filter(([u])=>/ (קטנה|בינונית|גדולה|דקה|עבה)/.test(u)).map(([u])=>firstWord(u)));
+      f.units=all.filter(([u,,est])=>!(est&&sized.has(u)&&!/ /.test(u))).sort((a,b)=>a[1]-b[1]);
+    });
+  }
+  function loadTzameret(force=false){
+    if(tz.loading&&!force)return tz.loading;
+    const job=(async()=>{
+      if(!tz.ready){let cached=null;try{cached=localStorage.getItem(TZ_STORE_KEY)}catch(e){}if(cached){try{tzIngest(cached)}catch(e){try{localStorage.removeItem(TZ_STORE_KEY)}catch(_){}}}}
+      const status=state.data&&state.data.tzameret;
+      if(!status||!status.count||(!force&&tz.ready&&tz.version===status.version))return tz.ready;
+      const res=await call('getTzameretData',tz.ready?tz.version:'');
+      if(res&&res.json){tzIngest(res.json);try{localStorage.setItem(TZ_STORE_KEY,res.json)}catch(e){}}
+      return tz.ready;
+    })().catch(e=>{console.error(e);return tz.ready});
+    tz.loading=job;job.finally(()=>{if(tz.loading===job)tz.loading=null});
+    return job;
+  }
+  function tzTokenVariants(t){const v=[t];if(t.length>3&&/(ים|ות)$/.test(t)){v.push(t.slice(0,-2));v.push(t.slice(0,-2)+'ה')}if(t.length>3&&/ה$/.test(t))v.push(t.slice(0,-1));return v}
+  function parseFoodQuery(q){
+    const raw=String(q||'').trim(),m=raw.match(/^(\d+(?:[.,]\d+)?|חצי|רבע)\s*/);let amount=null;
+    if(m)amount=m[1]==='חצי'?0.5:m[1]==='רבע'?0.25:Number(m[1].replace(',','.'));
+    const grams=/(^|\s)(גרם|גר|ג׳|ג'|גרמים)(\s|$)/.test(raw)||/^\d+(?:[.,]\d+)?\s*(ג|גר|גרם)(\s|$)/.test(raw);
+    const tokens=normHe(raw).split(' ').filter(t=>t&&!/^\d+(\.\d+)?$/.test(t)&&!TZ_SKIP_WORDS.has(t));
+    return {amount,grams,tokens};
+  }
+  function scoreFood(f,tokens,variants,qHead){
+    let score=0;
+    for(let k=0;k<tokens.length;k++){
+      let best=-1;
+      for(const v of variants[k]){let i=f.n.indexOf(v);while(i>=0){const s=(f.n[i-1]===' '?10:2)+(v===tokens[k]?2:0)+(f.n[i-1]===' '&&f.n[i+v.length]===' '?8:0);if(s>best)best=s;i=f.n.indexOf(v,i+1)}}
+      if(best<0)return -1;score+=best;
+    }
+    if(f.head===qHead)score+=6;
+    if(variants[0].some(v=>f.n.startsWith(' '+v+' ')))score+=12;
+    return score+tzPlainBonus(f.n)-f.name.length/12;
+  }
+  
+  function tzPlainBonus(n){
+    let b=0;
+    if(/ ffq/.test(n))b-=40;
+    if(/ (מיובש|מיובשת|מיובשים|אבקה|תינוקות|תמ.ל) /.test(n))b-=12;
+    if(/ לא מבושל/.test(n))b-=6;else if(/ (מבושל|מבושלת|מבושלים|מבושלות) /.test(n))b+=2;
+    if(/ (שלמה|שלם|טרי|טריה|טריים|טריות|רגיל|רגילה) /.test(n))b+=5;
+    if(/ (בלי|ללא) קליפה /.test(n))b+=3;
+    return b;
+  }
+  function localFoodSearch(q,limit=40){
+    const p=parseFoodQuery(q);if(!p.tokens.length)return {parsed:p,results:[]};
+    const variants=p.tokens.map(tzTokenVariants),qHead=p.tokens.join(' ');
+    const mine=(state.data.myFoods||[]).map(x=>({...x,n:' '+normHe(x.name+' '+(x.brand||''))+' ',head:normHe(String(x.name).split(',')[0])}));
+    const ranked=[];
+    mine.forEach(f=>{const s=scoreFood(f,p.tokens,variants,qHead);if(s>=0)ranked.push([s+(s>=18*p.tokens.length?25:0),f])});
+    if(tz.ready)tz.foods.forEach(f=>{const s=scoreFood(f,p.tokens,variants,qHead);if(s>=0)ranked.push([s,f])});
+    ranked.sort((a,b)=>b[0]-a[0]);
+    return {parsed:p,results:ranked.slice(0,limit).map(x=>x[1])};
+  }
+  
+  function foodUnitGrams(x,unit){
+    if(!unit||unit==='גרם')return 1;
+    const hit=(x&&x.units||[]).find(u=>u[0]===unit);if(hit)return hit[1];
+    if(x&&x.unit==='גרם'&&['יחידה','פרוסה','מנה','פחית'].includes(unit))return estimatedGrams(x.name,unit);
+    return null;
+  }
+  function foodUnitOptions(x){
+    const own=(x&&x.units||[]).map(u=>u[0]);
+    if(own.length)return ['גרם',...own];
+    if(x&&x.source==='צמרת')return ['גרם'];
+    return x&&x.unit&&x.unit!=='גרם'&&!['מ״ל','יחידה','מנה','פרוסה','פחית'].includes(x.unit)?[x.unit,'גרם','מ״ל','יחידה','מנה','פרוסה','פחית']:['גרם','מ״ל','יחידה','מנה','פרוסה','פחית'];
+  }
+  function unitLabel(x,u){const g=(x&&x.units||[]).find(v=>v[0]===u);return g?`${u} (${g[2]?'כ-':''}${fmt(g[1])} ג׳)`:u}
+  
+  function defaultPortion(x,parsed){
+    const units=x.units||[],pref=['יחידה בינונית','יחידה','מנה מהאריזה','פרוסה בינונית','פרוסה','מנה בינונית','מנה','גביע','כוס','כף','כפית'];
+    const natural=pref.map(p=>units.find(u=>u[0]===p)).find(Boolean);
+    if(x.unit&&x.unit!=='גרם'&&!(x.units||[]).length)return {amount:parsed&&parsed.amount||x.baseQty||1,unit:x.unit};
+    if(parsed&&parsed.amount&&parsed.grams)return {amount:parsed.amount,unit:'גרם'};
+    if(parsed&&parsed.amount&&natural)return {amount:parsed.amount,unit:natural[0]};
+    if(parsed&&parsed.amount&&parsed.amount>=10)return {amount:parsed.amount,unit:'גרם'};
+    if(natural)return {amount:parsed&&parsed.amount||1,unit:natural[0]};
+    return {amount:100,unit:'גרם'};
+  }
+  function portionMacros(x,amount,unit,gramsOverride){
+    const perUnit=unit===x.unit?1:(gramsOverride>0?gramsOverride:foodUnitGrams(x,unit));
+    const ratio=(Number(amount)||0)*(perUnit==null?1:perUnit)/(Number(x.baseQty)||100);
+    return {calories:(Number(x.calories)||0)*ratio,protein:(Number(x.protein)||0)*ratio,carbs:(Number(x.carbs)||0)*ratio,fat:(Number(x.fat)||0)*ratio};
+  }
+  function foodResultCard(x,onTap){
+    const per=x.unit==='גרם'?`ל-${fmt(x.baseQty||100)} ג׳`:`ל-${fmt(x.baseQty||1)} ${esc(x.unit)}`;
+    const tag=x.source==='צמרת'?'מאגר צמרת':x.sourceId&&/^\d{8,14}$/.test(x.sourceId)?'המוצרים שלי · ברקוד':'המזונות שלי';
+    return `<div class="smart-result tap-row" role="button" onclick="${onTap}"><div class="history-top"><div><b>${esc(x.name)}</b>${x.brand&&!String(x.name).includes(x.brand)?`<div class="muted">${esc(x.brand)}</div>`:''}<div class="source">${tag}</div></div><span class="tap-arrow">‹</span></div><div class="muted">${fmt(x.calories)} קל׳ · ${fmt(x.protein)} חלבון · ${fmt(x.carbs)} פחמ׳ · ${fmt(x.fat)} שומן ${per}</div></div>`;
+  }
+  function tzStatusText(){const s=state.data&&state.data.tzameret;return s&&s.count?`המאגר טעון: ${Number(s.count).toLocaleString('he-IL')} מזונות${tz.ready?' · זמין בטלפון':' · נטען…'}`:'המאגר עדיין לא נטען. העלה את שלושת קבצי צמרת ל-Google Drive ולחץ על הכפתור.'}
+  function renderTzStatus(){const el=$('tzStatus');if(el)el.textContent=tzStatusText()}
+  async function importTzameretUI(){
+    loading();
+    try{state.data.tzameret=await call('importTzameret');renderTzStatus();await loadTzameret(true);renderTzStatus();toast(`מאגר צמרת נטען — ${Number(state.data.tzameret.count).toLocaleString('he-IL')} מזונות`)}
+    catch(e){toast(e.message,true)}finally{loading(false)}
+  }
+  function renderLocalFoodResults(){
+    const all=state.localResults||[],shown=state.showAllFoods?all:all.slice(0,6);
+    $('foodResults').innerHTML=all.length?`<div class="muted" style="margin-top:12px">לחץ על המאכל המתאים — אחר כך בוחרים כמות ויחידה:</div>`+shown.map((x,i)=>foodResultCard(x,`selectLocalFood(${i})`)).join('')+(all.length>shown.length?`<button class="btn light full" onclick="state.showAllFoods=true;renderLocalFoodResults()">הצג עוד ${all.length-shown.length} תוצאות</button>`:''):'<div class="empty">לא נמצא במאגר. נסה מילה אחרת או קצרה יותר (למשל ״ביצה״ במקום ״חביתה עם ירקות״), חפש לפי ברקוד, או הזן ערכים ידנית.</div>';
+  }
+  function selectLocalFood(i){const x=(state.localResults||[])[i];if(x)openFoodChoice(x,state.localParsed)}
+  function setFoodUnit(u){const sel=$('foodUnit');if(![...sel.options].some(o=>o.value===u)){const o=document.createElement('option');o.value=u;o.textContent=u;sel.appendChild(o)}sel.value=u}
+  function openFoodChoice(x,parsed){
+    x=withHouseholdUnits(x);const d=defaultPortion(x,parsed);state.selectedFood=x;
+    $('foodName').value=x.name;$('foodBase').value=x.baseQty||100;setFoodUnit(d.unit);$('foodAmount').value=d.amount;
+    state.foodGramsPerUnit=d.unit==='גרם'?'':(foodUnitGrams(x,d.unit)||'');
+    $('foodCalories').value=x.calories||0;$('foodProtein').value=x.protein||0;$('foodCarbs').value=x.carbs||0;$('foodFat').value=x.fat||0;
+    updateFoodChoice();$('foodChoiceSheet').classList.remove('hide');
+  }
+  function changeFoodChoiceUnit(u){
+    const x=state.selectedFood;if(!x)return;const prev=$('foodUnit').value;let a=Number($('foodAmount').value)||0;
+    if(u==='גרם'&&prev!=='גרם'){const g=Number(state.foodGramsPerUnit)||foodUnitGrams(x,prev);a=g?Math.round(a*g):100}else if(prev==='גרם'&&u!=='גרם')a=1;
+    setFoodUnit(u);$('foodAmount').value=a;state.foodGramsPerUnit=u==='גרם'?'':(foodUnitGrams(x,u)||'');updateFoodChoice();
+  }
+  function renderCustomLocalResults(){
+    const all=state.customSearchResults||[],shown=state.customShowAll?all:all.slice(0,5);
+    $('customFoodResults').innerHTML=all.length?shown.map((x,i)=>foodResultCard(x,`chooseCustomIngredient(${i})`)).join('')+(all.length>shown.length?`<button class="btn light full" onclick="state.customShowAll=true;renderCustomLocalResults()">הצג עוד ${all.length-shown.length} תוצאות</button>`:''):'<div class="empty">לא נמצא במאגר. נסה מילה אחרת, או הוסף מרכיב ידנית עם הערכים מהאריזה.</div>';
+  }
+  function recalcCustomIngredient(x){const m=portionMacros({...x.per,units:x.units,name:x.name},x.amount,x.unit);['calories','protein','carbs','fat'].forEach(k=>x[k]=fmt(m[k]))}
+  function customUnitOptions(x){if(x.per)return foodUnitOptions({units:x.units,unit:x.per.unit,source:x.src});const base=['גרם','מ״ל','יחידה','מנה','פרוסה','פחית'];return base.includes(x.unit)||!x.unit?base:[x.unit,...base]}
+  
+  function enrichIngredient(x){
+    if(!tz.ready)return x;const f=tz.foods.find(v=>v.name===x.name);if(!f)return x;
+    const m=portionMacros(f,x.amount,x.unit);if(!m||Math.abs(m.calories-(Number(x.calories)||0))>Math.max(3,(Number(x.calories)||0)*0.03))return x;
+    return {...x,src:'צמרת',per:{baseQty:100,unit:'גרם',calories:f.calories,protein:f.protein,carbs:f.carbs,fat:f.fat},units:f.units};
+  }
+  function undoToast(msg,undoFn){
+    let bar=$('undoBar');if(!bar){bar=document.createElement('div');bar.id='undoBar';bar.className='undo-bar';document.body.appendChild(bar)}
+    clearTimeout(state.undoTimer);$('toast').classList.remove('show');
+    bar.innerHTML=`<span>${esc(msg)}</span><button type="button">בטל</button>`;
+    let used=false;bar.querySelector('button').onclick=async()=>{if(used)return;used=true;bar.classList.remove('show');clearTimeout(state.undoTimer);await undoFn()};
+    bar.classList.add('show');state.undoTimer=setTimeout(()=>bar.classList.remove('show'),7000);
+  }
+  async function workoutUndo(fn,payload,msg){loading();try{state.data.workout=await call(fn,payload);renderWorkouts(false);if(typeof renderWorkoutHistory==='function')renderWorkoutHistory();toast(msg)}catch(e){toast(e.message,true)}finally{loading(false)}}
+  function sessionDateFor(id){return (state.data.workout?.sessions||[]).find(s=>s.id===id)?.date||state.date}
+  async function reopenSession(id){
+    const s=(state.data.workout?.sessions||[]).find(x=>x.id===id);if(!s)return;
+    if(state.activePlan)return toast('יש תוכנית אימון פעילה. סיים אותה לפני שפותחים אימון אחר',true);
+    if(state.sessionId&&state.sessionId!==id&&!confirm('יש אימון פעיל אחר. לעבור לאימון הזה?'))return;
+    loading();try{state.data.workout=await call('reopenWorkoutSession',{id});state.sessionId=id;$('sessionName').value=s.name;try{localStorage.setItem('elaiWorkoutSession',JSON.stringify({id,name:s.name,date:state.date}))}catch(_){}renderWorkouts(false);renderSessionBanner();showView('workouts');toast('האימון נפתח מחדש — אפשר להוסיף תרגילים')}
+    catch(e){toast(e.message,true)}finally{loading(false)}
+  }
+  function removedExercisesHtml(){
+    const rows=(state.data.workout?.removedExercises||[]).filter(x=>x.group===state.muscleGroup);
+    return rows.length?`<div class="muted" style="margin-top:12px">תרגילים שהסרת מהרשימה:</div>`+rows.map(x=>`<div class="manage-row"><span class="muted">${esc(x.name)}</span><span class="inline-actions"><button class="btn light mini" onclick="restoreRemovedExercise('${esc(x.id)}')">החזר</button></span></div>`).join(''):'';
+  }
+  async function restoreRemovedExercise(id){loading();try{state.data.workout=await call('restoreExercise',id);renderWorkouts(false);toast('התרגיל הוחזר לרשימה')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function removeProcessDate(date,skipConfirm){
+    if(!skipConfirm&&!confirm('למחוק את המדידות של התאריך הזה? גם המשקל של אותו יום יימחק.'))return;
+    loading();try{const res=await call('deleteProcessCheckin',date);state.data.process=res;const day=(state.data.history||[]).find(x=>x.date===date);if(day)day.weight='';renderMetrics();renderProcess(false);undoToast('המדידה נמחקה',async()=>{loading();try{const r=await call('restoreProcessCheckin',res.undoToken);state.data.process=r.process;const h=(state.data.history||[]).find(x=>x.date===r.date);if(h&&r.weight!=='')h.weight=r.weight;renderMetrics();renderProcess(false);toast('המדידה הוחזרה')}catch(e){toast(e.message,true)}finally{loading(false)}})}
+    catch(e){toast(e.message,true)}finally{loading(false)}
+  }
+
+  
+  const SLASH2=String.fromCharCode(47,47);
+  const ZXING_SRC=['https:'+SLASH2+'cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js','https:'+SLASH2+'unpkg.com/@zxing/library@0.21.3/umd/index.min.js'];
+  let zxingLoading=null;
+  function loadZXing(){
+    if(window.ZXing)return Promise.resolve(window.ZXing);
+    if(zxingLoading)return zxingLoading;
+    zxingLoading=(async()=>{
+      for(const src of ZXING_SRC){
+        try{await new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.async=true;s.onload=res;s.onerror=()=>{s.remove();rej(new Error('load'))};document.head.appendChild(s)});if(window.ZXing)return window.ZXing}catch(e){}
+      }
+      throw new Error('לא הצלחתי לטעון את קורא הברקודים. בדוק חיבור לאינטרנט, או הקלד את המספר שמתחת לברקוד');
+    })();
+    zxingLoading.catch(()=>{zxingLoading=null});
+    return zxingLoading;
+  }
+  function rotateLuma(l,w,h){const out=new Uint8ClampedArray(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++)out[x*h+(h-1-y)]=l[y*w+x];return out}
+  
+  function decodeLuma(Z,luma,w,h){
+    const hints=new Map();
+    hints.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A,Z.BarcodeFormat.UPC_E]);
+    hints.set(Z.DecodeHintType.TRY_HARDER,true);
+    const reader=new Z.MultiFormatReader();reader.setHints(hints);
+    let l=luma,cw=w,ch=h;
+    for(let turn=0;turn<4;turn++){
+      for(const B of [Z.HybridBinarizer,Z.GlobalHistogramBinarizer]){
+        try{const r=reader.decode(new Z.BinaryBitmap(new B(new Z.RGBLuminanceSource(l,cw,ch))),hints);const t=r&&r.getText();if(t)return t}catch(e){}
+      }
+      if(turn<3){l=rotateLuma(l,cw,ch);const tmp=cw;cw=ch;ch=tmp}
+    }
+    return '';
+  }
+  function rgbaToLuma(d){const out=new Uint8ClampedArray(d.length/4);for(let i=0,j=0;i<d.length;i+=4,j++)out[j]=(d[i]*306+d[i+1]*601+d[i+2]*117)>>10;return out}
+  function loadImageFile(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{URL.revokeObjectURL(url);res(img)};img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('לא ניתן לפתוח את התמונה'))};img.src=url})}
+  async function decodeBarcodeFile(file){
+    if('BarcodeDetector' in window){try{const d=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']}),codes=await d.detect(await createImageBitmap(file));if(codes.length)return codes[0].rawValue}catch(e){}}
+    const [Z,img]=await Promise.all([loadZXing(),loadImageFile(file)]);
+    const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true});
+    
+    for(const a of [{crop:1,size:1400},{crop:1,size:2200},{crop:0.55,size:2000},{crop:0.35,size:1600}]){
+      const sw=img.naturalWidth*a.crop,sh=img.naturalHeight*a.crop,sx=(img.naturalWidth-sw)/2,sy=(img.naturalHeight-sh)/2;
+      const k=Math.min(1,a.size/Math.max(sw,sh)),w=Math.max(1,Math.round(sw*k)),h=Math.max(1,Math.round(sh*k));
+      canvas.width=w;canvas.height=h;ctx.drawImage(img,sx,sy,sw,sh,0,0,w,h);
+      const text=decodeLuma(Z,rgbaToLuma(ctx.getImageData(0,0,w,h).data),w,h);
+      if(text)return text;
+    }
+    return '';
+  }
+
+  
+  function closeSheet(id){$(id).classList.add('hide')}
+  function relativeDayLabel(date){
+    const today=state.todayDate||state.data?.date||date,diff=Math.round((new Date(date+'T12:00:00')-new Date(today+'T12:00:00'))/86400000);
+    return {0:'היום','-1':'אתמול','-2':'שלשום',1:'מחר',2:'מחרתיים'}[diff]||displayDate(date);
+  }
+  
+  const NO_EVENT={stopPropagation(){}};
+  const LP_ACTIONS={entry:id=>removeEntry(id,true),group:id=>removeGroup(id,true),ingredient:i=>removeCustomIngredient(Number(i)),workout:id=>removeWorkout(id,true),day:d=>removeDay(d,true),session:id=>removeWorkoutSession(id,true),plan:i=>removeWorkoutPlan(Number(i),true),meal:id=>removeCustomMeal(NO_EVENT,id,true),builtin:k=>deleteBuiltinMeal(NO_EVENT,k,true),quick:id=>deleteQuickAction(id,true),measure:d=>removeProcessDate(d,true),video:id=>removeWorkoutVideo(id,true),exercise:id=>removeExercise(id,true).then(()=>{if(!$('exPickSheet').classList.contains('hide')&&state.pickMode&&state.pickMode.reopen)state.pickMode.reopen()})};
+  const LP_EDIT={entry:id=>openEntryEdit(id),ingredient:i=>focusIngredient(Number(i)),session:id=>openSessionDate(id)};
+  const LP_LABELS={group:'מחק את כל הארוחה',workout:'מחק את התרגיל מהאימון',ingredient:'הסר מהארוחה',day:'מחק את היום',session:'מחק את האימון',plan:'מחק את התוכנית',meal:'מחק את הארוחה',builtin:'מחק את הארוחה',quick:'מחק את קיצור הדרך',measure:'מחק את המדידה',video:'מחק את הסרטון',exercise:'הסר את התרגיל מהרשימה'};
+  function initLongPress(){
+    if(state.lpReady)return;state.lpReady=true;let timer=null,sx=0,sy=0,fired=false,lpEl=null,firedAt=0;
+    const cancel=()=>{clearTimeout(timer);document.querySelectorAll('.lp-arm').forEach(x=>x.classList.remove('lp-arm'))};
+    document.addEventListener('pointerdown',e=>{if(state.select&&state.select.mode)return;const el=e.target.closest('[data-lp]');if(!el)return;const ctl=e.target.closest('input,select,textarea,button,summary');if(ctl&&ctl!==el)return;sx=e.clientX;sy=e.clientY;fired=false;cancel();el.classList.add('lp-arm');timer=setTimeout(()=>{fired=true;lpEl=el;firedAt=Date.now();el.classList.remove('lp-arm');el.classList.remove('lp-pop');void el.offsetWidth;el.classList.add('lp-pop');setTimeout(()=>el.classList.remove('lp-pop'),400);hapticTick();openLongPressMenu(el)},550)},{passive:true});
+    document.addEventListener('pointermove',e=>{if(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)cancel()},{passive:true});
+    document.addEventListener('pointerup',()=>{if(fired&&Date.now()-firedAt<3000)hapticTick();cancel()});document.addEventListener('pointercancel',cancel);
+    document.addEventListener('click',e=>{if(e.target&&(e.target.id==='hapticLabel'||e.target.id==='hapticSwitch'))return;if(fired&&lpEl&&lpEl.contains(e.target)&&Date.now()-firedAt<1500){e.preventDefault();e.stopPropagation()}fired=false},true);
+    document.addEventListener('contextmenu',e=>{if(e.target.closest('[data-lp]'))e.preventDefault()});
+  }
+  function hapticTick(){try{navigator.vibrate&&navigator.vibrate(15)}catch(_){}try{let l=$('hapticLabel');if(!l){const i=document.createElement('input');i.type='checkbox';i.setAttribute('switch','');i.id='hapticSwitch';i.style.cssText='position:fixed;left:-200px;top:0;opacity:0;pointer-events:none';l=document.createElement('label');l.id='hapticLabel';l.htmlFor='hapticSwitch';l.style.cssText='position:fixed;left:-200px;top:0;opacity:0';document.body.append(i,l)}l.click()}catch(_){}}
+  function openLongPressMenu(el){
+    const [kind,...rest]=String(el.dataset.lp).split(':'),id=rest.join(':');if(kind==='plantime')return openPlanTiming(Number(id));const action=LP_ACTIONS[kind];if(!action)return;
+    $('lpTitle').textContent=el.dataset.lpTitle||'';
+    $('lpDelete').textContent=LP_LABELS[kind]||'מחק';
+    $('lpDelete').onclick=()=>{closeSheet('lpSheet');action(id)};const editFn=LP_EDIT[kind];$('lpEdit').style.display=editFn?'block':'none';$('lpEdit').onclick=()=>{closeSheet('lpSheet');editFn&&editFn(id)};
+    $('lpSheet').classList.remove('hide');
+  }
+  
+  async function removeDay(date,skipConfirm){
+    if(!skipConfirm&&!confirm(`למחוק את כל האוכל שנרשם ב-${displayDate(date)}? משקל ומדידות של אותו יום נשארים.`))return;
+    const card=document.querySelector(`#historyList .journal-day[data-date="${date}"]`);if(card){card.style.transition='opacity .25s';card.style.opacity='.3'}
+    try{const r=await call('deleteDay',date);dropDaysLocally([date],r.day.history);if(date===state.date)applyDayKeepJournal(r.day);renderDay();undoToast('היום נמחק',()=>restoreDays(r.ids,[date]))}
+    catch(e){if(card)card.style.opacity='';toast(e.message,true)}
+  }
+  function afterDayChange(date,day){state.data.history=day.history;if(date===state.date){applyDay(day);renderDay()}else{state.nutritionJournal=null}if(state.nutritionJournal===null&&typeof loadNutritionJournal==='function'&&$('history').classList.contains('active'))loadNutritionJournal();else renderHistory()}
+  
+  function addSetRowSameWeight(){const weights=[...document.querySelectorAll('#setRows .set-weight')].map(x=>x.value).filter(v=>v!=='');const w=weights.at(-1)||'';addSetRow();const rows=document.querySelectorAll('#setRows .set-weight');if(rows.length)rows[rows.length-1].value=w;const reps=document.querySelectorAll('#setRows .set-reps');if(reps.length)reps[reps.length-1].focus()}
+  
+  function renderPlanCategoryChips(){const v=$('workoutPlanCategory').value,other=state.planCategoryOther;$('planCategoryChips').innerHTML=['משיכה','דחיפה','רגליים','אחר'].map(c=>`<button class="chip ${(c==='אחר'?other:(!other&&v===c))?'active':''}" onclick="choosePlanCategory('${c}')">${c}</button>`).join('');$('workoutPlanCategory').style.display=other?'block':'none'}
+  function choosePlanCategory(c){if(c==='אחר'){state.planCategoryOther=true;if(['משיכה','דחיפה','רגליים'].includes($('workoutPlanCategory').value))$('workoutPlanCategory').value='';renderPlanCategoryChips();$('workoutPlanCategory').focus()}else{state.planCategoryOther=false;$('workoutPlanCategory').value=c;renderPlanCategoryChips()}}
+  
+  function openNewExerciseSheet(group){state.newEx={group:(typeof group==='string'&&group)||state.muscleGroup||'חזה',equipment:state.equipment&&state.equipment!=='משולב'?state.equipment:'משקולות חופשיות',newGroup:false};$('newExName').value='';$('newExGroupName').value='';renderNewExerciseSheet();$('exerciseSheet').classList.remove('hide');setTimeout(()=>$('newExName').focus(),50)}
+  function renderNewExerciseSheet(){const base=['חזה','גב','כתפיים','יד קדמית','יד אחורית','רגליים','בטן'],groups=[...base,...Object.keys(state.data.workout.exercises||{}).filter(g=>!base.includes(g))],n=state.newEx;
+    $('newExGroups').innerHTML=groups.map(g=>`<button class="chip ${!n.newGroup&&n.group===g?'active':''}" onclick="state.newEx.group='${esc(g)}';state.newEx.newGroup=false;renderNewExerciseSheet()">${esc(g)}</button>`).join('')+`<button class="chip ${n.newGroup?'active':''}" onclick="state.newEx.newGroup=true;renderNewExerciseSheet();$('newExGroupName').focus()">＋ אזור חדש</button>`;
+    $('newExGroupName').style.display=n.newGroup?'block':'none';
+    $('newExEquip').innerHTML=['משקולות חופשיות','מכונה'].map(v=>`<button class="chip ${n.equipment===v?'active':''}" onclick="state.newEx.equipment='${v}';renderNewExerciseSheet()">${v}</button>`).join('')}
+  async function saveNewExercise(){const n=state.newEx,name=$('newExName').value.trim(),group=n.newGroup?$('newExGroupName').value.trim():n.group;if(!group)return toast('בחר קבוצת שרירים',true);if(!name)return toast('כתוב את שם התרגיל',true);
+    loading();try{state.data.workout=await call('saveExercise',{muscleGroup:group,name,equipment:n.equipment});state.muscleGroup=group;if(state.equipment!=='משולב')state.equipment=n.equipment;state.setCount=1;renderWorkouts(false);const ex=(state.data.workout.exercises[group]||[]).find(x=>x.name===name&&x.equipment===n.equipment);if(ex){$('exerciseSelect').value=ex.id;exerciseChanged()}closeSheet('exerciseSheet');toast('התרגיל נוסף ונבחר')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  
+  async function moveWorkoutTo(workoutId,sessionId){closeSheet('moveSheet');loading();try{state.data.workout=await call('moveExerciseToSession',{workoutId,sessionId});renderWorkoutHistory();renderSessionBanner();toast('התרגיל הועבר')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  
+  async function startLiveScan(){
+    let blocked=false;try{blocked=localStorage.getItem('elaiLiveScanBlocked')==='1'}catch(_){}
+    if(blocked||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('barcodePhoto').click();return}
+    $('scanHint').textContent='פותח מצלמה…';$('scanSheet').classList.remove('hide');
+    let stream;
+    try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false})}
+    catch(e){try{localStorage.setItem('elaiLiveScanBlocked','1')}catch(_){}$('scanHint').textContent='המכשיר לא נתן לאפליקציה לפתוח מצלמה חיה. לחץ ״צלם תמונה במקום״ — מהפעם הבאה הכפתור יפתח ישר את המצלמה לצילום.';return}
+    const video=$('scanVideo');state.scan={stream,active:true};video.srcObject=stream;try{await video.play()}catch(_){}
+    $('scanHint').textContent='כוון את הברקוד לתוך המסגרת — הסריקה תזהה אותו לבד.';
+    let Z=null;try{Z=await loadZXing()}catch(e){$('scanHint').textContent=e.message;return}
+    const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true}),detector='BarcodeDetector' in window?new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']}):null;
+    const tick=async()=>{
+      if(!state.scan||!state.scan.active)return;
+      const vw=video.videoWidth,vh=video.videoHeight;
+      if(vw&&vh){
+        let code='';
+        if(detector){try{const r=await detector.detect(video);if(r.length)code=r[0].rawValue}catch(_){}}
+        if(!code){const sw=vw*0.8,sh=vh*0.5,k=Math.min(1,900/sw),w=Math.round(sw*k),h=Math.round(sh*k);canvas.width=w;canvas.height=h;ctx.drawImage(video,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,w,h);code=decodeLumaQuick(Z,rgbaToLuma(ctx.getImageData(0,0,w,h).data),w,h)}
+        if(code){try{navigator.vibrate&&navigator.vibrate(60)}catch(_){}stopLiveScan();$('barcode').value=code;await barcodeLookup();return}
+      }
+      setTimeout(tick,180);
+    };
+    tick();
+  }
+  function decodeLumaQuick(Z,luma,w,h){const hints=new Map();hints.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A,Z.BarcodeFormat.UPC_E]);const reader=new Z.MultiFormatReader();reader.setHints(hints);try{const r=reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.RGBLuminanceSource(luma,w,h))),hints);return r&&r.getText()||''}catch(e){return ''}}
+  function stopLiveScan(){if(state.scan){state.scan.active=false;(state.scan.stream?.getTracks()||[]).forEach(t=>t.stop());state.scan=null}const v=$('scanVideo');if(v)v.srcObject=null;closeSheet('scanSheet')}
+  
+  const VIDEO_CHUNK=4*1024*1024;
+  function readChunkBase64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=()=>rej(new Error('לא ניתן לקרוא את הסרטון'));r.readAsDataURL(blob)})}
+  async function uploadVideoChunked(file,workoutId,onProgress){
+    const mime=file.type||(/\.mov$/i.test(file.name)?'video/quicktime':'video/mp4');
+    const ticket=await call('startVideoUpload',{workoutId,name:file.name||'clip.mp4',mime,size:file.size});
+    let done=0,res=null;
+    while(done<file.size){
+      const end=Math.min(file.size,done+VIDEO_CHUNK),b64=await readChunkBase64(file.slice(done,end));
+      let tries=0;
+      for(;;){try{res=await call('uploadVideoChunk',{ticket:ticket.ticket,start:done,total:file.size,data:b64});break}catch(e){if(++tries>=3)throw e;await new Promise(r=>setTimeout(r,1500*tries))}}
+      done=end;onProgress&&onProgress(done/file.size,done);
+    }
+    if(!res||!res.workout)throw new Error('ההעלאה לא הושלמה');
+    return res.workout;
+  }
+
+  function planTimingAll(){try{return JSON.parse(localStorage.getItem('elaiPlanTiming')||'{}')||{}}catch(_){return {}}}
+  function planTiming(id){const t=planTimingAll()[id]||{};return {set:Number(t.set)>0?Number(t.set):1,rest:Number(t.rest)>=0&&t.rest!==undefined&&t.rest!==''?Number(t.rest):1.5}}
+  function planSetCount(p){return (p.items||[]).reduce((n,x)=>n+(Number(x.sets)||3),0)}
+  function planMinutesWith(p,t){const sets=planSetCount(p);return Math.round(sets*t.set+Math.max(0,sets-1)*t.rest)}
+  function planMinutes(p){return planMinutesWith(p,planTiming(p.id))}
+  function openPlanTiming(i){const p=planList()[i];if(!p)return;state.timingPlan=i;const t=planTiming(p.id);$('timingTitle').textContent='זמן משוער · '+p.name;$('timingInfo').textContent=`${p.items.length} תרגילים · ${planSetCount(p)} סטים`;$('timingSet').value=t.set;$('timingRest').value=t.rest;previewPlanTiming();$('timingSheet').classList.remove('hide')}
+  function previewPlanTiming(){const p=planList()[state.timingPlan];if(!p)return;const t={set:Math.max(0.25,Number($('timingSet').value)||1),rest:Math.max(0,Number($('timingRest').value)||0)};$('timingPreview').textContent=`⏱ כ-${planMinutesWith(p,t)} דקות`}
+  function savePlanTiming(){const p=planList()[state.timingPlan];if(!p)return;const all=planTimingAll();all[p.id]={set:Math.max(0.25,Number($('timingSet').value)||1),rest:Math.max(0,Number($('timingRest').value)||0)};try{localStorage.setItem('elaiPlanTiming',JSON.stringify(all))}catch(_){}closeSheet('timingSheet');renderWorkoutPlans();toast('הזמן המשוער עודכן')}
+  function resetPlanTiming(){const p=planList()[state.timingPlan];if(!p)return;const all=planTimingAll();delete all[p.id];try{localStorage.setItem('elaiPlanTiming',JSON.stringify(all))}catch(_){}closeSheet('timingSheet');renderWorkoutPlans();toast('חזר לברירת המחדל')}
+  function editBuiltinMeal(e,key){e.stopPropagation();openCustomMealBuilder(key,false)}
+  function duplicateBuiltinMeal(e,key){e.stopPropagation();openCustomMealBuilder(key,true)}
+  async function deleteBuiltinMeal(e,key,skipConfirm){e&&e.stopPropagation&&e.stopPropagation();if(!skipConfirm&&!confirm('למחוק את הארוחה מהרשימה? אפשר לשחזר אותה בהגדרות, תחת ארוחות מוסתרות.'))return;loading();try{const data=await call('hideMeal',{key});state.data.meals=data.meals;state.data.hiddenMeals=data.hiddenMeals;renderMeals();renderHiddenMeals();undoToast('הארוחה נמחקה',()=>restoreMeal(key))}catch(err){toast(err.message,true)}finally{loading(false)}}
+  function goToPreviousWorkout(sessionId,workoutId){
+    const sessions=state.data.workout?.sessions||[],sid=sessionId||(sessions.find(s=>s.items.some(x=>x.id===workoutId))||{}).id;
+    ['workoutTypeFilter','workoutCategoryFilter','workoutMuscleFilter','workoutExerciseFilter','workoutFrom','workoutTo'].forEach(id=>{if($(id))$(id).value=''});if($('workoutPeriod'))$('workoutPeriod').value='all';
+    state.openWorkoutSessionId=sid||'';showView('workoutDiary');renderWorkoutHistory();
+    const el=sid?[...document.querySelectorAll('details.session-card')].find(d=>d.dataset.session===sid):null;
+    if(!el)return toast('האימון הקודם לא נמצא ביומן',true);
+    el.open=true;let g=el.parentElement;while(g){if(g.tagName==='DETAILS')g.open=true;g=g.parentElement}const card=el.closest('.journal-day')||el;card.classList.add('flash');setTimeout(()=>card.classList.remove('flash'),2500);card.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  function withHouseholdUnits(x){
+    if(!x||x.source==='צמרת'||(x.unit&&x.unit!=='גרם'))return x;
+    const units=(x.units||[]).map(u=>[u[0],Number(u[1]),!!u[2]]);
+    if(tz.ready){
+      const base=String(x.name||'').split(' – ')[0],words=normHe(base).split(' ').filter(Boolean),first=words[0]||'';
+      const tries=[base,words.slice(0,2).join(' '),first].filter((q,i,a)=>q&&a.indexOf(q)===i);
+      let match=null;
+      for(const q of tries){const r=localFoodSearch(q,8).results.filter(f=>f.source==='צמרת'&&f.units.length&&f.n.trim().split(' ')[0]===first);if(r.length){match=r[0];break}}
+      if(match){const have=new Set(units.map(u=>u[0]));match.units.forEach(([u,g])=>{if(!have.has(u)&&!TZ_PACK.test(u))units.push([u,g,true])})}
+    }
+    units.sort((a,b)=>a[1]-b[1]);
+    return {...x,units};
+  }
+  async function uploadVideoSmart(file,workoutId,onProgress){
+    const mime=file.type||(/\.mov$/i.test(file.name)?'video/quicktime':'video/mp4');
+    const t=await call('startVideoUpload',{workoutId,name:file.name||'clip.mp4',mime,size:file.size,origin:location.origin});
+    const direct=t.uploadUrl?await new Promise(res=>{try{const x=new XMLHttpRequest();x.open('PUT',t.uploadUrl,true);x.upload.onprogress=e=>{if(e.lengthComputable)onProgress(e.loaded/e.total,e.loaded)};x.onload=()=>res({status:x.status});x.onerror=()=>res({status:0});x.onabort=()=>res({status:0});x.send(file)}catch(_){res({status:0})}}):{status:0};
+    if(direct.status===200||direct.status===201||direct.status===0){try{const r=await call('checkVideoUpload',t.ticket);if(r&&r.workout){onProgress(1,file.size);return r.workout}}catch(_){}}
+    onProgress(0,0,true);
+    return uploadVideoChunked(file,workoutId,onProgress);
+  }
+
+  function selHas(kind,id){return !!(state.select&&state.select.mode===kind&&state.select.set.has(id))}
+  function toggleSelectMode(kind){
+    if(state.select&&state.select.mode===kind)return exitSelectMode();
+    state.select={mode:kind,set:new Set()};
+    const list=$({nut:'historyList',work:'workoutHistory',ent:'entries'}[kind]);list.classList.add('select-mode');
+    $('selBtn-'+kind).textContent='סיום בחירה';
+    if(kind==='work')list.querySelectorAll('details').forEach(d=>{if(d.dataset.journalGroup)d.open=true});
+    updateBulkBar();
+  }
+  function exitSelectMode(){
+    const kind=state.select&&state.select.mode;state.select={mode:null,set:new Set()};
+    ['historyList','workoutHistory','entries'].forEach(id=>{const el=$(id);if(el){el.classList.remove('select-mode');el.querySelectorAll('.sel').forEach(x=>x.classList.remove('sel'))}});
+    if($('selBtn-nut'))$('selBtn-nut').textContent='בחר כמה ימים';if($('selBtn-work'))$('selBtn-work').textContent='בחר כמה אימונים';if($('selBtn-ent'))$('selBtn-ent').textContent='בחר פריטים';
+    $('bulkBar').classList.add('hide');
+  }
+  function updateBulkBar(){const n=state.select&&state.select.set.size||0,kind=state.select&&state.select.mode;if(!kind){$('bulkBar').classList.add('hide');return}const noun={nut:'ימים',work:'אימונים',ent:'פריטים'}[kind];$('bulkCount').textContent=n?`${n} ${noun} נבחרו`:`לחץ על ה${noun} שתרצה לבחור`;$('bulkGroupBtn').style.display=kind==='ent'?'inline-block':'none';$('bulkGroupBtn').textContent=kind==='ent'&&n?`אחד לארוחה (${n})`:'אחד לארוחה';$('bulkBar').classList.remove('hide')}
+  function initSelectClicks(){
+    ['historyList','workoutHistory','entries'].forEach(id=>{const el=$(id);if(!el||el.dataset.selReady)return;el.dataset.selReady='1';el.addEventListener('click',e=>{if(!state.select||!state.select.mode)return;const card=e.target.closest('[data-sel]');if(!card||!el.contains(card))return;e.preventDefault();e.stopPropagation();const key=card.dataset.sel;if(state.select.set.has(key)){state.select.set.delete(key);card.classList.remove('sel')}else{state.select.set.add(key);card.classList.add('sel')}updateBulkBar()},true)});
+  }
+  function applyDayKeepJournal(day){const j=state.nutritionJournal;applyDay(day);state.nutritionJournal=j}
+  function dropDaysLocally(dates,history){const set=new Set(dates);if(Array.isArray(state.nutritionJournal))state.nutritionJournal=state.nutritionJournal.filter(x=>!set.has(x.date));if(history)state.data.history=history;else state.data.history=(state.data.history||[]).filter(x=>!set.has(x.date))}
+  async function restoreDays(ids,dates){
+    try{const day=await call('restoreEntries',ids);state.data.history=day.history;if(dates.includes(state.date)){const d=await call('getDayView',state.date);applyDayKeepJournal(d)}
+      if(Array.isArray(state.nutritionJournal)){try{state.nutritionJournal=await call('getNutritionJournal')}catch(_){state.nutritionJournal=null}}
+      renderDay();toast(dates.length>1?'הימים הוחזרו':'היום הוחזר')}catch(e){toast(e.message,true)}
+  }
+  async function bulkDelete(){
+    const kind=state.select&&state.select.mode,ids=[...(state.select&&state.select.set||[])];if(!kind||!ids.length)return toast('לא נבחר כלום',true);
+    if(kind==='ent'){
+      if(!confirm(`למחוק ${ids.length} פריטים?`))return;
+      exitSelectMode();loading();
+      try{const r=await call('deleteEntries',ids);applyDay(r.day);renderDay();undoToast(`${r.ids.length} פריטים נמחקו`,()=>restoreDays(r.ids,[state.date]))}catch(e){toast(e.message,true)}finally{loading(false)}
+      return;
+    }
+    if(kind==='nut'){
+      if(!confirm(`למחוק את כל האוכל של ${ids.length} ימים? משקל ומדידות נשארים.`))return;
+      exitSelectMode();ids.forEach(d=>{const c=document.querySelector(`#historyList .journal-day[data-date="${d}"]`);if(c){c.style.transition='opacity .25s';c.style.opacity='.3'}});
+      try{const r=await call('deleteDays',ids);dropDaysLocally(ids,r.history);if(ids.includes(state.date)){const d=await call('getDayView',state.date);applyDayKeepJournal(d)}renderDay();undoToast(`${ids.length} ימים נמחקו`,()=>restoreDays(r.ids,ids))}
+      catch(e){renderHistory();toast(e.message,true)}
+    }else{
+      if(!confirm(`למחוק ${ids.length} אימונים?`))return;
+      const list=ids.map(id=>({id,workoutIds:((state.data.workout.sessions||[]).find(s=>s.id===id)?.items||[]).map(x=>x.id)}));
+      exitSelectMode();loading();
+      try{state.data.workout=await call('deleteWorkoutSessions',ids);if(ids.includes(state.sessionId)){state.sessionId='';try{localStorage.removeItem('elaiWorkoutSession')}catch(_){}}if(state.activePlan&&ids.includes(state.activePlan.sessionId)){state.activePlan=null;state.activePlanIndex=null;persistWorkoutPlanDraft()}renderWorkouts(false);undoToast(`${ids.length} אימונים נמחקו`,()=>workoutUndo('restoreWorkoutSessions',list,'האימונים הוחזרו'))}
+      catch(e){toast(e.message,true)}finally{loading(false)}
+    }
+  }
+
+  function setupUiOnce(){if(state.uiReady)return;state.uiReady=true;initLongPress();initSelectClicks();loadTzameret().then(()=>{renderTzStatus();renderFoodStateChips();renderCustomFoodStateChips()});$('foodQuery').addEventListener('keydown',e=>{if(e.key==='Enter'){clearTimeout(foodSearchTimer);searchFood()}});$('foodQuery').addEventListener('input',()=>{if(state.dishEstimate&&$('foodQuery').value.trim()!==state.dishEstimate.name){state.dishEstimate=null;$('dishPreview').innerHTML='';$('dishExtras').value=''}renderFoodStateChips();clearTimeout(foodSearchTimer);$('foodChoice').innerHTML='';state.selectedFood=null;foodSearchTimer=setTimeout(()=>{if($('foodQuery').value.trim().length>=2){if($('dishExtras').value.trim())estimateDishFromText();else searchFood(true)}},tz.ready?300:950)});document.addEventListener('pointerdown',e=>{if(e.target.closest('input,textarea,select,.overlay .sheet'))return;document.activeElement?.blur?.()});}
+  const STATE_CACHE_KEY='elaiStateCache';
+  function readCachedState(){try{const raw=localStorage.getItem(STATE_CACHE_KEY);if(!raw)return null;const x=JSON.parse(raw);return x&&x.v===1&&x.data&&x.data.date?x.data:null}catch(_){return null}}
+  function saveCachedState(){if(!state.data||state.bootPromise)return;try{localStorage.setItem(STATE_CACHE_KEY,JSON.stringify({v:1,savedAt:Date.now(),data:state.data}))}catch(_){try{localStorage.removeItem(STATE_CACHE_KEY)}catch(__){}}}
+  function saveCachedStateSoon(){clearTimeout(state.cacheTimer);state.cacheTimer=setTimeout(saveCachedState,800)}
+  function showSyncChip(on){const c=$('syncChip');if(c)c.style.display=on?'inline-block':'none'}
+  function setEquipment(v,silent){state.equipment=v;try{localStorage.setItem('elaiEquipment',v)}catch(_){}if(!silent)renderWorkouts(false)}
+  function openExercisePicker(){state.pickMode={group:state.muscleGroup,current:$('exerciseSelect').value,all:state.equipment==='משולב',equipment:state.equipment,onPick:id=>{$('exerciseSelect').value=id;exerciseChanged()},reopen:()=>openExercisePicker()};renderExercisePicker()}
+  function renderExercisePicker(){
+    const pm=state.pickMode,catalog=state.data.workout.exercises||{},list=(catalog[pm.group]||[]).filter(x=>pm.all||x.equipment===pm.equipment),cur=pm.current;
+    $('exPickTitle').textContent='בחר תרגיל · '+pm.group;
+    $('exPickList').innerHTML=list.length?list.map(x=>`<button type="button" class="pick-row" data-lp="exercise:${esc(x.id)}" data-lp-title="${esc(x.name)}" onclick="pickExercise('${esc(x.id)}')"><b>${x.id===cur?'✓ ':''}${esc(x.name)}</b>${pm.all?`<small>${esc(x.equipment==='מכונה'?'מכונה':'משקולות חופשיות')}</small>`:''}</button>`).join(''):'<div class="empty">אין עדיין תרגילים כאן. לחץ ״＋ תרגיל חדש״.</div>';
+    $('exPickSheet').classList.remove('hide');
+  }
+  function pickExercise(id){const pm=state.pickMode;closeSheet('exPickSheet');if(pm&&pm.onPick)pm.onPick(id)}
+  function togglePlanPeek(id){state.planPeek=state.planPeek===id?'':id;renderWorkoutPlans()}
+
+  function apiConf(){try{const c=JSON.parse(localStorage.getItem('elaiApi')||'null');return c&&c.url&&c.pass?c:null}catch(_){return null}}
+  async function httpCall(fn,args){
+    const c=apiConf();if(!c){showLogin();throw new Error('צריך להתחבר')}
+    let res;
+    try{res=await fetch(c.url,{method:'POST',body:JSON.stringify({fn,args:args||[],token:c.pass}),redirect:'follow'})}catch(e){throw new Error('אין חיבור לשרת. בדוק אינטרנט ונסה שוב')}
+    let j;try{j=await res.json()}catch(e){throw new Error('השרת לא החזיר תשובה תקינה. בדוק שהפריסה מוגדרת ל"כל אחד"')}
+    if(!j.ok){const msg=String(j.error||'שגיאה');if(/^AUTH/.test(msg)){if(/שגויה|לא הוגדרה/.test(msg)){try{localStorage.removeItem('elaiApi')}catch(_){}showLogin(msg.replace(/^AUTH:\s*/,''))}throw new Error(msg.replace(/^AUTH:\s*/,''))}throw new Error(msg)}
+    return j.result;
+  }
+  function showLogin(msg){$('loginSheet').classList.remove('hide');$('loginMsg').textContent=msg||'';const c=apiConf();if(c&&!$('loginUrl').value)$('loginUrl').value=c.url}
+  async function doLogin(){
+    const url=$('loginUrl').value.trim(),pass=$('loginPass').value;
+    if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(url))return $('loginMsg').textContent='הכתובת צריכה להיראות כמו script.google.com/macros/s/.../exec';
+    if(pass.length<6)return $('loginMsg').textContent='הסיסמה קצרה מדי';
+    $('loginMsg').textContent='בודק…';
+    try{const res=await fetch(url,{method:'POST',body:JSON.stringify({fn:'ping',token:pass}),redirect:'follow'});const j=await res.json();if(!j.ok)throw new Error(String(j.error||'').replace(/^AUTH:\s*/,''));localStorage.setItem('elaiApi',JSON.stringify({url,pass}));closeSheet('loginSheet');$('loginPass').value='';loading();init()}
+    catch(e){$('loginMsg').textContent=e.message&&!/JSON|token/i.test(e.message)?e.message:'לא הצלחתי להתחבר. בדוק את הכתובת, ושהפריסה ב-Apps Script מוגדרת ל"כל אחד"'}
+  }
+  function logoutApp(){if(IS_GAS)return;if(!confirm('להתנתק מהמכשיר הזה?'))return;try{localStorage.removeItem('elaiApi');localStorage.removeItem(STATE_CACHE_KEY)}catch(_){}location.reload()}
+  async function saveApiPassword(){const p=$('apiPassword').value;if(p.length<6)return toast('הסיסמה חייבת להיות לפחות 6 תווים',true);loading();try{state.apiInfo=await call('setApiPassword',p);$('apiPassword').value='';if(!IS_GAS){const c=apiConf();if(c){c.pass=p;localStorage.setItem('elaiApi',JSON.stringify(c))}}renderApiInfo();toast('הסיסמה נשמרה')}catch(e){toast(e.message,true)}finally{loading(false)}}
+  async function renderApiInfo(){const el=$('apiInfo');if(!el)return;try{if(!state.apiInfo)state.apiInfo=await call('getApiInfo')}catch(_){return}const a=state.apiInfo;el.textContent=(a.hasPassword?'✓ סיסמה מוגדרת. ':'עדיין לא הוגדרה סיסמה. ')+(a.url?'כתובת השרת: '+a.url:'');$('copyApiUrlBtn').style.display=a.url?'block':'none';$('logoutBtn').style.display=IS_GAS?'none':'block'}
+  async function copyApiUrl(){const u=state.apiInfo&&state.apiInfo.url;if(!u)return;try{await navigator.clipboard.writeText(u);toast('הכתובת הועתקה')}catch(_){prompt('העתק את הכתובת:',u)}}
+  function setupStandalone(){
+    if(IS_GAS)return;
+    const add=(tag,attrs)=>{const el=document.createElement(tag);Object.keys(attrs).forEach(k=>el.setAttribute(k,attrs[k]));document.head.appendChild(el)};
+    if(!document.querySelector('meta[name=viewport]'))add('meta',{name:'viewport',content:'width=device-width, initial-scale=1, viewport-fit=cover'});
+    add('meta',{name:'apple-mobile-web-app-capable',content:'yes'});add('meta',{name:'mobile-web-app-capable',content:'yes'});add('meta',{name:'apple-mobile-web-app-status-bar-style',content:'default'});add('meta',{name:'theme-color',content:'#1c6b5c'});
+    add('link',{rel:'manifest',href:'manifest.webmanifest'});add('link',{rel:'apple-touch-icon',href:'icon-180.png'});add('link',{rel:'icon',href:'icon-192.png'});
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+    setTimeout(checkAppUpdate,4000);setInterval(()=>{if(document.visibilityState==='visible')checkAppUpdate()},30*60*1000);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkAppUpdate()});
+    try{localStorage.removeItem('elaiLiveScanBlocked')}catch(_){}
+  }
+  function currentAppVersion(){const m=(document.querySelector('header small')||{}).textContent;return String(m||'').replace(/[^0-9.]/g,'')}
+  async function checkAppUpdate(){
+    if(IS_GAS||state.updateShown)return;
+    try{const res=await fetch('index.html?check='+Date.now(),{cache:'no-store'});if(!res.ok)return;const html=await res.text();const m=html.match(new RegExp('<small>גרסה ([0-9.]+)<'+'/small>'));
+      if(m&&m[1]&&m[1]!==currentAppVersion()){state.updateShown=true;$('updateBar').classList.remove('hide')}}catch(_){}
+  }
+  async function applyAppUpdate(){if(IS_GAS)return;$('updateBar').textContent='מעדכן…';try{if(window.caches){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(_){}location.reload()}
+  function clearField(id){const el=$(id);el.value='';el.dispatchEvent(new Event('input',{bubbles:true}));if(id==='foodQuery'){$('foodResults').innerHTML='';$('foodChoice').innerHTML=''}if(id==='customFoodQuery')$('customFoodResults').innerHTML='';el.focus()}
+  function findFoodForEntry(e){
+    const mine=(state.data.myFoods||[]).find(x=>x.name===e.name);if(mine)return withHouseholdUnits(mine);
+    if(tz.ready){const f=tz.foods.find(x=>x.name===e.name);if(f)return f}
+    return null;
+  }
+  function openEntryEdit(id){
+    const e=(state.data.entries||[]).find(x=>x.id===id);if(!e)return;
+    const food=findFoodForEntry(e);state.entryEdit={entry:e,food};
+    $('entryEditTitle').textContent=e.name;$('entryEditAmount').value=e.amount;
+    const units=food?foodUnitOptions(food):[e.unit];if(!units.includes(e.unit))units.unshift(e.unit);
+    $('entryEditUnit').innerHTML=units.map(u=>`<option value="${esc(u)}" ${u===e.unit?'selected':''}>${esc(food?unitLabel(food,u):u)}</option>`).join('');
+    $('entryEditNote').textContent=food?'':'אפשר לשנות כמות. כדי להחליף יחידה, מחק והוסף מחדש מהחיפוש.';
+    $('entryEditUnit').disabled=!food;
+    updateEntryEditTotals();$('entryEditSheet').classList.remove('hide');
+  }
+  function entryEditMacros(){
+    if(!state.entryEdit)return {calories:0,protein:0,carbs:0,fat:0};const {entry:e,food}=state.entryEdit,amount=Number($('entryEditAmount').value)||0,unit=$('entryEditUnit').value;
+    if(food){const g=foodUnitGrams(food,unit),ge=foodUnitGrams(food,e.unit);if(g!=null&&(unit===food.unit||g))return portionMacros(food,amount,unit)}
+    const r=e.amount?amount/e.amount:0;return {calories:e.calories*r,protein:e.protein*r,carbs:(e.carbs||0)*r,fat:(e.fat||0)*r};
+  }
+  function changeEntryEditUnit(){if(!state.entryEdit)return;const {entry:e,food}=state.entryEdit,u=$('entryEditUnit').value;if(food){$('entryEditAmount').value=u==='גרם'?Math.round((Number($('entryEditAmount').value)||0)*(foodUnitGrams(food,e.unit)||1)):1}updateEntryEditTotals()}
+  function updateEntryEditTotals(){const m=entryEditMacros();$('entryEditTotals').textContent=`${fmt(m.calories)} קל׳ · ${fmt(m.protein)} ג׳ חלבון · ${fmt(m.carbs)} פחמ׳ · ${fmt(m.fat)} שומן`}
+  async function saveEntryEdit(){if(!state.entryEdit)return;const {entry:e}=state.entryEdit,m=entryEditMacros(),amount=Number($('entryEditAmount').value);if(!(amount>0))return toast('כמות לא תקינה',true);closeSheet('entryEditSheet');await mutate('editEntry',{entryId:e.id,amount,unit:$('entryEditUnit').value,calories:m.calories,protein:m.protein,carbs:m.carbs,fat:m.fat},'הפריט עודכן')}
+  function focusIngredient(i){const rows=document.querySelectorAll('#customIngredients .custom-ingredient');const row=rows[i];if(!row)return;row.scrollIntoView({behavior:'smooth',block:'center'});const inp=row.querySelector('input[type=number]');if(inp)setTimeout(()=>{inp.focus();inp.select&&inp.select()},250)}
+  function openPlanExercisePicker(i){const item=state.planItems[i];if(!item)return;state.pickMode={group:item.group,current:item.exerciseId,all:true,onPick:id=>{updateWorkoutPlanItem(i,'exerciseId',id);renderWorkoutPlanItems()},reopen:()=>openPlanExercisePicker(i)};renderExercisePicker()}
+  function workoutStartDateValue(){const v=$('workoutStartDate')&&$('workoutStartDate').value;return /^\d{4}-\d{2}-\d{2}$/.test(v||'')?v:state.date}
+  function openSessionDate(id){const s=(state.data.workout.sessions||[]).find(x=>x.id===id);if(!s)return;state.dateSessionId=id;$('sessionDateInfo').textContent=`${s.name} · כרגע ${displayDate(s.date)}`;$('sessionDateInput').value=s.date;$('sessionDateSheet').classList.remove('hide')}
+  async function saveSessionDate(){if(!state.dateSessionId)return closeSheet('sessionDateSheet');const date=$('sessionDateInput').value;if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return toast('בחר תאריך',true);closeSheet('sessionDateSheet');loading();try{state.data.workout=await call('changeWorkoutSessionDate',{id:state.dateSessionId,date});renderWorkoutHistory();renderWorkouts(true);toast('האימון הועבר ל-'+displayDate(date))}catch(e){toast(e.message,true)}finally{loading(false)}}
+  function openGroupSheet(){if(!state.select||state.select.mode!=='ent')return;const ids=[...(state.select&&state.select.set||[])];if(ids.length<2)return toast('בחר לפחות שני פריטים',true);const es=(state.data.entries||[]).filter(e=>ids.includes(e.id));const tot=es.reduce((a,e)=>({c:a.c+(Number(e.calories)||0),p:a.p+(Number(e.protein)||0)}),{c:0,p:0});$('groupInfo').textContent=`${es.length} פריטים · ${fmt(tot.c)} קל׳ · ${fmt(tot.p)} ג׳ חלבון`;$('groupName').value='';state.groupCat=state.category||'צהריים';renderGroupCats();$('groupSavePermanent').checked=false;$('groupSheet').classList.remove('hide');setTimeout(()=>$('groupName').focus(),50)}
+  function renderGroupCats(){$('groupCats').innerHTML=['בוקר','צהריים','ערב','נשנושים'].map(c=>`<button class="chip ${state.groupCat===c?'active':''}" onclick="state.groupCat='${c}';renderGroupCats()">${c}</button>`).join('')}
+  async function saveGroup(){
+    if(!state.select||state.select.mode!=='ent')return closeSheet('groupSheet');
+    const ids=[...(state.select&&state.select.set||[])],name=$('groupName').value.trim();if(!name)return toast('תן שם לארוחה',true);
+    const savePermanent=$('groupSavePermanent').checked,es=(state.data.entries||[]).filter(e=>ids.includes(e.id));
+    closeSheet('groupSheet');exitSelectMode();loading();
+    try{const r=await call('groupEntries',{ids,name,category:state.groupCat});applyDay(r.day);renderDay();
+      if(savePermanent){try{const d=await call('saveCustomMeal',{date:state.date,mealId:'',category:state.groupCat,name,ingredients:es.map(e=>({name:e.name,amount:e.amount,unit:e.unit,calories:e.calories,protein:e.protein,carbs:e.carbs||0,fat:e.fat||0})),savePermanent:true,addToToday:false});state.data.meals=d.meals;state.data.hiddenMeals=d.hiddenMeals}catch(err){toast('האיחוד הצליח, אבל השמירה כארוחה קבועה נכשלה: '+err.message,true)}}
+      undoToast('הפריטים אוחדו לארוחה',()=>mutate('ungroupEntries',r.prev,'הארוחה פורקה'))}
+    catch(e){toast(e.message,true)}finally{loading(false)}
+  }
+
+  window.__stage='script parsed, starting';
+  setupStandalone();
+  init();
+</script>
+</body>
+</html>
