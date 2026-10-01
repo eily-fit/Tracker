@@ -41,7 +41,7 @@ setTimeout(function(){if(!window.__booted)__bootErr('TIMEOUT: the app did not fi
 <body>
 <div class="loader" id="loader"><div class="spinner"></div></div>
 <main class="app">
-  <header><div class="brand"><h1>המעקב של עילאי</h1><small>גרסה 0.19.1</small><small id="syncChip" class="sync-chip" style="display:none">מתעדכן…</small><small id="prettyDate"></small></div><div class="date-nav"><button class="icon-btn" onclick="moveDate(-1)">›</button><button class="icon-btn" id="todayBtn" onclick="goToday()">היום</button><button class="icon-btn" onclick="moveDate(1)">‹</button></div></header>
+  <header><div class="brand"><h1>המעקב של עילאי</h1><small>גרסה 0.19.2</small><small id="syncChip" class="sync-chip" style="display:none">מתעדכן…</small><small id="prettyDate"></small></div><div class="date-nav"><button class="icon-btn" onclick="moveDate(-1)">›</button><button class="icon-btn" id="todayBtn" onclick="goToday()">היום</button><button class="icon-btn" onclick="moveDate(1)">‹</button></div></header>
 
   <section id="today" class="view active">
     <div class="card progress-wrap">
@@ -966,7 +966,33 @@ setTimeout(function(){if(!window.__booted)__bootErr('TIMEOUT: the app did not fi
   function togglePlanPeek(id){state.planPeek=state.planPeek===id?'':id;renderWorkoutPlans()}
 
   function apiConf(){try{const c=JSON.parse(localStorage.getItem('elaiApi')||'null');return c&&c.url&&c.pass?c:null}catch(_){return null}}
+  let jsonpSeq=0;
+  function jsonpRequest(url,params,timeoutMs){
+    return new Promise((resolve,reject)=>{
+      const cb='elaiCb'+Date.now().toString(36)+(jsonpSeq++);
+      const q=Object.keys(params).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(params[k])).join('&');
+      const s=document.createElement('script');let done=false;
+      const finish=()=>{done=true;clearTimeout(t);try{delete window[cb]}catch(_){window[cb]=undefined}s.remove()};
+      window[cb]=data=>{finish();resolve(data)};
+      s.onerror=()=>{if(done)return;finish();reject(new Error('אין חיבור לשרת. בדוק אינטרנט ונסה שוב'))};
+      const t=setTimeout(()=>{if(done)return;finish();reject(new Error('השרת לא ענה בזמן. נסה שוב'))},timeoutMs||90000);
+      s.src=url+(url.indexOf('?')<0?'?':'&')+q+'&cb='+cb;
+      document.head.appendChild(s);
+    });
+  }
+  function handleApiReply(j){
+    if(j&&j.ok)return j.result;
+    const msg=String(j&&j.error||'שגיאה');
+    if(/^AUTH/.test(msg)){if(/שגויה|לא הוגדרה/.test(msg)){try{localStorage.removeItem('elaiApi')}catch(_){}showLogin(msg.replace(/^AUTH:\s*/,''))}throw new Error(msg.replace(/^AUTH:\s*/,''))}
+    throw new Error(msg);
+  }
   async function httpCall(fn,args){
+    const c=apiConf();if(!c){showLogin();throw new Error('צריך להתחבר')}
+    const a=JSON.stringify(args||[]);
+    if(a.length<6000)return handleApiReply(await jsonpRequest(c.url,{fn,a,t:c.pass}));
+    return httpPost(fn,args);
+  }
+  async function httpPost(fn,args){
     const c=apiConf();if(!c){showLogin();throw new Error('צריך להתחבר')}
     let res;
     try{res=await fetch(c.url,{method:'POST',body:JSON.stringify({fn,args:args||[],token:c.pass}),redirect:'follow'})}catch(e){throw new Error('אין חיבור לשרת. בדוק אינטרנט ונסה שוב')}
@@ -980,7 +1006,7 @@ setTimeout(function(){if(!window.__booted)__bootErr('TIMEOUT: the app did not fi
     if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(url))return $('loginMsg').textContent='הכתובת צריכה להיראות כמו script.google.com/macros/s/.../exec';
     if(pass.length<6)return $('loginMsg').textContent='הסיסמה קצרה מדי';
     $('loginMsg').textContent='בודק…';
-    try{const res=await fetch(url,{method:'POST',body:JSON.stringify({fn:'ping',token:pass}),redirect:'follow'});const j=await res.json();if(!j.ok)throw new Error(String(j.error||'').replace(/^AUTH:\s*/,''));localStorage.setItem('elaiApi',JSON.stringify({url,pass}));closeSheet('loginSheet');$('loginPass').value='';loading();init()}
+    try{const j=await jsonpRequest(url,{fn:'ping',a:'[]',t:pass},30000);if(!j||!j.ok)throw new Error(String(j&&j.error||'').replace(/^AUTH:\s*/,''));localStorage.setItem('elaiApi',JSON.stringify({url,pass}));closeSheet('loginSheet');$('loginPass').value='';loading();init()}
     catch(e){$('loginMsg').textContent=e.message&&!/JSON|token/i.test(e.message)?e.message:'לא הצלחתי להתחבר. בדוק את הכתובת, ושהפריסה ב-Apps Script מוגדרת ל"כל אחד"'}
   }
   function logoutApp(){if(IS_GAS)return;if(!confirm('להתנתק מהמכשיר הזה?'))return;try{localStorage.removeItem('elaiApi');localStorage.removeItem(STATE_CACHE_KEY)}catch(_){}location.reload()}
