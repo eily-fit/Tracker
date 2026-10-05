@@ -11,9 +11,24 @@ const db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:pe
 let core=null,col=null,user=null,pendingCommits=[];
 const $id=id=>document.getElementById(id);
 const oldConf=()=>{try{const c=JSON.parse(localStorage.getItem('elaiApi')||'null');return c&&c.url&&c.pass?c:null}catch(_){return null}};
+/* The old server is reached with a normal POST first (works best inside installed iPhone/iPad apps),
+   and only if that fails with the older script-tag method. */
+async function postOld(fn,args){
+  const c=oldConf(),ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),60000);let res;
+  try{res=await fetch(c.url,{method:'POST',body:JSON.stringify({fn,args:args||[],token:c.pass}),redirect:'follow',signal:ctl.signal})}
+  catch(e){throw new Error('NET:'+(e&&e.name==='AbortError'?'timeout':(e&&e.message||'fetch')))}finally{clearTimeout(timer)}
+  const txt=await res.text();let j;try{j=JSON.parse(txt)}catch(_){throw new Error('NET:status '+res.status)}
+  if(!j.ok)throw new Error(String(j.error||'שגיאה').replace(/^AUTH:\s*/,''));
+  return j.result;
+}
 async function remote(fn,args){
   if(!oldConf())throw new Error('לפעולה הזו צריך חיבור לשרת הישן. חבר אותו בהגדרות');
-  return window.httpCall(fn,args||[]);
+  let first;
+  for(let k=0;k<3;k++){
+    try{return await postOld(fn,args)}catch(e){if(!/^NET:/.test(e.message))throw e;first=first||e.message.slice(4)}
+    try{return await window.httpCall(fn,args||[])}catch(e){if(!/חיבור|timeout|זמן/i.test(e.message))throw e;if(k===2)throw new Error('אין חיבור לשרת הישן ('+first+')')}
+    await new Promise(r=>setTimeout(r,1500*(k+1)));
+  }
 }
 
 /* ---------- saving to Firebase ---------- */

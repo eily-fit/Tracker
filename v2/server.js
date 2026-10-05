@@ -3,7 +3,7 @@ window.FitServerSheetNames=["App_BodyMeasurements", "App_DailySummary", "App_Ent
 window.FitServerFactory=function(__env,__user){
   var SpreadsheetApp=__env.SpreadsheetApp,PropertiesService=__env.PropertiesService,CacheService=__env.CacheService,LockService=__env.LockService,Session=__env.Session,Utilities=__env.Utilities,UrlFetchApp=__env.UrlFetchApp,DriveApp=__env.DriveApp,MailApp=__env.MailApp,GmailApp=__env.GmailApp,ScriptApp=__env.ScriptApp,HtmlService=__env.HtmlService,ContentService=__env.ContentService,Logger=__env.Logger,XmlService=__env.XmlService;
 const APP = Object.freeze({
-  version: '0.33.9',
+  version: '0.34.1',
   spreadsheetId: '15ICIt6QZIytJyoO6Cj4dYfp2UdY5MisExvnBcXm6S1I',
   timezone: 'Asia/Jerusalem',
   sheets: {
@@ -1235,7 +1235,7 @@ function openaiNutrition_(key,input,fallbackName,extra){
       }}}
   }};
   const request={model:'gpt-6-luna',store:false,reasoning:{effort:'low'},max_output_tokens:2400,
-    instructions:extra+'You estimate nutrition for a personal food diary. Reply in the language of the user (Hebrew or Arabic). Split mixed dishes into individually editable ingredients. grams is edible weight of each ingredient; calories, protein, carbs and fat are PER 100 GRAMS, never totals. Give short explicit assumptions about unknown quantity, oil, sauce, cooking state and recipe. Do not claim branded product precision without a label. Provide a reasonable estimate, not false certainty. If the input is unclear, state the uncertainty in note and assumptions. Do not include ingredients the user explicitly excludes. Use the exact counts and amounts the user states (for example 2 eggs means 2 eggs; one large egg is about 50 g edible, 72 kcal and 6.3 g protein). Assume home-cooked portions. Never count fat twice: when oil or butter is its own item, give the main ingredient plain values (raw or boiled), not fried or with-fat values. If cooking oil is not stated, assume 1 teaspoon (5 g) for a pan dish and none for boiled, baked without oil or raw food.',
+    instructions:extra+'You estimate nutrition for a personal food diary. Reply in the language of the user (Hebrew or Arabic). Split mixed dishes into individually editable ingredients. grams is edible weight of each ingredient; calories, protein, carbs and fat are PER 100 GRAMS, never totals. Give short explicit assumptions about unknown quantity, oil, sauce, cooking state and recipe. Do not claim branded product precision without a label. Provide a reasonable estimate, not false certainty. If the input is unclear, state the uncertainty in note and assumptions. Do not include ingredients the user explicitly excludes. Use the exact counts and amounts the user states (for example 2 eggs means 2 eggs; one large egg is about 50 g edible, 72 kcal and 6.3 g protein). Assume home-cooked portions. Never count fat twice: when oil or butter is its own item, give the main ingredient plain values (raw or boiled), not fried or with-fat values. If cooking oil is not stated, assume 1 teaspoon (5 g) for a pan dish and none for boiled, baked without oil or raw food. Meat and fish weights are usually weighed as served, with bone and skin: give grams of the edible part only (for example a cooked chicken drumstick is about 30% bone and 12% skin, a thigh 20% bone and 15% skin, a wing 40% bone and 25% skin, a whole fish about 35% bones and head). Count the skin only if the user says it was eaten; otherwise leave it out and say in the note that the skin was not counted.',
     input,
     text:{format:{type:'json_schema',name:'nutrition_estimate',strict:true,schema}}};
   let response;
@@ -1311,10 +1311,47 @@ function estimateDish(title, additions, options) {
       choices:foods.slice(0,1).map(f=>({name:f.name,calories:f.calories,protein:f.protein,carbs:f.carbs,fat:f.fat,sourceId:f.sourceId})),
       missing:!foods.length};
   });
-  return {name:dish,items,note:'אומדן בלבד. הכמויות וההתאמה למאגר הן הנחות; בדוק ושנה אותן לפני השמירה.'};
+  return {name:dish,items,meta:dishMeta_,note:'אומדן בלבד. הכמויות וההתאמה למאגר הן הנחות; בדוק ושנה אותן לפני השמירה.'};
 }
 
+// v0.34: meat and fish are weighed as served. The bone comes off automatically; the skin only if it was not eaten.
+// Shares of the cooked weight, approximate, from standard yield tables.
+const BONE_CUTS_={
+  chicken:[
+    {re:/כנפ|wing/,key:'wing',label:'כנפיים',bone:0.40,skin:0.25,usda:'wing'},
+    {re:/(^|[^א-ת])(שוק|שוקיים|כרעיים)(?![א-ת])|drumstick/,key:'drumstick',label:'שוק עוף',bone:0.30,skin:0.12,usda:'drumstick'},
+    {re:/(^|[^א-ת])(ירך|ירכיים)(?![א-ת])|thigh/,key:'thigh',label:'ירך עוף',bone:0.20,skin:0.15,usda:'thigh'},
+    {re:/רבע עוף|כרע|leg/,key:'leg',label:'רבע עוף',bone:0.25,skin:0.13,usda:'leg'},
+    {re:/עוף שלם|חצי עוף|whole chicken/,key:'whole',label:'עוף',bone:0.30,skin:0.12,usda:''},
+    {re:/חזה.*(?:עצם|עצמות)|breast.*bone/,key:'breast',label:'חזה עוף עם עצם',bone:0.15,skin:0.08,usda:'breast'}],
+  fish:[{re:/שלם|whole/,key:'whole',label:'דג שלם',bone:0.35,skin:0.08,usda:''}]
+};
+let dishMeta_=null;
+function weighedGrams_(text){const m=String(text||'').match(/(\d+(?:[.,]\d+)?)\s*(?:גרם|גר[׳']?|ג[׳']|g\b)/);return m?Number(m[1].replace(',','.')):0;}
+function boneCut_(text,kind,options){
+  options=options||{};
+  const cuts=BONE_CUTS_[kind]||[],cut=cuts.find(c=>c.re.test(text))||null;
+  const hasBoneWord=/עם עצם|עם עצמות|כולל עצם|על העצם|with bone|bone-in/.test(text);
+  // Weight includes bone: the user's switch wins; otherwise a bone-in cut, or the words "with bone".
+  const bone=options.bone===true||options.bone===false?options.bone:!!(cut||hasBoneWord);
+  // Skin: true = eaten, false = not eaten, undefined = not answered yet (counted as not eaten until answered).
+  const skinAns=options.skin===true||options.skin===false?options.skin:(/בלי עור|ללא עור|without skin|skinless/.test(text)?false:/עם העור|עם עור|with skin/.test(text)?true:undefined);
+  const skinEaten=skinAns===true;
+  const boneShare=bone?(cut?cut.bone:(kind==='fish'?0.25:0.30)):0;
+  // Only pieces that normally come with skin lose it: bone-in cuts, salmon, or when the user says so.
+  const hasSkin=!!cut||/עם עור|עם העור|with skin|סלמון|salmon/.test(text);
+  const skinShare=skinEaten||!hasSkin?0:(cut?cut.skin:(kind==='fish'?0.08:0.12));
+  const label=cut?cut.label:(kind==='fish'?'דג':'עוף');
+  const edible=g=>Math.max(1,Math.round(g*(1-boneShare-skinShare)));
+  return {skin:skinEaten,label,
+    query:kind==='chicken'?'chicken '+(cut&&cut.usda?cut.usda+' ':'')+(skinEaten?'meat and skin cooked roasted':'meat only cooked roasted'):'',
+    edible,
+    note:g=>{const parts=[];if(bone)parts.push('העצם (כ־'+Math.round(boneShare*100)+'%)');if(skinShare)parts.push('העור (כ־'+Math.round(skinShare*100)+'%)');
+      return 'שקלת '+g+' גרם'+(parts.length?', ירדו '+parts.join(' ו'):'')+'. נאכלו כ־'+edible(g)+' גרם '+(skinEaten?'בשר עם עור':'בשר')+(hasSkin&&skinAns===undefined?'. אכלת את העור? ענה למטה':'');},
+    meta:g=>({animal:true,kind,cut:cut?cut.key:'',bone,hasSkin,skin:skinAns===undefined?null:skinAns,weighed:g,edible:edible(g)})};
+}
 function parseDishParts_(title,additions,options) {
+  dishMeta_=null;
   const split=title.split(/\s+עם\s+/i),mainTitle=split.shift(),text=mainTitle.toLowerCase(),parts=[];
   additions=[split.join(' עם '),additions].filter(Boolean).join(', ');
   const add=(label,amount,query,fallback,assumption,unit,required,skinRequested)=>parts.push({label,amount,query,fallback:fallback||'',assumption:assumption||'כמות משוערת',unit:unit||'גרם',required,skinRequested:!!skinRequested});
@@ -1336,26 +1373,22 @@ function parseDishParts_(title,additions,options) {
       'הונחו 150 גרם בשר '+(beef?'בקר':'עוף')+'; שמן הכנה אינו נכלל אם לא הוספת אותו','גרם',beef?/beef/i:/chicken/i);
     add('פיתה',90,'pita bread','bread pita','פיתה אחת: כ־90 גרם; ערך הפיתה מחושב בנפרד');
   }else if(/סלמון|דג|salmon|fish/.test(text)){
-    const skin=!!options.skin,bone=!!options.bone,portion=Number(options.fishGrams)||150;
     const salmon=/סלמון|salmon/.test(text),fish=salmon?'salmon':'fish';
-    add(salmon?'סלמון':'דג',bone?Math.round(portion*.75):portion,
-      fish+' '+(skin?'with skin ':'')+'cooked',fish+' cooked',
-      'הונחו '+portion+' גרם '+(bone?'כולל עצמות (כ־75% אכיל)':'חלק אכיל')+'; '+(skin?'עם עור':'ללא עור'),
-      'גרם',salmon?/salmon/i:/fish/i,true);
-  }else if(/עוף|chicken/.test(text)&&/תפוחי? אדמה|potato/.test(title)){
-    const skin=!!options.skin, bone=!!options.bone;
-    const portion=Number(options.chickenGrams)||(chickenCut?(twoPieces?220:110):150);
-    add('עוף',bone?Math.round(portion*0.7):portion,
-      chickenCut?(skin?'chicken thigh meat and skin cooked roasted':'chicken thigh meat only cooked roasted'):(skin?'chicken meat and skin cooked roasted':'chicken meat only cooked roasted'),'chicken cooked roasted',
-      bone?'הונחו '+portion+' גרם עוף עם עצם; חושב כ־70% חלק אכיל, אומדן בלבד':'הונחו '+portion+' גרם חלק אכיל, '+(skin?'עם עור':'ללא עור')+'; שנה כמות לפי מה שאכלת','גרם',/chicken/i);
+    const cut=boneCut_(text,'fish',options),portion=Number(options.fishGrams)||weighedGrams_(text)||150;
+    add(salmon?'סלמון':'דג',cut.edible(portion),
+      fish+' '+(cut.skin?'with skin ':'')+'cooked',fish+' cooked',cut.note(portion),'גרם',salmon?/salmon/i:/fish/i,true);
+    dishMeta_=cut.meta(portion);
+  }else if(/עוף|chicken|כנפ|wing|שוק עוף|כרעיים|drumstick/.test(text)&&/תפוחי? אדמה|potato/.test(title)){
+    const cut=boneCut_(text,'chicken',options),portion=Number(options.chickenGrams)||weighedGrams_(text)||(chickenCut?(twoPieces?220:110):150);
+    add(cut.label,cut.edible(portion),cut.query,'chicken cooked roasted',cut.note(portion),'גרם',/chicken/i);
+    dishMeta_=cut.meta(portion);
     const potatoText=(title.match(/(?:\d+\s*(?:גרם|ג[׳']?)\s*)?תפוחי? אדמה/)||[])[0]||'תפוחי אדמה';
     const potato=parseDishPart_(potatoText);
     add('תפוחי אדמה',potato.amount,potato.query,'potatoes cooked','כמות תפוחי האדמה משוערת; שנה לפני שמירה','גרם',/potato/i);
-  }else if(/עוף|chicken/.test(text)){
-    const skin=!!options.skin,bone=!!options.bone,portion=Number(options.chickenGrams)||(chickenCut?(twoPieces?220:110):150);
-    add(chickenCut?'נתחי עוף':'עוף',bone?Math.round(portion*0.7):portion,
-      chickenCut?(skin?'chicken thigh meat and skin cooked roasted':'chicken thigh meat only cooked roasted'):(skin?'chicken meat and skin cooked roasted':'chicken meat only cooked roasted'),
-      'chicken cooked roasted',bone?'המשקל עם עצם; חושב כ־70% חלק אכיל, אומדן בלבד':'הונחה מנה של '+portion+' גרם חלק אכיל, '+(skin?'עם עור':'בלי עור'),'גרם',/chicken/i);
+  }else if(/עוף|chicken|כנפ|wing|כרעיים|drumstick/.test(text)){
+    const cut=boneCut_(text,'chicken',options),portion=Number(options.chickenGrams)||weighedGrams_(text)||(chickenCut?(twoPieces?220:110):150);
+    add(cut.label,cut.edible(portion),cut.query,'chicken cooked roasted',cut.note(portion),'גרם',/chicken/i);
+    dishMeta_=cut.meta(portion);
   }else if(isSausage&&/לחמני|לחמניה|bun/.test(text)){
     add('נקניקייה',75,'hot dog sausage','frankfurter','נקניקייה אחת: כ־75 גרם');
     add('לחמנייה',70,'hot dog bun','bread roll','לחמנייה אחת: כ־70 גרם');
