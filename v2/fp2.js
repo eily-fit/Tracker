@@ -61,12 +61,12 @@ function persist(ch,wait,retried){
 }
 
 /* ---------- screens: sign-in and first import ---------- */
-const CSS=`.fp2-ov{position:fixed;inset:0;z-index:10000;background:var(--bg,#f2f6f5);display:flex;align-items:flex-start;justify-content:center;padding:calc(40px + env(safe-area-inset-top)) 18px 20px;overflow:auto;direction:rtl;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
-.fp2-box{width:100%;max-width:420px;background:#fff;border-radius:20px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
-.fp2-box h1{margin:0 0 4px;font-size:28px;color:#1c6b5c}.fp2-box p{color:#5f6b68;line-height:1.55;margin:6px 0 14px}
-.fp2-box input{width:100%;box-sizing:border-box;font-size:17px;padding:13px 14px;border:1px solid #d5e0dc;border-radius:12px;margin:6px 0;direction:ltr;text-align:left;background:#fff}
-.fp2-btn{display:block;width:100%;border:0;border-radius:14px;padding:14px;font-size:17px;font-weight:700;margin-top:10px;background:#1c6b5c;color:#fff}.fp2-btn.light{background:#e9f2ef;color:#1c6b5c}.fp2-link{background:none;border:0;color:#1c6b5c;font-size:15px;margin-top:12px;padding:6px}
-.fp2-msg{min-height:22px;color:#b03a3a;font-size:15px;margin-top:8px}.fp2-bar{height:10px;background:#e9f2ef;border-radius:6px;overflow:hidden;margin:14px 0 6px}.fp2-bar i{display:block;height:100%;background:#1c6b5c;width:0;transition:width .3s}`;
+const CSS=`.fp2-ov{position:fixed;inset:0;z-index:10000;background:#1f1f1d;display:flex;align-items:flex-start;justify-content:center;padding:calc(40px + env(safe-area-inset-top)) 18px 20px;overflow:auto;direction:rtl;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+.fp2-box{width:100%;max-width:420px;background:#2C2C2A;color:#F1EFE8;border-radius:20px;padding:22px;box-shadow:none}
+.fp2-box h1{margin:0 0 4px;font-size:28px;color:#EF9F27}.fp2-box p{color:#B4B2A9;line-height:1.55;margin:6px 0 14px}
+.fp2-box input{width:100%;box-sizing:border-box;font-size:17px;padding:13px 14px;border:1px solid #444441;border-radius:12px;margin:6px 0;direction:ltr;text-align:left;background:#363634;color:#F1EFE8}
+.fp2-btn{display:block;width:100%;border:0;border-radius:14px;padding:14px;font-size:17px;font-weight:700;margin-top:10px;background:#EF9F27;color:#2a1a03}.fp2-btn.light{background:#3a352a;color:#EF9F27}.fp2-link{background:none;border:0;color:#EF9F27;font-size:15px;margin-top:12px;padding:6px}
+.fp2-msg{min-height:22px;color:#F09595;font-size:15px;margin-top:8px}.fp2-bar{height:10px;background:#444441;border-radius:6px;overflow:hidden;margin:14px 0 6px}.fp2-bar i{display:block;height:100%;background:#EF9F27;width:0;transition:width .3s}`;
 function overlay(html){
   if(!$id('fp2css')){const s=document.createElement('style');s.id='fp2css';s.textContent=CSS;document.head.appendChild(s)}
   let o=$id('fp2ov');if(!o){o=document.createElement('div');o.id='fp2ov';o.className='fp2-ov';document.body.appendChild(o)}
@@ -88,12 +88,12 @@ function showAuth(mode){
   $id('fp2Go').onclick=async()=>{const e=$id('fp2Email').value.trim(),p=$id('fp2Pass').value;$id('fp2Msg').textContent='רגע…';
     try{reg?await createUserWithEmailAndPassword(auth,e,p):await signInWithEmailAndPassword(auth,e,p)}catch(err){$id('fp2Msg').textContent=authErr(err)}};
   if(!reg)$id('fp2Forgot').onclick=async()=>{const e=$id('fp2Email').value.trim();if(!e)return $id('fp2Msg').textContent='כתוב קודם את האימייל';
-    try{await sendPasswordResetEmail(auth,e);$id('fp2Msg').style.color='#1c6b5c';$id('fp2Msg').textContent='נשלח מייל לאיפוס סיסמה'}catch(err){$id('fp2Msg').textContent=authErr(err)}};
+    try{await sendPasswordResetEmail(auth,e);$id('fp2Msg').style.color='#5DCAA5';$id('fp2Msg').textContent='נשלח מייל לאיפוס סיסמה'}catch(err){$id('fp2Msg').textContent=authErr(err)}};
 }
 function showImport(){
   const c=oldConf();
   overlay(`<h1>ברוך הבא 👋</h1><p>זו הכניסה הראשונה לחשבון הזה. להעביר את כל הנתונים מהאפליקציה הישנה? ארוחות, אימונים, משקלים, תוכניות, אירועים ודופק. זה לוקח בערך דקה, פעם אחת.</p>
-    ${c?'<p style="color:#1c6b5c">✓ השרת הישן מחובר בטלפון הזה</p>':`<input id="fp2Url" placeholder="כתובת השרת הישן (מסתיימת ב-/exec)"><input id="fp2Code" type="password" placeholder="הקוד האישי מהאפליקציה הישנה">`}
+    ${c?'<p style="color:#5DCAA5">✓ השרת הישן מחובר בטלפון הזה</p>':`<input id="fp2Url" placeholder="כתובת השרת הישן (מסתיימת ב-/exec)"><input id="fp2Code" type="password" placeholder="הקוד האישי מהאפליקציה הישנה">`}
     <button class="fp2-btn" id="fp2Imp">העבר את הנתונים שלי</button><button class="fp2-btn light" id="fp2Fresh">התחל מאפס</button>
     <div class="fp2-bar"><i id="fp2Prog"></i></div><div id="fp2Step" style="color:#5f6b68;font-size:15px"></div><div class="fp2-msg" id="fp2Msg"></div>`);
   $id('fp2Imp').onclick=async()=>{
