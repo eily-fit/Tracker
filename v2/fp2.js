@@ -151,6 +151,8 @@ function accountCard(){
   $id('fp2Out').onclick=async()=>{if(!confirm('להתנתק? הנתונים שמורים בענן ויחזרו בכניסה הבאה.'))return;await Promise.all(pendingCommits).catch(()=>{});await signOut(auth);location.reload()};
 }
 window.FP2={
+  oldConfig:oldConf,
+  async refreshHealth(){if(!core||!oldConf())throw new Error("חבר קודם את שרת השעון בחשבון וענן");await core.pullHealth();const fresh=await core.call("getBootstrapData",[]);if(typeof state!=="undefined"&&state.data)state.data.health=fresh.health},
   call:(fn,args)=>{if(!core)return Promise.reject(new Error('האפליקציה עוד נטענת'));return core.call(fn,args)},
   afterBoot(){accountCard();pullHealth();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pullHealth()})}
 };

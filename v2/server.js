@@ -463,9 +463,15 @@ function saveMeal(payload) {
     ];
   }).filter(r => r[7] > 0);
   if (!rows.length) throw new Error('כל מרכיבי הארוחה הוסרו');
+  const extraOil=extraOilRow_(payload,date,groupId,payload.category,meal.title||String(payload.option));if(extraOil)rows.push(extraOil);
   appendRows_(APP.sheets.entries, rows);
   touchDay_(date);
   return getDayData_(date);
+}
+
+function extraOilRow_(payload,date,groupId,category,title){
+  const g=Number(payload&&payload.oilGrams);if(!Number.isFinite(g)||g<=0)return null;
+  return [Utilities.getUuid(),date,new Date(),category||'נוסף','food',title||'','שמן נוסף',round1_(g),'גרם',round1_(g*9),0,0,round1_(g),'תוספת שמן',false,'תוספת שנבחרה במפורש; ערכי המזון המקורי נשמרו',groupId];
 }
 
 function saveFood(payload) {
@@ -488,7 +494,8 @@ function saveFood(payload) {
     round1_((Number(payload.carbs) || 0) * ratio), round1_((Number(payload.fat) || 0) * ratio),
     payload.source || 'הזנה ידנית', false, payload.notes || '', Utilities.getUuid()
   ];
-  appendRows_(APP.sheets.entries, [row]);
+  const extraOil=extraOilRow_(payload,date,row[16],row[3],'');
+  appendRows_(APP.sheets.entries, extraOil?[row,extraOil]:[row]);
   if (!/צמרת/.test(String(payload.source||''))) cacheFood_(payload);
   touchDay_(date);
   return getDayData_(date);
@@ -499,7 +506,7 @@ function saveDishEntries(payload) {
   const name=String(payload&&payload.name||'').trim();
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!name)throw new Error('חסרים שם המנה או התאריך');
   const items=payload.items||[];
-  if(!Array.isArray(items)||!items.length||items.length>15)throw new Error('יש לבחור בין רכיב אחד ל־15 רכיבים');
+  if(!Array.isArray(items)||!items.length||items.length>16)throw new Error('יש לבחור בין רכיב אחד ל־16 רכיבים');
   const rows=items.map(item=>{
     const label=String(item.label||'').trim();
     const amount=Number(item.amount),calories=Number(item.calories),protein=Number(item.protein),carbs=Number(item.carbs),fat=Number(item.fat);
@@ -1255,7 +1262,7 @@ function openaiNutrition_(key,input,fallbackName,extra){
     const text=(body.output||[]).flatMap(o=>o.content||[]).filter(x=>x.type==='output_text').map(x=>x.text).join('');
     parsed=JSON.parse(text);
   }catch(e){throw new Error('התקבלה תשובה חלקית מה־AI. לא נשמר מזון ולא נשלחה בקשה חוזרת.');}
-  if(body.status!=='completed'||!Array.isArray(parsed.items)||!parsed.items.length||parsed.items.length>15)
+  if(body.status!=='completed'||!Array.isArray(parsed.items)||!parsed.items.length||parsed.items.length>16)
     throw new Error('תשובת ה־AI לא הושלמה או חסרים בה מרכיבים. לא נשמר מזון.');
   const items=parsed.items.map(x=>{
     const grams=Number(x.grams),vals=['calories','protein','carbs','fat'].map(k=>Number(x[k]));
