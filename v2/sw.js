@@ -1,4 +1,4 @@
-const CACHE='fitpro2-2.3.1';
+const CACHE='fitpro2-2.4.1';
 const ASSETS=['./','index.html','server.js','fp2-core.js','fp2.js','fp2-nutrition.js','fp2-improvements.js','manifest.webmanifest','../icon-180.png','../icon-192.png','../icon-512.png'];
 const FB='https://www.gstatic.com/firebasejs/';
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>Promise.all(ASSETS.map(async u=>{try{const r=await fetch(new Request(u,{cache:'reload'}));if(r.ok)await c.put(u,r)}catch(_){}}))).then(()=>self.skipWaiting())));
@@ -20,4 +20,20 @@ self.addEventListener('fetch',e=>{
   const hit=await cache.match(key);
   return hit||net;
  }));
+});
+
+/* Data-only FCM payloads: exactly one notification, using the existing worker. */
+self.addEventListener('push',event=>{
+  let payload;try{payload=event.data.json()}catch(_){return}
+  const data=payload.data;if(!data||data.kind!=='fitpro-weekly')return;
+  event.waitUntil(self.registration.showNotification(data.title||'FitPro',{
+    body:data.body||'יש אירוע השבוע. פתח את האפליקציה לתכנון.',tag:data.tag||'fitpro-weekly',
+    data:{url:new URL('./',self.registration.scope).href,week:data.week},icon:'../icon-192.png'
+  }));
+});
+self.addEventListener('notificationclick',event=>{
+  event.notification.close();const url=new URL('./',self.registration.scope).href;
+  event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async clients=>{
+    const client=clients.find(c=>c.url.startsWith(self.registration.scope));if(client){await client.focus();client.postMessage({type:'FITPRO_OPEN_WEEKLY'});return}return self.clients.openWindow(url);
+  }));
 });

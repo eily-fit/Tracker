@@ -114,7 +114,7 @@ function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(as
   try{if(typeof state==='undefined'||!state.data)return;const fresh=await core.call('getBootstrapData',[]);const viewing=state.date;
     state.data=fresh;state.todayDate=fresh.date;
     if(viewing&&viewing!==fresh.date){state.date=viewing;const d=await core.call('getDayView',[viewing]);if(window.applyDay)applyDay(d)}else state.date=fresh.date;
-    if(window.renderAll)renderAll()}catch(e){console.error(e)}},700)}
+    if(window.renderAll)renderAll();queueNotificationSync()}catch(e){console.error(e)}},700)}
 function listen(){
   let first=true;
   onSnapshot(col,s=>{
@@ -148,13 +148,38 @@ function accountCard(){
   $id('fp2Repair').onclick=async()=>{if(!oldConf())return toast('חבר קודם את השרת הישן',true);const b=$id('fp2Repair'),m=$id('fp2RepairMsg');b.disabled=true;
     try{const n=await core.repairFromOld((t,p)=>{m.textContent=t+' · '+p+'%'});await flushAll(true);m.textContent='✓ הושלם. נוספו '+n+' שורות שהיו חסרות.';scheduleRefresh()}
     catch(e){m.textContent='לא הצליח: '+e.message}finally{b.disabled=false}};
-  $id('fp2Out').onclick=async()=>{if(!confirm('להתנתק? הנתונים שמורים בענן ויחזרו בכניסה הבאה.'))return;await Promise.all(pendingCommits).catch(()=>{});await signOut(auth);location.reload()};
+  $id('fp2Out').onclick=async()=>{if(!confirm('להתנתק? הנתונים שמורים בענן ויחזרו בכניסה הבאה.'))return;await Promise.all(pendingCommits).catch(()=>{});if(localStorage.getItem(pushKey())==='on'){try{await disablePush()}catch(e){toast('לא ניתן לבטל את ההתראות לפני ההתנתקות. התחבר לאינטרנט ונסה שוב',true);return}}await signOut(auth);location.reload()};
 }
+/* Push uses authenticated callable functions; no server keys live in the app. */
+let pushSDK=null,pushConfig=null,notifyTimer=null,notifyLast='';
+const pushDevice=()=>{let id=localStorage.getItem('fp2PushDevice');if(!id){id=crypto.randomUUID();localStorage.setItem('fp2PushDevice',id)}return id};
+const pushKey=()=>`fp2PushEnabled:${user?.uid||''}`;
+async function notificationAPI(name,data){const {getFunctions,httpsCallable}=await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js');return (await httpsCallable(getFunctions(app,'europe-west1'),name)(data||{})).data}
+async function messagingSDK(){if(!pushSDK)pushSDK=await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging.js');return pushSDK}
+function queueNotificationSync(){clearTimeout(notifyTimer);notifyTimer=setTimeout(async()=>{if(!core||!user)return;try{const fresh=await core.call('getBootstrapData',[]);const events=(fresh.bank?.events||[]).map(e=>({id:e.id,date:e.date,label:e.label,note:e.note||''}));const data={events,inApp:fresh.settings?.notifications_in_app!=='off'};const sig=JSON.stringify(data);if(sig===notifyLast)return;await notificationAPI('syncNotificationEvents',data);notifyLast=sig}catch(e){console.warn('Notification server is not available yet',e.code||e.message)}},1500)}
+async function enablePush(){
+  if(!user)throw new Error('התחבר קודם לחשבון');
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;
+  if(ios&&!navigator.standalone&&!matchMedia('(display-mode: standalone)').matches)throw new Error('באייפון צריך להוסיף את FitPro למסך הבית ולפתוח משם');
+  if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window))throw new Error('המכשיר או הדפדפן הזה אינו תומך בהתראות לטלפון');
+  // Request synchronously within the user's tap, before any network await (iOS requirement).
+  const permission=await Notification.requestPermission();if(permission!=='granted')throw new Error('לא אושרה הרשאה להתראות. ניתן לשנות בהגדרות הטלפון');
+  try{pushConfig=await notificationAPI('getNotificationConfig')}catch(_){throw new Error('שירות ההתראות טרם הופעל בשרת. ההודעות בתוך האפליקציה זמינות')}
+  const sdk=await messagingSDK();if(!await sdk.isSupported())throw new Error('הדפדפן הזה אינו תומך בחיבור התראות');
+  const reg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
+  const token=await sdk.getToken(sdk.getMessaging(app),{vapidKey:pushConfig.vapidKey,serviceWorkerRegistration:reg});if(!token)throw new Error('לא התקבלה הרשמה להתראות. נסה שוב');
+  await notificationAPI('registerNotificationDevice',{deviceId:pushDevice(),token});localStorage.setItem(pushKey(),'on');queueNotificationSync();
+}
+async function refreshPushRegistration(){if(!user||localStorage.getItem(pushKey())!=='on'||typeof Notification==='undefined'||Notification.permission!=='granted')return;try{const cfg=await notificationAPI('getNotificationConfig'),sdk=await messagingSDK();if(!await sdk.isSupported())return;const reg=await navigator.serviceWorker.ready,token=await sdk.getToken(sdk.getMessaging(app),{vapidKey:cfg.vapidKey,serviceWorkerRegistration:reg});if(token)await notificationAPI('registerNotificationDevice',{deviceId:pushDevice(),token})}catch(e){console.warn('Push registration refresh failed',e.code||e.message)}}
+async function disablePush(){if(!user)return;await notificationAPI('unregisterNotificationDevice',{deviceId:pushDevice()});localStorage.removeItem(pushKey());try{const sdk=await messagingSDK();await sdk.deleteToken(sdk.getMessaging(app))}catch(_){} }
+
 window.FP2={
   oldConfig:oldConf,
+  userId:()=>user?.uid,
+  enablePush,disablePush,pushEnabled:()=>!!user&&localStorage.getItem(pushKey())==='on'&&typeof Notification!=='undefined'&&Notification.permission==='granted',
   async refreshHealth(){if(!core||!oldConf())throw new Error("חבר קודם את שרת השעון בחשבון וענן");await core.pullHealth();const fresh=await core.call("getBootstrapData",[]);if(typeof state!=="undefined"&&state.data)state.data.health=fresh.health},
-  call:(fn,args)=>{if(!core)return Promise.reject(new Error('האפליקציה עוד נטענת'));return core.call(fn,args)},
-  afterBoot(){accountCard();pullHealth();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pullHealth()})}
+  call:async(fn,args)=>{if(!core)throw new Error('האפליקציה עוד נטענת');const r=await core.call(fn,args);if(['saveBankEvent','deleteBankEvent','restoreBankEvent','saveSettings','getBootstrapData','activateBankEvent'].includes(fn))queueNotificationSync();return r},
+  afterBoot(){accountCard();pullHealth();queueNotificationSync();refreshPushRegistration();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){pullHealth();queueNotificationSync()}})}
 };
 
 onAuthStateChanged(auth,async u=>{

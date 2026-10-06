@@ -104,7 +104,7 @@ renderHealthSetup=function(){
   renderWatchToggle();
 };
 (function(){
-  const style=document.createElement('style');style.textContent=`.trash,.delete-action{background:#35282C!important;color:#D6A1A7!important;border:1px solid #594047!important;box-shadow:none!important;font-weight:600}.trash:active{background:#483139!important}.plus-fab{width:48px;height:48px;background:#A9BD69!important;color:#19200D!important;box-shadow:0 3px 10px rgba(0,0,0,.2)!important;font-size:26px}.step-btn,.stepper button{box-shadow:none!important;border-color:#59683C!important}.prep-oil{margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:12px;line-height:1.5}.prep-oil .skin-chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.prep-oil small,.prep-assumption{display:block;font-size:12px;line-height:1.6}.prep-oil input{width:90px;padding:8px;margin:6px;border:1px solid var(--line);border-radius:8px}.prep-details,.bone-line,.prep-assumption{grid-column:1/-1}.prep-details{width:100%;margin:6px 0}.prep-details summary{color:var(--muted);font-size:13px}.saved-prep{margin:12px 0}#healthSetup .steps{padding-right:22px;line-height:1.8}#healthSetup li{margin-bottom:12px}#healthSetup a{color:var(--brand)}`;document.head.appendChild(style);
+  const style=document.createElement('style');style.textContent=`.trash,.delete-action{background:#452A30!important;color:#F0A0A8!important;border:1px solid #9A515C!important;box-shadow:none!important;font-weight:600}.trash:active{background:#483139!important}.plus-fab{width:48px;height:48px;background:#A9BD69!important;color:#19200D!important;box-shadow:0 3px 10px rgba(0,0,0,.2)!important;font-size:26px}.step-btn,.stepper button{box-shadow:none!important;border-color:#59683C!important}.prep-oil{margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:12px;line-height:1.5}.prep-oil .skin-chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.prep-oil small,.prep-assumption{display:block;font-size:12px;line-height:1.6}.prep-oil input{width:90px;padding:8px;margin:6px;border:1px solid var(--line);border-radius:8px}.prep-details,.bone-line,.prep-assumption{grid-column:1/-1}.prep-details{width:100%;margin:6px 0}.prep-details summary{color:var(--muted);font-size:13px}.saved-prep{margin:12px 0}#healthSetup .steps{padding-right:22px;line-height:1.8}#healthSetup li{margin-bottom:12px}#healthSetup a{color:var(--brand)}`;document.head.appendChild(style);
   // Form fields also work when a food was entered manually.
   ['foodName','foodAmount','foodUnit','foodCalories','foodProtein','foodCarbs','foodFat'].forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>{renderFoodBone();renderFoodOil()})});
 })();
@@ -136,3 +136,113 @@ function dishOilGrams(){const r=state.dishEstimate;if(!r)return 0;const all=r.ex
   const select=selectFood;selectFood=function(){const r=select.apply(this,arguments);renderFoodOil();return r};
   const box=$('customIngredients');if(box)box.addEventListener('change',e=>{if(e.target&&e.target.matches('input[aria-label="שם מרכיב"]'))renderCustomIngredients()});
 })();
+
+/* 2.4.0: current workout first, two equipment buckets, independent notifications. */
+function equipmentBucket(value){return /מכונ|machine/i.test(String(value||''))?'מכונה':'משקולות חופשיות'}
+function openCurrentWorkoutBuilder(){openWorkoutPlanBuilder();state.workoutBuilderMode='current';$('workoutPlanHeading').textContent='בניית אימון נוכחי';$('planBuilderSave').textContent='התחל את האימון';renderBuilderContext()}
+function renderBuilderContext(){
+  const current=state.workoutBuilderMode==='current';let box=$('workoutBuilderContext');
+  if(!box){box=document.createElement('div');box.id='workoutBuilderContext';$('workoutPlanItems').insertAdjacentElement('beforebegin',box)}
+  box.innerHTML=`${current?`<div class="field"><label>תאריך האימון</label><input id="currentBuilderDate" type="date" value="${esc(workoutStartDateValue())}"></div>`:''}<div class="field"><label>ציוד</label><div class="meal-tabs">${[['מכונה','מכונות ומתקנים'],['משקולות חופשיות','משקולות חופשיות']].map(([v,l])=>`<button type="button" class="chip ${equipmentBucket(state.equipment)===v?'active':''}" onclick="setEquipment('${v}',true);renderBuilderContext()">${l}</button>`).join('')}</div></div>`;
+}
+async function beginCurrentPlan(plan,date){
+  if(!plan.items.length)return toast('הוסף לפחות תרגיל אחד',true);
+  if((state.activePlan||state.sessionId)&&state.data.workout?.sessions?.some(s=>s.status==='active'&&(s.id===state.sessionId||s.id===state.activePlan?.sessionId))&&!confirm('יש אימון פעיל. להתחיל אימון נוסף? התרגילים שכבר שמרת יישארו ביומן.'))return false;
+  loading();try{const r=await call('createWorkoutSession',{date,name:plan.name,type:plan.category});if(date!==state.date){const day=await call('getDayView',date);state.date=date;applyDay(day);renderDate()}state.data.workout=r.workout;state.sessionId=r.id;localStorage.setItem('elaiWorkoutSession',JSON.stringify({id:r.id,name:plan.name,date}));state.activePlan={...plan,id:plan.id||'current:'+r.id,sessionId:r.id,date,ephemeral:true};state.activePlanDone=[];state.activePlanIndex=null;$('sessionName').value=plan.name;cancelWorkoutEdit();persistWorkoutPlanDraft();renderWorkouts(false);if(plan.category!=='אירובי')selectPlanExercise(0);$('activeWorkoutPlan').scrollIntoView({behavior:'smooth'});toast('האימון הנוכחי התחיל');return true}catch(e){toast(e.message,true);return false}finally{loading(false)}
+}
+(function(){
+  const open=openWorkoutPlanBuilder;openWorkoutPlanBuilder=function(i){state.workoutBuilderMode='fixed';const r=open.apply(this,arguments);$('fixedWorkoutSheet').classList.remove('hide');$('workoutPlanHeading').textContent=Number.isInteger(i)?'עריכת אימון קבוע':'יצירת אימון קבוע';$('planBuilderSave').textContent='שמור אימון קבוע';renderBuilderContext();return r};
+  const close=closeWorkoutPlanBuilder;closeWorkoutPlanBuilder=function(){const r=close.apply(this,arguments);$('fixedWorkoutSheet').classList.add('hide');return r};
+  const save=saveWorkoutPlan;saveWorkoutPlan=async function(){if(state.workoutBuilderMode!=='current')return save.apply(this,arguments);const name=$('workoutPlanName').value.trim(),category=$('workoutPlanCategory').value.trim();if(!name||!state.planItems.length)return toast('תן שם לאימון והוסף תרגיל',true);const catalog=state.data.workout.exercises,items=state.planItems.map(x=>({...x,name:(catalog[x.group]||[]).find(e=>e.id===x.exerciseId)?.name||'תרגיל'}));const date=$('currentBuilderDate').value||state.date;if(await beginCurrentPlan({name,category:category||'כללי',items},date))closeWorkoutPlanBuilder()};
+  const start=startWorkoutPlan;startWorkoutPlan=async function(i){const p=planList()[i];if(p)return beginCurrentPlan(p,workoutStartDateValue());return start.apply(this,arguments)};
+  const persist=persistWorkoutPlanDraft;persistWorkoutPlanDraft=function(){if(state.activePlan?.ephemeral){try{localStorage.setItem('elaiActiveWorkoutPlan',JSON.stringify({date:state.activePlan.date,planId:state.activePlan.id,sessionId:state.activePlan.sessionId,snapshot:state.activePlan}))}catch(_){}return}return persist.apply(this,arguments)};
+  const restore=restoreWorkoutPlanDraft;restoreWorkoutPlanDraft=function(){try{const d=JSON.parse(localStorage.getItem('elaiActiveWorkoutPlan')||'null');if(d?.date===state.date&&d.snapshot?.ephemeral&&state.data.workout.sessions?.some(s=>s.id===d.sessionId&&s.status==='active')){state.activePlan=d.snapshot;state.sessionId=d.sessionId;state.activePlanIndex=null;$('sessionName').value=d.snapshot.name;reconcileWorkoutPlan();return}}catch(_){}return restore.apply(this,arguments)};
+  const render=renderWorkouts;renderWorkouts=function(){state.equipment=equipmentBucket(state.equipment);state.libraryMode=state.libraryMode==='machines'?'machines':'free';return render.apply(this,arguments)};
+  const finish=finishPlanWorkout;finishPlanWorkout=async function(){const id=state.activePlan?.sessionId;await finish.apply(this,arguments);if(!state.activePlan&&state.sessionId===id){state.sessionId='';localStorage.removeItem('elaiWorkoutSession');renderSessionBanner()}};
+  const set=setEquipment;setEquipment=function(v,silent){return set(equipmentBucket(v),silent)};
+  const picker=openPlanExercisePicker;openPlanExercisePicker=function(i){picker(i);if(state.pickMode){state.pickMode.all=false;state.pickMode.equipment=equipmentBucket(state.equipment);renderExercisePicker()}};
+})();
+function notificationDate(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).format(now)}
+function weeklyNotice(events,today){const week=weekStartOf(today),end=isoAdd(week,6),items=(events||[]).filter(e=>e.date>=today&&e.date<=end);return {week,items,title:items.length?'האירועים שלך השבוע':'יש לך אירוע השבוע?',body:items.length?items.map(e=>`${e.label} · ${displayDate(e.date)}`).join(' · '):'אירוע, מסעדה או משהו חשוב? אפשר להוסיף ליומן ולתכנן מראש.'}}
+function notificationKey(part){return 'fp2:'+((window.FP2&&FP2.userId&&FP2.userId())||'local')+':'+part}
+function inAppNotificationsOn(){return state.data?.settings?.notifications_in_app!=='off'}
+function dismissWeeklyNotice(week){localStorage.setItem(notificationKey('weekSeen'),week);$('weeklyNoticeSheet')?.classList.add('hide')}
+function openWeeklyEvent(week,id){dismissWeeklyNotice(week);if(id)openEventSheet({edit:id});else openEventSheet()}
+function showWeeklyNotice(force=false){
+  if(!state.data||!inAppNotificationsOn()||document.visibilityState==='hidden')return;
+  if(document.querySelector('.overlay:not(.hide)')||$('fp2ov'))return;
+  const n=weeklyNotice(bankEvents(),notificationDate());if(!force&&localStorage.getItem(notificationKey('weekSeen'))===n.week)return;
+  let el=$('weeklyNoticeSheet');if(!el){el=document.createElement('div');el.id='weeklyNoticeSheet';el.className='overlay hide';document.body.appendChild(el)}
+  el.innerHTML=`<div class="sheet"><div class="history-top"><h2>${esc(n.title)}</h2><button class="trash" aria-label="סגור" onclick="dismissWeeklyNotice('${n.week}')">✕</button></div>${n.items.length?`<p>יש אירוע השבוע שהוספת ליומן. אפשר לפתוח אותו ולתכנן את יום האירוע מראש.</p>${n.items.map(e=>`<button class="pick-row" onclick="openWeeklyEvent('${n.week}','${esc(e.id)}')"><b>${esc(e.label)}</b><small>${esc(displayDate(e.date))}</small></button>`).join('')}<p class="muted">שמור על שגרת האכילה והחלבון. תכנן מקום לארוחה באירוע, בלי צום או קיצוץ חד.</p>`:`<p>${esc(n.body)}</p><button class="btn full" onclick="openWeeklyEvent('${n.week}')">＋ הוסף אירוע לשבוע</button>`}<button class="btn light full" style="margin-top:10px" onclick="dismissWeeklyNotice('${n.week}')">${n.items.length?'הבנתי':'לא עכשיו'}</button></div>`;el.classList.remove('hide');
+}
+async function setInAppNotifications(on){try{const r=await call('saveSettings',{notifications_in_app:on?'on':'off'});state.data.settings=r.settings;if(!on)$('weeklyNoticeSheet')?.classList.add('hide')}catch(e){toast(e.message,true)}renderNotificationSettings()}
+async function enablePhonePush(){const b=$('enablePhonePush');if(b)b.disabled=true;try{if(!window.FP2?.enablePush)throw new Error('החשבון עדיין נטען');await FP2.enablePush();toast('התראות לטלפון הופעלו');localStorage.setItem(notificationKey('pushPrompt'),'done');$('pushWelcome')?.remove()}catch(e){toast(e.message,true)}finally{if(b)b.disabled=false;renderNotificationSettings()}}
+async function disablePhonePush(){try{await FP2.disablePush();toast('התראות לטלפון כבויות במכשיר הזה')}catch(e){toast(e.message,true)}renderNotificationSettings()}
+function renderNotificationSettings(){
+  const sec=$('settings');if(!sec||!state.data)return;let box=$('notificationSettings');if(!box){box=document.createElement('details');box.id='notificationSettings';box.className='settings-section';const h=sec.querySelector('h2');h.insertAdjacentElement('afterend',box)}
+  const enabled=window.FP2?.pushEnabled?.();box.innerHTML=`<summary>🔔 התראות</summary><div class="settings-body"><h3>התראות לטלפון — Push</h3><p class="muted">תזכורת לאירועי השבוע ביום ראשון ב־09:00, גם כשהאפליקציה סגורה. ההגדרה היא למכשיר הזה.</p><button class="btn ${enabled?'light':'secondary'} full" id="enablePhonePush" onclick="${enabled?'disablePhonePush()':'enablePhonePush()'}">${enabled?'בטל התראות לטלפון':'הפעל התראות לטלפון'}</button><p class="muted" id="pushStatus">${enabled?'פעיל במכשיר הזה':typeof Notification!=='undefined'&&Notification.permission==='denied'?'ההרשאה חסומה בטלפון. אפשר לשנות אותה בהגדרות ההתראות של FitPro.':'באייפון: הוסף למסך הבית ופתח משם, ואז לחץ להפעלה.'}</p><h3>התראות בתוך האפליקציה</h3><label class="bone-row"><span>הודעה שבועית על אירועים</span><input type="checkbox" ${inAppNotificationsOn()?'checked':''} onchange="setInAppNotifications(this.checked)"></label><p class="muted">בפתיחה הראשונה בשבוע: אירועים קרובים, או שאלה אם תרצה להוסיף אירוע. נפרד מהתראות לטלפון.</p></div>`;
+}
+function offerPhonePush(){if(!state.data||localStorage.getItem(notificationKey('pushPrompt'))||window.FP2?.pushEnabled?.())return;const t=$('today');if(!t||$('pushWelcome'))return;const el=document.createElement('div');el.id='pushWelcome';el.className='card';el.innerHTML=`<b>🔔 תזכורת לאירועים שלך</b><p class="muted">הפעל התראות לטלפון כדי לקבל תזכורת בתחילת השבוע. אפשר לבטל בהגדרות.</p><button class="btn secondary full" onclick="enablePhonePush()">הפעל התראות לטלפון</button><button class="btn light full" onclick="localStorage.setItem(notificationKey('pushPrompt'),'later');$('pushWelcome').remove()">אחר כך</button>`;t.insertAdjacentElement('afterbegin',el)}
+(function(){
+  const r=renderSettings;renderSettings=function(){const result=r.apply(this,arguments);renderNotificationSettings();return result};
+  const all=renderAll;renderAll=function(){const result=all.apply(this,arguments);offerPhonePush();setTimeout(showWeeklyNotice,600);return result};
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')showWeeklyNotice()});
+  // No ambient oil controls above the AI entry buttons.
+  renderOilChips();
+})();
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='FITPRO_OPEN_WEEKLY'){showView('today');showWeeklyNotice(true)}});
+
+// 2.4.1: plain ingredients share one nutrition baseline, independent of recipes.
+const PLAIN_POULTRY=[
+  ['פרגית',121,19.66,4.12,179,24.76,8.15,'173627','172388'],
+  ['ירך עוף',121,19.66,4.12,179,24.76,8.15,'173627','172388'],
+  ['חזה עוף',120,22.5,2.62,165,31.02,3.57,'171077','171477']
+].flatMap(([cut,k,p,f,ck,cp,cf,rid,cid])=>[
+  {name:cut+' נא — ללא עור, עצם ושמן נוסף',calories:k,protein:p,fat:f,sourceId:rid},
+  {name:cut+' צלוי — ללא עור, עצם ושמן נוסף',calories:ck,protein:cp,fat:cf,sourceId:cid}
+].map(x=>({...x,baseQty:100,unit:'גרם',carbs:0,units:[],source:'USDA · חומר גלם בסיסי',plainIngredient:true})));
+(function(){
+  const search=localFoodSearch;localFoodSearch=function(q,limit=40){
+    const r=search.apply(this,arguments),n=String(q||'');
+    const cut=/פרגי/.test(n)?'פרגית':/ירך|ירכיים/.test(n)?'ירך עוף':/חזה/.test(n)&&/עוף/.test(n)?'חזה עוף':null;
+    if(!cut)return r;
+    const raw=/נא|לפני בישול/.test(n),cooked=/מבושל|צלוי|אפוי/.test(n);
+    const plain=PLAIN_POULTRY.filter(x=>x.name.startsWith(cut+' ')&&(!raw||x.name.includes(' נא '))&&(!cooked||x.name.includes(' צלוי ')));
+    r.results=plain.map(x=>({...x})).concat(r.results||[]).slice(0,limit);return r;
+  };
+  const card=foodResultCard;foodResultCard=function(x,onTap){const html=card.apply(this,arguments);return x.plainIngredient?html.replace('המזונות שלי',esc(x.source)+' · אפשר להוסיף שמן בנפרד'):html};
+})();
+
+// The journal-only action cannot overwrite a saved recipe, even while editing it.
+async function saveCustomToJournalOnly(){
+  const id=state.editingMealId,key=state.replaceBuiltinKey,checked=$('customSavePermanent').checked;
+  state.editingMealId='';state.replaceBuiltinKey='';$('customSavePermanent').checked=false;
+  try{return await saveCustomMeal(true,false)}finally{
+    if($('customMealBuilder').style.display!=='none'){state.editingMealId=id;state.replaceBuiltinKey=key;$('customSavePermanent').checked=checked}
+  }
+}
+
+function fitRowMacros(r){const x=state.customIngredients[r.i];return x.per?portionMacros({...x.per,units:x.units,name:x.name},r.amount,r.unit):Object.fromEntries(['calories','protein','carbs','fat'].map(k=>[k,x.amount?Number(x[k]||0)*r.amount/x.amount:0]))}
+function updateFitTotals(){
+  const s=state.fit?.result;if(!s)return;
+  const totals={calories:0,protein:0,carbs:0,fat:0};let oil=state.mealOil?.mode==='exact'?FP2Nutrition.oilGrams(state.mealOil,0):0;
+  s.rows.forEach(r=>{const x=state.customIngredients[r.i],m=fitRowMacros(r);Object.keys(totals).forEach(k=>totals[k]+=m[k]);const selection=x.extraOil||(state.mealOil?.mode!=='exact'?state.mealOil:null);oil+=FP2Nutrition.oilGrams(selection,ingredientMass({...x,unit:r.unit},r.amount));const el=$('fitMacro-'+r.i);if(el)el.textContent=`${fmt(m.calories)} קל׳ · ${fmt(m.protein)} חלבון · ${fmt(m.carbs)} פחמ׳ · ${fmt(m.fat)} שומן`});
+  totals.calories+=oil*9;totals.fat+=oil;s.kcal=totals.calories;s.protein=totals.protein;s.totals=totals;
+  $('fitTotal').textContent=`סה״כ: ${fmt(totals.calories)} קל׳ · ${fmt(totals.protein)} חלבון · ${fmt(totals.carbs)} פחמימות · ${fmt(totals.fat)} שומן${oil?' · כולל שמן נוסף':''}`;
+}
+function setFitAmount(i,value){
+  if(value==='')return;const amount=Number(value);if(!Number.isFinite(amount)||amount<0)return;
+  const r=state.fit?.result?.rows.find(r=>r.i===i);if(!r)return;
+  (state.fit.prefs[i]||(state.fit.prefs[i]={})).fixed=amount;r.amount=amount;r.fixed=amount;updateFitTotals();
+}
+previewFit=function(){
+  const K=Math.max(0,Number($('fitKcal').value)||0),P=Math.max(0,Number($('fitProtein').value)||0);
+  const s=suggestPortions(K,P,state.fit.prefs);state.fit.result=s;
+  $('fitPreview').innerHTML=s.rows.map(r=>`<div class="fit-row"><b>${esc(r.name)}</b><div class="field"><label>כמות (${esc(r.unit)}) — אפשר להקליד</label><input aria-label="כמות ${esc(r.name)}" type="number" min="0" step="0.1" inputmode="decimal" value="${r.amount}" oninput="setFitAmount(${r.i},this.value)"></div><div id="fitMacro-${r.i}" class="muted"></div><div class="fit-ctl">${[[.5,'פחות'],[1,'רגיל'],[2,'יותר']].map(([v,l])=>`<button class="chip mini ${r.fixed==null&&r.w===v?'active':''}" onclick="setFitPref(${r.i},'w',${v})">${l}</button>`).join('')}<button class="chip mini" onclick="setFitPref(${r.i},'fixed',null)">חשב אוטומטית</button></div></div>`).join('')+'<p id="fitTotal" style="font-weight:700"></p><p class="muted">כמות שהקלדת נשמרת גם בחישוב הבא. 0 מסיר את המרכיב מהאוכל שיוסף ליומן.</p>';
+  updateFitTotals();
+};
+applyFit=function(){
+  const s=state.fit?.result;if(!s)return;
+  s.rows.forEach(r=>{const x=state.customIngredients[r.i];if(!x)return;if(x.per){x.unit=r.unit;x.amount=r.amount;recalcCustomIngredient(x)}else{const ratio=x.amount?r.amount/x.amount:0;['calories','protein','carbs','fat'].forEach(k=>x[k]=fmt(Number(x[k]||0)*ratio));x.amount=r.amount}if(x.cut){const factor=boneEdible(x,100)/100;x.weighed=factor?r.amount/factor:r.amount}});
+  closeSheet('fitSheet');renderCustomIngredients();toast('הכמויות עודכנו לפי הבחירה שלך');
+};

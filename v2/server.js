@@ -517,7 +517,7 @@ function saveDishEntries(payload) {
   const id=Utilities.getUuid(),now=new Date();
   appendRows_(APP.sheets.entries,rows.map(x=>[Utilities.getUuid(),date,now,'נוסף','dish',name,x.label,x.amount,x.unit,
     round1_(x.calories),round1_(x.protein),round1_(x.carbs),round1_(x.fat),x.source,false,x.notes,id]));
-  saveDishAsMeal_(name,rows,payload.category||'צהריים');
+  if(payload.savePermanent!==false)saveDishAsMeal_(name,rows,payload.category||'צהריים');
   rows.forEach(x=>cacheFood_({name:x.label,baseQty:x.amount,unit:x.unit,sourceBaseUnit:x.unit,
     calories:x.calories,protein:x.protein,carbs:x.carbs,fat:x.fat}));
   touchDay_(date);
@@ -1456,7 +1456,7 @@ function saveSettings(payload) {
   const newUsdaKey = payload && String(payload.usda_api_key || '').trim();
   if (newUsdaKey) verifyUsdaKey_(newUsdaKey);
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'checkin_day')){const d=Number(payload.checkin_day);if(!Number.isInteger(d)||d<0||d>6)throw new Error('יום לא תקין');setSetting_('checkin_day',d);}
-  ['has_watch','shake_hidden'].forEach(k=>{if(payload&&Object.prototype.hasOwnProperty.call(payload,k))setSetting_(k,payload[k]==='on'?'on':'off');});
+  ['has_watch','shake_hidden','notifications_in_app'].forEach(k=>{if(payload&&Object.prototype.hasOwnProperty.call(payload,k))setSetting_(k,payload[k]==='on'?'on':'off');});
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'meal_hours')){const h=String(payload.meal_hours||'').split(',').map(Number);if(h.length!==3||h.some(x=>!Number.isInteger(x)||x<0||x>23)||!(h[0]<h[1]&&h[1]<h[2]))throw new Error('שעות לא תקינות');setSetting_('meal_hours','h:'+h.join(','));}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'chicken_skin')){setSetting_('chicken_skin',payload.chicken_skin==='with'?'with':'without');}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'display_name')){const name=String(payload.display_name||'').trim();if(!name||name.length>40)throw new Error('כתוב שם עד 40 תווים');setSetting_('display_name',name);}
