@@ -6,6 +6,8 @@
 const TZ='Asia/Jerusalem';
 const reviveRow=r=>r.map(x=>x&&typeof x==='object'&&x.$d?new Date(x.$d):x);
 const packRow=r=>(r||[]).map(x=>x instanceof Date?{$d:x.toISOString()}:(x===undefined?'':x));
+const utf8Len=str=>{let n=0;for(let i=0;i<str.length;i++){const c=str.charCodeAt(i);n+=c<128?1:c<2048?2:(c>=0xD800&&c<=0xDBFF)?(i++,4):3}return n};
+const MAX_CHUNK=500000;
 const uuid=()=>(typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16)});
 function fmtDate(d,tz,pat){
   d=new Date(d);if(isNaN(d))return '';
@@ -28,11 +30,18 @@ Store.prototype.takeChanges=function(){
   const writes=[],deletes=[];
   this.tables.forEach(t=>{
     if(t.removed){for(let n=0;n*t.size<Math.max(t.known,1);n++)deletes.push(t.name+'~'+n);this.tables.delete(t.name);return}
-    const chunks=new Set();t.dirty.forEach(i=>chunks.add(Math.floor(i/t.size)));t.dirty.clear();
-    const lastChunk=Math.max(0,Math.ceil(t.data.length/t.size)-1);
-    chunks.forEach(n=>{if(n>lastChunk&&t.data.length)return;writes.push({id:t.name+'~'+n,t:t.name,n,size:t.size,rows:JSON.stringify(t.data.slice(n*t.size,(n+1)*t.size).map(packRow))})});
-    const oldLast=Math.max(0,Math.ceil(t.known/t.size)-1);
+    let chunks=new Set();t.dirty.forEach(i=>chunks.add(Math.floor(i/t.size)));t.dirty.clear();
+    let lastChunk=Math.max(0,Math.ceil(t.data.length/t.size)-1);
+    const pack=n=>JSON.stringify(t.data.slice(n*t.size,(n+1)*t.size).map(packRow));
+    /* a chunk that grew too big: make the table's chunks smaller and rewrite all of it */
+    let tooBig=false;chunks.forEach(n=>{if(!tooBig&&n<=lastChunk&&utf8Len(pack(n))>MAX_CHUNK)tooBig=true});
+    if(tooBig){let maxB=1;for(let n=0;n<=lastChunk;n++)maxB=Math.max(maxB,utf8Len(pack(n)));
+      t.size=Math.max(1,Math.floor(t.size*MAX_CHUNK*0.7/maxB));t.known=Math.max(t.known,t.data.length);
+      lastChunk=Math.max(0,Math.ceil(t.data.length/t.size)-1);chunks=new Set();for(let n=0;n<=lastChunk;n++)chunks.add(n);t.knownChunks=Math.max(t.knownChunks||0,Math.ceil(t.known/1))}
+    chunks.forEach(n=>{if(n>lastChunk&&t.data.length)return;const rows=pack(n);writes.push({id:t.name+'~'+n,t:t.name,n,size:t.size,rows,bytes:utf8Len(rows)})});
+    const oldLast=Math.max(t.maxChunk||0,Math.max(0,Math.ceil(t.known/t.size)-1));
     for(let n=lastChunk+1;n<=oldLast;n++)deletes.push(t.name+'~'+n);
+    t.maxChunk=lastChunk;
     t.known=t.data.length;
   });
   let props=null;if(this.propsDirty){props=JSON.stringify(this.props);this.propsDirty=false}
@@ -44,7 +53,7 @@ Store.prototype.applyChunk=function(doc){
   const rows=JSON.parse(doc.rows||'[]').map(reviveRow),start=doc.n*t.size;
   for(let i=0;i<rows.length;i++)t.data[start+i]=rows[i];
   for(let i=0;i<start;i++)if(!t.data[i])t.data[i]=[];
-  t.known=Math.max(t.known,t.data.length);
+  t.known=Math.max(t.known,t.data.length);t.maxChunk=Math.max(t.maxChunk||0,doc.n);
 };
 Store.prototype.removeChunk=function(id){
   const k=id.lastIndexOf('~'),name=id.slice(0,k),n=Number(id.slice(k+1)),t=this.tables.get(name);if(!t)return;
@@ -177,8 +186,8 @@ Core.prototype.importFromOld=async function(progress){
       page.rows.forEach(r=>rows.push(reviveRow(r)));doneRows+=page.rows.length;
       if(!page.rows.length)break;
     }
-    const bytes=JSON.stringify(rows.slice(0,200).map(packRow)).length/Math.max(1,Math.min(rows.length,200));
-    const size=Math.max(10,Math.min(400,Math.floor(450000/Math.max(50,bytes))));
+    let big=50;for(let i=0;i<rows.length;i+=Math.max(1,Math.floor(rows.length/400)))big=Math.max(big,utf8Len(JSON.stringify(packRow(rows[i]))));
+    const size=Math.max(1,Math.min(400,Math.floor(MAX_CHUNK*0.6/big)));
     const old=this.store.table(s.name);if(old)this.store.tables.delete(s.name);
     const t=this.store.create(s.name,size);t.data=rows;this.store.markAll(t);
   }
@@ -191,6 +200,26 @@ Core.prototype.importFromOld=async function(progress){
   this.store.props.FP2_IMPORTED=new Date().toISOString();this.store.propsDirty=true;
   this.start();
   say('שומר בענן…',95);
+};
+Core.prototype.repairFromOld=async function(progress){
+  const say=progress||function(){};say('בודק מה יש בשרת הישן…',0);
+  const info=await this.remote('exportSheetInfo',[]);
+  const known=new Set(window.FitServerSheetNames||[]);
+  const sheets=info.filter(s=>s.rows>0&&(known.has(s.name)||/^App_/.test(s.name)));
+  const total=sheets.reduce((a,s)=>a+s.rows,0)||1;let done=0,added=0;
+  const blank=r=>!r||r.every(v=>v===''||v===null||v===undefined);
+  for(const s of sheets){
+    const rows=[];
+    for(let off=0;off<s.rows;off+=1000){say('משחזר: '+s.name,Math.round(done/total*90));
+      const page=await this.remote('exportSheet',[{name:s.name,offset:off,limit:1000}]);page.rows.forEach(r=>rows.push(reviveRow(r)));done+=page.rows.length;if(!page.rows.length)break}
+    let t=this.store.table(s.name);
+    if(!t){t=this.store.create(s.name,100);t.data=rows;this.store.markAll(t);added+=rows.length;continue}
+    const have=new Set(t.data.map(r=>r&&r[0]!==''&&r[0]!=null?String(r[0]):null).filter(Boolean));
+    if(!t.data.length&&rows.length)t.data.push(rows[0]);
+    for(let i=1;i<rows.length;i++){const r=rows[i];if(blank(r))continue;const id=String(r[0]);if(!have.has(id)){t.data.push(r);have.add(id);added++}}
+    this.store.markAll(t);t.size=Math.min(t.size,100);
+  }
+  this.server&&this.flush();say('הושלם',100);return added;
 };
 /* Sleep and heart rate from the iPhone Shortcut still land on the old server: copy what is new. */
 Core.prototype.pullHealth=async function(){

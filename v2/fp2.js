@@ -10,7 +10,9 @@ const db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:pe
 
 let core=null,col=null,user=null,pendingCommits=[];
 const $id=id=>document.getElementById(id);
-const oldConf=()=>{try{const c=JSON.parse(localStorage.getItem('elaiApi')||'null');return c&&c.url&&c.pass?c:null}catch(_){return null}};
+const oldConf=()=>{try{const c=JSON.parse(localStorage.getItem('elaiApi')||'null');if(c&&c.url&&c.pass)return c}catch(_){}
+  const p=core&&core.store&&core.store.props;return p&&p.OLD_URL&&p.OLD_PASS?{url:p.OLD_URL,pass:p.OLD_PASS}:null};
+function rememberOld(url,pass){try{localStorage.setItem('elaiApi',JSON.stringify({url,pass}))}catch(_){}if(core&&core.store){core.store.props.OLD_URL=url;core.store.props.OLD_PASS=pass;core.store.propsDirty=true;core.flush()}}
 /* The old server is reached with a normal POST first (works best inside installed iPhone/iPad apps),
    and only if that fails with the older script-tag method. */
 async function postOld(fn,args){
@@ -32,17 +34,27 @@ async function remote(fn,args){
 }
 
 /* ---------- saving to Firebase ---------- */
-function persist(ch,wait){
+let syncState={pending:0,error:''};
+function syncNote(){const el=$id('fp2Sync');if(el)el.innerHTML=syncState.error?'⚠️ '+syncState.error:syncState.pending?'⏳ שומר בענן…':'✓ הכול שמור בענן';
+  let bar=$id('fp2SyncErr');if(syncState.error){if(!bar){bar=document.createElement('div');bar.id='fp2SyncErr';bar.style.cssText='position:fixed;z-index:9000;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));background:#8f3434;color:#fff;padding:10px 12px;border-radius:12px;font:14px/1.4 -apple-system,sans-serif;direction:rtl;text-align:right';bar.onclick=()=>bar.remove();document.body.appendChild(bar)}bar.textContent='⚠️ השמירה לענן נכשלה: '+syncState.error+' (נוגע כדי לסגור)'}else if(bar)bar.remove()}
+function persist(ch,wait,retried){
   if(!col)return Promise.resolve();
   const ops=[];
-  ch.writes.forEach(w=>ops.push(b=>b.set(doc(col,w.id),{t:w.t,n:w.n,size:w.size,rows:w.rows,u:Date.now()})));
-  ch.deletes.forEach(id=>ops.push(b=>b.delete(doc(col,id))));
-  if(ch.props)ops.push(b=>b.set(doc(col,'__props'),{t:'__props',rows:ch.props,u:Date.now()}));
-  const commits=[];
-  for(let i=0;i<ops.length;i+=400){const b=writeBatch(db);ops.slice(i,i+400).forEach(f=>f(b));commits.push(b.commit())}
+  ch.writes.forEach(w=>ops.push({bytes:(w.bytes||w.rows.length*2)+200,t:w.t,f:b=>b.set(doc(col,w.id),{t:w.t,n:w.n,size:w.size,rows:w.rows,u:Date.now()})}));
+  ch.deletes.forEach(id=>ops.push({bytes:100,f:b=>b.delete(doc(col,id))}));
+  if(ch.props)ops.push({bytes:ch.props.length*2+200,f:b=>b.set(doc(col,'__props'),{t:'__props',rows:ch.props,u:Date.now()})});
+  /* Firebase takes at most ~10 MB per request: group the writes into batches of up to 6 MB */
+  const groups=[];let cur=[],size=0;ops.forEach(o=>{if(cur.length&&(cur.length>=400||size+o.bytes>6000000)){groups.push(cur);cur=[];size=0}cur.push(o);size+=o.bytes});if(cur.length)groups.push(cur);
+  const commits=groups.map(g=>{const b=writeBatch(db);g.forEach(o=>o.f(b));syncState.pending++;syncNote();
+    return b.commit().then(()=>{syncState.pending--;syncState.error='';syncNote()},e=>{syncState.pending--;
+      console.error('sync',e);syncState.error=(e&&e.code==='permission-denied')?'אין הרשאה. בדוק את חוקי האבטחה ב-Firebase':((e&&e.message)||'שגיאה');syncNote();
+      /* too large or rejected: rewrite those tables in smaller pieces, once */
+      if(!retried&&core){const names=new Set(g.map(o=>o.t).filter(Boolean));names.forEach(n=>{const t=core.store.table(n);if(t){t.size=Math.max(1,Math.floor(t.size/3));core.store.markAll(t)}});
+        const again=core.store.takeChanges();return persist(again,true,true)}
+      throw e})});
   const all=Promise.all(commits);
   /* The phone copy is updated at once; the upload to the cloud finishes in the background (also after being offline). */
-  all.catch(e=>console.error('sync',e));
+  all.catch(()=>{});
   if(wait)return all;
   pendingCommits.push(all);all.finally(()=>{pendingCommits=pendingCommits.filter(x=>x!==all)});
   return Promise.resolve();
@@ -88,7 +100,7 @@ function showImport(){
     if(!c){const url=$id('fp2Url').value.trim(),pass=$id('fp2Code').value;if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(url)||!pass)return $id('fp2Msg').textContent='כתוב את הכתובת והקוד';localStorage.setItem('elaiApi',JSON.stringify({url,pass}))}
     $id('fp2Imp').disabled=$id('fp2Fresh').disabled=true;$id('fp2Msg').textContent='';
     const say=(t,p)=>{$id('fp2Step').textContent=t;$id('fp2Prog').style.width=p+'%'};
-    try{core=newCore();await core.importFromOld(say);await Promise.all(pendingCommits);say('מסיים…',98);await flushAll(true);say('הכול הועבר ✓',100);setTimeout(()=>location.reload(),600)}
+    try{core=newCore();const cc=oldConf();await core.importFromOld(say);if(cc){core.store.props.OLD_URL=cc.url;core.store.props.OLD_PASS=cc.pass;core.store.propsDirty=true}await Promise.all(pendingCommits);say('מסיים…',98);await flushAll(true);say('הכול הועבר ✓',100);setTimeout(()=>location.reload(),600)}
     catch(e){$id('fp2Msg').textContent='ההעברה נכשלה: '+e.message+'. אפשר לנסות שוב.';$id('fp2Imp').disabled=$id('fp2Fresh').disabled=false}
   };
   $id('fp2Fresh').onclick=async()=>{core=newCore();core.start();await flushAll(true);location.reload()};
@@ -124,9 +136,18 @@ function accountCard(){
   const view=$id('settings');if(!view||$id('fp2Account'))return;
   const card=document.createElement('details');card.className='settings-section';card.id='fp2Account';card.open=false;
   card.innerHTML=`<summary>👤 חשבון וענן</summary><div class="settings-body"><p class="muted">מחובר בתור <b dir="ltr">${(user.email||'').replace(/[<>&"]/g,'')}</b>. הנתונים נשמרים בטלפון ומסתנכרנים ל-Firebase.</p>
-    <p class="muted">השרת הישן (ל-AI, לתמונות ולשעון): ${oldConf()?'✓ מחובר':'לא מחובר'}</p>
+    <p class="muted" id="fp2Sync"></p>
+    <p class="muted">השרת הישן (ל-AI, לתמונות ולשעון): <b>${oldConf()?'✓ מחובר':'לא מחובר'}</b></p>
+    ${oldConf()?'':`<div class="field"><input id="fp2OldUrl" placeholder="כתובת השרת הישן (מסתיימת ב-/exec)" dir="ltr"></div><div class="field"><input id="fp2OldCode" type="password" placeholder="הקוד האישי מהאפליקציה הישנה" dir="ltr"></div><button class="btn full" id="fp2Connect">חבר</button>`}
+    <button class="btn secondary full" style="margin-top:10px" id="fp2Repair">🔄 השלם נתונים מהאפליקציה הישנה</button>
+    <p class="muted" id="fp2RepairMsg">מוסיף מהאפליקציה הישנה כל מה שחסר כאן: ארוחות, מזונות, אימונים, משקלים ועוד. מה שרשמת באפליקציה החדשה נשאר.</p>
     <button class="btn light full" id="fp2Out">התנתק</button></div>`;
   const h=view.querySelector('h2');(h||view.firstChild).insertAdjacentElement(h?'afterend':'beforebegin',card);
+  syncNote();
+  const cn=$id('fp2Connect');if(cn)cn.onclick=()=>{const u=$id('fp2OldUrl').value.trim(),p=$id('fp2OldCode').value;if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(u)||!p)return toast('כתוב כתובת וקוד',true);rememberOld(u,p);toast('השרת הישן חובר ✓');const c=$id('fp2Account');if(c)c.remove();accountCard();const d=$id('fp2Account');if(d)d.open=true};
+  $id('fp2Repair').onclick=async()=>{if(!oldConf())return toast('חבר קודם את השרת הישן',true);const b=$id('fp2Repair'),m=$id('fp2RepairMsg');b.disabled=true;
+    try{const n=await core.repairFromOld((t,p)=>{m.textContent=t+' · '+p+'%'});await flushAll(true);m.textContent='✓ הושלם. נוספו '+n+' שורות שהיו חסרות.';scheduleRefresh()}
+    catch(e){m.textContent='לא הצליח: '+e.message}finally{b.disabled=false}};
   $id('fp2Out').onclick=async()=>{if(!confirm('להתנתק? הנתונים שמורים בענן ויחזרו בכניסה הבאה.'))return;await Promise.all(pendingCommits).catch(()=>{});await signOut(auth);location.reload()};
 }
 window.FP2={

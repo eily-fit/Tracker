@@ -3,7 +3,7 @@ window.FitServerSheetNames=["App_BodyMeasurements", "App_DailySummary", "App_Ent
 window.FitServerFactory=function(__env,__user){
   var SpreadsheetApp=__env.SpreadsheetApp,PropertiesService=__env.PropertiesService,CacheService=__env.CacheService,LockService=__env.LockService,Session=__env.Session,Utilities=__env.Utilities,UrlFetchApp=__env.UrlFetchApp,DriveApp=__env.DriveApp,MailApp=__env.MailApp,GmailApp=__env.GmailApp,ScriptApp=__env.ScriptApp,HtmlService=__env.HtmlService,ContentService=__env.ContentService,Logger=__env.Logger,XmlService=__env.XmlService;
 const APP = Object.freeze({
-  version: '0.34.1',
+  version: '0.35.0',
   spreadsheetId: '15ICIt6QZIytJyoO6Cj4dYfp2UdY5MisExvnBcXm6S1I',
   timezone: 'Asia/Jerusalem',
   sheets: {
@@ -1235,7 +1235,7 @@ function openaiNutrition_(key,input,fallbackName,extra){
       }}}
   }};
   const request={model:'gpt-6-luna',store:false,reasoning:{effort:'low'},max_output_tokens:2400,
-    instructions:extra+'You estimate nutrition for a personal food diary. Reply in the language of the user (Hebrew or Arabic). Split mixed dishes into individually editable ingredients. grams is edible weight of each ingredient; calories, protein, carbs and fat are PER 100 GRAMS, never totals. Give short explicit assumptions about unknown quantity, oil, sauce, cooking state and recipe. Do not claim branded product precision without a label. Provide a reasonable estimate, not false certainty. If the input is unclear, state the uncertainty in note and assumptions. Do not include ingredients the user explicitly excludes. Use the exact counts and amounts the user states (for example 2 eggs means 2 eggs; one large egg is about 50 g edible, 72 kcal and 6.3 g protein). Assume home-cooked portions. Never count fat twice: when oil or butter is its own item, give the main ingredient plain values (raw or boiled), not fried or with-fat values. If cooking oil is not stated, assume 1 teaspoon (5 g) for a pan dish and none for boiled, baked without oil or raw food. Meat and fish weights are usually weighed as served, with bone and skin: give grams of the edible part only (for example a cooked chicken drumstick is about 30% bone and 12% skin, a thigh 20% bone and 15% skin, a wing 40% bone and 25% skin, a whole fish about 35% bones and head). Count the skin only if the user says it was eaten; otherwise leave it out and say in the note that the skin was not counted.',
+    instructions:extra+'You estimate nutrition for a personal food diary. Reply in the language of the user (Hebrew or Arabic). Split mixed dishes into individually editable ingredients. grams is edible weight of each ingredient (except bone-in chicken or fish pieces, explained below); calories, protein, carbs and fat are PER 100 GRAMS, never totals. Give short explicit assumptions about unknown quantity, oil, sauce, cooking state and recipe. Do not claim branded product precision without a label. Provide a reasonable estimate, not false certainty. If the input is unclear, state the uncertainty in note and assumptions. Do not include ingredients the user explicitly excludes. Use the exact counts and amounts the user states (for example 2 eggs means 2 eggs; one large egg is about 50 g edible, 72 kcal and 6.3 g protein). Assume home-cooked portions. Never count fat twice: when oil or butter is its own item, give the main ingredient plain values (raw or boiled), not fried or with-fat values. If cooking oil is not stated, assume 1 teaspoon (5 g) for a pan dish and none for boiled, baked without oil or raw food. For chicken or fish pieces that come with bone (drumstick, thigh, wing, back, leg quarter, whole chicken, whole fish): name the cut in Hebrew at the start of the item name (שוק עוף, ירך עוף, כנפיים, גב עוף, רבע עוף, עוף שלם, דג שלם), give grams exactly as the user weighed them including bone and skin, and give nutrition values for cooked meat without skin. The app removes the bone and skin itself. If the user did not give a weight, estimate a typical weighed portion with bone.',
     input,
     text:{format:{type:'json_schema',name:'nutrition_estimate',strict:true,schema}}};
   let response;
@@ -1321,6 +1321,7 @@ const BONE_CUTS_={
     {re:/כנפ|wing/,key:'wing',label:'כנפיים',bone:0.40,skin:0.25,usda:'wing'},
     {re:/(^|[^א-ת])(שוק|שוקיים|כרעיים)(?![א-ת])|drumstick/,key:'drumstick',label:'שוק עוף',bone:0.30,skin:0.12,usda:'drumstick'},
     {re:/(^|[^א-ת])(ירך|ירכיים)(?![א-ת])|thigh/,key:'thigh',label:'ירך עוף',bone:0.20,skin:0.15,usda:'thigh'},
+    {re:/גב עוף|(^|[^א-ת])גב(?![א-ת])|chicken back/,key:'back',label:'גב עוף',bone:0.45,skin:0.20,usda:'back'},
     {re:/רבע עוף|כרע|leg/,key:'leg',label:'רבע עוף',bone:0.25,skin:0.13,usda:'leg'},
     {re:/עוף שלם|חצי עוף|whole chicken/,key:'whole',label:'עוף',bone:0.30,skin:0.12,usda:''},
     {re:/חזה.*(?:עצם|עצמות)|breast.*bone/,key:'breast',label:'חזה עוף עם עצם',bone:0.15,skin:0.08,usda:'breast'}],
@@ -1335,7 +1336,7 @@ function boneCut_(text,kind,options){
   // Weight includes bone: the user's switch wins; otherwise a bone-in cut, or the words "with bone".
   const bone=options.bone===true||options.bone===false?options.bone:!!(cut||hasBoneWord);
   // Skin: true = eaten, false = not eaten, undefined = not answered yet (counted as not eaten until answered).
-  const skinAns=options.skin===true||options.skin===false?options.skin:(/בלי עור|ללא עור|without skin|skinless/.test(text)?false:/עם העור|עם עור|with skin/.test(text)?true:undefined);
+  const skinAns=options.skin===true||options.skin===false?options.skin:(/בלי עור|ללא עור|without skin|skinless/.test(text)?false:/עם העור|עם עור|with skin/.test(text)?true:(getSettings_().chicken_skin==='with'));
   const skinEaten=skinAns===true;
   const boneShare=bone?(cut?cut.bone:(kind==='fish'?0.25:0.30)):0;
   // Only pieces that normally come with skin lose it: bone-in cuts, salmon, or when the user says so.
@@ -1347,7 +1348,7 @@ function boneCut_(text,kind,options){
     query:kind==='chicken'?'chicken '+(cut&&cut.usda?cut.usda+' ':'')+(skinEaten?'meat and skin cooked roasted':'meat only cooked roasted'):'',
     edible,
     note:g=>{const parts=[];if(bone)parts.push('העצם (כ־'+Math.round(boneShare*100)+'%)');if(skinShare)parts.push('העור (כ־'+Math.round(skinShare*100)+'%)');
-      return 'שקלת '+g+' גרם'+(parts.length?', ירדו '+parts.join(' ו'):'')+'. נאכלו כ־'+edible(g)+' גרם '+(skinEaten?'בשר עם עור':'בשר')+(hasSkin&&skinAns===undefined?'. אכלת את העור? ענה למטה':'');},
+      return 'שקלת '+g+' ג׳ עם עצם · נכנס לגוף '+edible(g)+' ג׳'+(skinEaten?' עם העור':' בלי עור ועצם');},
     meta:g=>({animal:true,kind,cut:cut?cut.key:'',bone,hasSkin,skin:skinAns===undefined?null:skinAns,weighed:g,edible:edible(g)})};
 }
 function parseDishParts_(title,additions,options) {
@@ -1448,6 +1449,7 @@ function saveSettings(payload) {
   const newUsdaKey = payload && String(payload.usda_api_key || '').trim();
   if (newUsdaKey) verifyUsdaKey_(newUsdaKey);
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'checkin_day')){const d=Number(payload.checkin_day);if(!Number.isInteger(d)||d<0||d>6)throw new Error('יום לא תקין');setSetting_('checkin_day',d);}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'chicken_skin')){setSetting_('chicken_skin',payload.chicken_skin==='with'?'with':'without');}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'display_name')){const name=String(payload.display_name||'').trim();if(!name||name.length>40)throw new Error('כתוב שם עד 40 תווים');setSetting_('display_name',name);}
   const allowed = ['calorie_goal','protein_goal','free_calories_goal','shake_calories','shake_protein','shake_carbs','shake_fat','day_rollover_hour'];
   Object.keys(payload || {}).forEach(key => {
