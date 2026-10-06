@@ -152,7 +152,7 @@ function accountCard(){
 }
 /* Push goes through a free Google Apps Script web app (backend/apps-script/Push.gs), signed in with the user's Firebase login.
    No server keys live in the app. After deploying Push.gs, paste its web-app URL (ends with /exec) between the quotes. */
-const PUSH_URL='';
+const PUSH_URL='https://script.google.com/macros/s/AKfycbzNHWZsYOt9sWVWdadY3Kp3mnE5ku3W2sDdeewolJibZF1DLb090hxF2JAxCFf6Bh0b/exec';
 let pushSDK=null,pushConfig=null,notifyTimer=null,notifyLast='';
 const pushDevice=()=>{let id=localStorage.getItem('fp2PushDevice');if(!id){id=crypto.randomUUID();localStorage.setItem('fp2PushDevice',id)}return id};
 const pushKey=()=>`fp2PushEnabled:${user?.uid||''}`;
@@ -176,7 +176,7 @@ async function enablePush(){
   if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window))throw new Error('המכשיר או הדפדפן הזה אינו תומך בהתראות לטלפון');
   // Request synchronously within the user's tap, before any network await (iOS requirement).
   const permission=await Notification.requestPermission();if(permission!=='granted')throw new Error('לא אושרה הרשאה להתראות. ניתן לשנות בהגדרות הטלפון');
-  try{pushConfig=await notificationAPI('getNotificationConfig')}catch(e){throw new Error(e.message==='AUTH'||/התחבר/.test(e.message)?e.message:'שירות ההתראות טרם הופעל. ההודעות בתוך האפליקציה זמינות')}
+  try{pushConfig=await notificationAPI('getNotificationConfig')}catch(e){throw new Error(e.message==='AUTH'||/התחבר/.test(e.message)?e.message:'שירות ההתראות לא הופעל ('+(e.message==='push-not-configured'?'חסרה כתובת בקוד':String(e.message||e).slice(0,120))+')')}
   const sdk=await messagingSDK();if(!await sdk.isSupported())throw new Error('הדפדפן הזה אינו תומך בחיבור התראות');
   const reg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
   const token=await sdk.getToken(sdk.getMessaging(app),{vapidKey:pushConfig.vapidKey,serviceWorkerRegistration:reg});if(!token)throw new Error('לא התקבלה הרשמה להתראות. נסה שוב');
