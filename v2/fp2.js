@@ -148,15 +148,27 @@ function accountCard(){
   $id('fp2Repair').onclick=async()=>{if(!oldConf())return toast('חבר קודם את השרת הישן',true);const b=$id('fp2Repair'),m=$id('fp2RepairMsg');b.disabled=true;
     try{const n=await core.repairFromOld((t,p)=>{m.textContent=t+' · '+p+'%'});await flushAll(true);m.textContent='✓ הושלם. נוספו '+n+' שורות שהיו חסרות.';scheduleRefresh()}
     catch(e){m.textContent='לא הצליח: '+e.message}finally{b.disabled=false}};
-  $id('fp2Out').onclick=async()=>{if(!confirm('להתנתק? הנתונים שמורים בענן ויחזרו בכניסה הבאה.'))return;await Promise.all(pendingCommits).catch(()=>{});if(localStorage.getItem(pushKey())==='on'){try{await disablePush()}catch(e){toast('לא ניתן לבטל את ההתראות לפני ההתנתקות. התחבר לאינטרנט ונסה שוב',true);return}}await signOut(auth);location.reload()};
+  $id('fp2Out').onclick=async()=>{if(!confirm('להתנתק? הנתונים שמורים בענן ויחזרו בכניסה הבאה.'))return;await Promise.all(pendingCommits).catch(()=>{});if(localStorage.getItem(pushKey())==='on'){try{await disablePush()}catch(e){if(!confirm('אין חיבור לשירות ההתראות, ולכן ההתראות של החשבון עלולות להמשיך להגיע למכשיר הזה. להתנתק בכל זאת?'))return;try{localStorage.removeItem(pushKey())}catch(_){}}}await signOut(auth);location.reload()};
 }
-/* Push uses authenticated callable functions; no server keys live in the app. */
+/* Push goes through a free Google Apps Script web app (backend/apps-script/Push.gs), signed in with the user's Firebase login.
+   No server keys live in the app. After deploying Push.gs, paste its web-app URL (ends with /exec) between the quotes. */
+const PUSH_URL='';
 let pushSDK=null,pushConfig=null,notifyTimer=null,notifyLast='';
 const pushDevice=()=>{let id=localStorage.getItem('fp2PushDevice');if(!id){id=crypto.randomUUID();localStorage.setItem('fp2PushDevice',id)}return id};
 const pushKey=()=>`fp2PushEnabled:${user?.uid||''}`;
-async function notificationAPI(name,data){const {getFunctions,httpsCallable}=await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-functions.js');return (await httpsCallable(getFunctions(app,'europe-west1'),name)(data||{})).data}
+const pushUrl=()=>{let u=PUSH_URL;if(!u){try{u=localStorage.getItem('fp2PushUrl')||''}catch(_){}}return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(u)?u:''};
+async function notificationAPI(name,data){
+  const url=pushUrl();if(!url)throw new Error('push-not-configured');
+  if(!auth.currentUser)throw new Error('התחבר קודם לחשבון');
+  const idToken=await auth.currentUser.getIdToken();
+  /* plain text body = a simple request, no CORS preflight (same way as the old server) */
+  const res=await fetch(url,{method:'POST',redirect:'follow',body:JSON.stringify(Object.assign({},data||{},{push:name,idToken}))});
+  let j;try{j=await res.json()}catch(_){throw new Error('שירות ההתראות לא ענה')}
+  if(!j.ok)throw new Error(j.error==='AUTH'?'ההתחברות פגה. התחבר מחדש':String(j.error||'שגיאה'));
+  return j.result;
+}
 async function messagingSDK(){if(!pushSDK)pushSDK=await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging.js');return pushSDK}
-function queueNotificationSync(){clearTimeout(notifyTimer);notifyTimer=setTimeout(async()=>{if(!core||!user)return;try{const fresh=await core.call('getBootstrapData',[]);const events=(fresh.bank?.events||[]).map(e=>({id:e.id,date:e.date,label:e.label,note:e.note||''}));const data={events,inApp:fresh.settings?.notifications_in_app!=='off'};const sig=JSON.stringify(data);if(sig===notifyLast)return;await notificationAPI('syncNotificationEvents',data);notifyLast=sig}catch(e){console.warn('Notification server is not available yet',e.code||e.message)}},1500)}
+function queueNotificationSync(){clearTimeout(notifyTimer);notifyTimer=setTimeout(async()=>{if(!core||!user||!pushUrl())return;try{const fresh=await core.call('getBootstrapData',[]);const events=(fresh.bank?.events||[]).map(e=>({id:e.id,date:e.date,label:e.label}));const data={events,inApp:fresh.settings?.notifications_in_app!=='off'};const sig=JSON.stringify(data);if(sig===notifyLast)return;await notificationAPI('syncNotificationEvents',data);notifyLast=sig}catch(e){console.warn('Notification server is not available yet',e.message)}},1500)}
 async function enablePush(){
   if(!user)throw new Error('התחבר קודם לחשבון');
   const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;
@@ -164,19 +176,20 @@ async function enablePush(){
   if(!('Notification' in window)||!('serviceWorker' in navigator)||!('PushManager' in window))throw new Error('המכשיר או הדפדפן הזה אינו תומך בהתראות לטלפון');
   // Request synchronously within the user's tap, before any network await (iOS requirement).
   const permission=await Notification.requestPermission();if(permission!=='granted')throw new Error('לא אושרה הרשאה להתראות. ניתן לשנות בהגדרות הטלפון');
-  try{pushConfig=await notificationAPI('getNotificationConfig')}catch(_){throw new Error('שירות ההתראות טרם הופעל בשרת. ההודעות בתוך האפליקציה זמינות')}
+  try{pushConfig=await notificationAPI('getNotificationConfig')}catch(e){throw new Error(e.message==='AUTH'||/התחבר/.test(e.message)?e.message:'שירות ההתראות טרם הופעל. ההודעות בתוך האפליקציה זמינות')}
   const sdk=await messagingSDK();if(!await sdk.isSupported())throw new Error('הדפדפן הזה אינו תומך בחיבור התראות');
   const reg=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
   const token=await sdk.getToken(sdk.getMessaging(app),{vapidKey:pushConfig.vapidKey,serviceWorkerRegistration:reg});if(!token)throw new Error('לא התקבלה הרשמה להתראות. נסה שוב');
   await notificationAPI('registerNotificationDevice',{deviceId:pushDevice(),token});localStorage.setItem(pushKey(),'on');queueNotificationSync();
 }
 async function refreshPushRegistration(){if(!user||localStorage.getItem(pushKey())!=='on'||typeof Notification==='undefined'||Notification.permission!=='granted')return;try{const cfg=await notificationAPI('getNotificationConfig'),sdk=await messagingSDK();if(!await sdk.isSupported())return;const reg=await navigator.serviceWorker.ready,token=await sdk.getToken(sdk.getMessaging(app),{vapidKey:cfg.vapidKey,serviceWorkerRegistration:reg});if(token)await notificationAPI('registerNotificationDevice',{deviceId:pushDevice(),token})}catch(e){console.warn('Push registration refresh failed',e.code||e.message)}}
+async function sendTestPush(){await notificationAPI('sendTestNotification')}
 async function disablePush(){if(!user)return;await notificationAPI('unregisterNotificationDevice',{deviceId:pushDevice()});localStorage.removeItem(pushKey());try{const sdk=await messagingSDK();await sdk.deleteToken(sdk.getMessaging(app))}catch(_){} }
 
 window.FP2={
   oldConfig:oldConf,
   userId:()=>user?.uid,
-  enablePush,disablePush,pushEnabled:()=>!!user&&localStorage.getItem(pushKey())==='on'&&typeof Notification!=='undefined'&&Notification.permission==='granted',
+  enablePush,disablePush,sendTestPush,pushEnabled:()=>!!user&&localStorage.getItem(pushKey())==='on'&&typeof Notification!=='undefined'&&Notification.permission==='granted',
   async refreshHealth(){if(!core||!oldConf())throw new Error("חבר קודם את שרת השעון בחשבון וענן");await core.pullHealth();const fresh=await core.call("getBootstrapData",[]);if(typeof state!=="undefined"&&state.data)state.data.health=fresh.health},
   call:async(fn,args)=>{if(!core)throw new Error('האפליקציה עוד נטענת');const r=await core.call(fn,args);if(['saveBankEvent','deleteBankEvent','restoreBankEvent','saveSettings','getBootstrapData','activateBankEvent'].includes(fn))queueNotificationSync();return r},
   afterBoot(){accountCard();pullHealth();queueNotificationSync();refreshPushRegistration();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){pullHealth();queueNotificationSync()}})}

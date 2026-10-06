@@ -10,7 +10,7 @@ function oilGrams(selection,mass){
 }
 function classify(name){
   const n=String(name||'').toLowerCase();
-  if(/שוקולד|מרק|ציר|סלט|ממרח|נקניק|פסטרמה|משומר|שימור|קציצ|קבב|נאגט|טחון|שניצל|מעושן|sausage|soup|salad|canned|ground|nugget/.test(n))return null;
+  if(/שוקולד|מרק|ציר|סלט|ממרח|נקניק|פסטרמה|משומר|שימור|קציצ|קבב|נאגט|טחון|שניצל|מעושן|פסטה|אורז|פתיתים|קוסקוס|נודלס|ספגטי|ריזוטו|פיצה|כריך|סנדוויץ|טורטיה|בורקס|פשטידה|sausage|soup|salad|canned|ground|nugget|pasta|rice|pizza|sandwich|noodles|couscous/.test(n))return null; // mixed dishes: the weight is not just meat, so no bone/skin guess
   const fish=/(^|[^א-ת])(דג|דגים|סול)(?=$|[^א-ת])|סלמון|אמנון|דניס|לברק|מושט|בורי|פורל|הליבוט|טונה|בקלה|קרפיון|סרדין|מקרל|לוקוס|נסיכת הנילוס|salmon|fish|tilapia|tuna|cod|trout|sea bass|mackerel|sardine|halibut/.test(n);
   const poultry=/עוף|הודו|פרגי[תות]|chicken|turkey|duck|ברווז/.test(n);
   const meat=/בשר|בקר|עגל|כבש|טלה|אסאדו|צלע|אוסובוקו|אנטריקוט|סינטה|פילה|שייטל|כתף|צלי|סטייק|beef|veal|lamb|steak|rib|brisket|t-?bone/.test(n);
@@ -20,7 +20,8 @@ function classify(name){
   const whole=/שלם|whole/.test(n);
   const skinless=/ללא עור|בלי עור|בשר בלבד|meat only|skinless|without skin/.test(n);
   const skinOn=/עם עור|עם העור|בשר ועור|with skin|meat and skin/.test(n);
-  const rules=[[/כנפ|wing/,'כנפיים',.40,.25,true],[/שוק|כרע|drumstick/,'שוק',.30,.12,true],[/ירך|פרגי|thigh/,'ירך',.20,.15,true],[/גב|back/,'גב',.45,.20,true],[/רבע|quarter/,'רבע עוף',.25,.13,true],[/חזה|breast/,'חזה',.15,.08,false]];
+  const B='(^|[^א-ת])',E='(?=$|[^א-ת])';
+  const rules=[[new RegExp(B+'(?:כנפ|wing)'),'כנפיים',.40,.25,true],[new RegExp(B+'(?<!ירקות |פירות |ירק |פרי )(?:שוק(?:יים|י)?|כרע(?:יים)?|drumstick)'+E),'שוק',.30,.12,true],[new RegExp(B+'(?:ירך|ירכיים|פרגי|thigh)'),'ירך',.20,.15,true],[new RegExp(B+'(?:גב(?:ות)?|back)'+E),'גב',.45,.20,true],[new RegExp(B+'(?:רבע|quarter)'+E),'רבע עוף',.25,.13,true],[new RegExp(B+'(?:חזה|breast)'),'חזה',.15,.08,false]];
   const cut=poultry?rules.find(x=>x[0].test(n)):null;
   const skin=poultry?(cut?cut[3]:.12):fish?.08:0;
   const bone=poultry?(whole?.30:cut?cut[2]:.25):fish?(whole?.35:.05):.30;
