@@ -1456,6 +1456,7 @@ function saveSettings(payload) {
   const newUsdaKey = payload && String(payload.usda_api_key || '').trim();
   if (newUsdaKey) verifyUsdaKey_(newUsdaKey);
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'checkin_day')){const d=Number(payload.checkin_day);if(!Number.isInteger(d)||d<0||d>6)throw new Error('יום לא תקין');setSetting_('checkin_day',d);}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'hidden_workout_plans')){const ids=JSON.parse(String(payload.hidden_workout_plans||'[]'));if(!Array.isArray(ids)||ids.length>300||ids.some(x=>typeof x!=='string'||x.length>200))throw new Error('רשימת תוכניות לא תקינה');setSetting_('hidden_workout_plans',JSON.stringify(ids));}
   ['has_watch','shake_hidden','notifications_in_app'].forEach(k=>{if(payload&&Object.prototype.hasOwnProperty.call(payload,k))setSetting_(k,payload[k]==='on'?'on':'off');});
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'meal_hours')){const h=String(payload.meal_hours||'').split(',').map(Number);if(h.length!==3||h.some(x=>!Number.isInteger(x)||x<0||x>23)||!(h[0]<h[1]&&h[1]<h[2]))throw new Error('שעות לא תקינות');setSetting_('meal_hours','h:'+h.join(','));}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'chicken_skin')){setSetting_('chicken_skin',payload.chicken_skin==='with'?'with':'without');}
@@ -1767,6 +1768,7 @@ function saveWorkoutPlan(payload) {
     const sets=Number(x.sets),reps=x.reps===''||x.reps==null?'':Number(x.reps);
     if(!Number.isInteger(sets)||sets<1||sets>10||reps!==''&&(!Number.isInteger(reps)||reps<1||reps>50))throw new Error('מספר סטים או חזרות לא תקין');
     const item={group,exerciseId:id,name:exercise.name,sets,reps};
+    if(x.planContext){const c=x.planContext;if(!['home','gym'].includes(c.place)||!['free','machines'].includes(c.mode))throw new Error('מקום או ציוד לא תקינים');item.planContext={place:c.place,mode:c.mode};}
     if(x.durationMinutes!=null){const minutes=Number(x.durationMinutes);if(group!=='אירובי'||!(minutes>=1&&minutes<=120))throw new Error('משך אירובי לא תקין');item.durationMinutes=minutes;}
     if(x.notes)item.notes=String(x.notes).slice(0,700);
     if(x.timing){const t=x.timing;if(!(Number(t.set)>0&&Number(t.set)<=10&&Number(t.rest)>=0&&Number(t.rest)<=10&&Number(t.warmup)>=0&&Number(t.warmup)<=30&&[30,40,50].includes(Number(t.target))))throw new Error('זמני תוכנית לא תקינים');item.timing={set:Number(t.set),rest:Number(t.rest),warmup:Number(t.warmup),target:Number(t.target)};}
@@ -1827,7 +1829,7 @@ function getWorkoutPlans_(catalog) {
     let items=[];
     try{items=JSON.parse(String(r[2]||'[]'))}catch(err){}
     if(!Array.isArray(items))items=[];
-    return {id:String(r[0]),name:String(r[1]),category:String(r[5]||'כללי'),items:items.map(x=>{
+    return {id:String(r[0]),name:String(r[1]),category:String(r[5]||'כללי'),trainingPlace:items[0]?.planContext?.place||'',trainingMode:items[0]?.planContext?.mode||'',items:items.map(x=>{
       const current=(catalog[x.group]||[]).find(e=>e.id===x.exerciseId);
       return {group:x.group,exerciseId:x.exerciseId,name:current?current.name:x.name,sets:x.sets,reps:x.reps,timing:x.timing,durationMinutes:x.durationMinutes,notes:x.notes,equipment:current?.equipment,sourceUrl:current?.sourceUrl,removed:!current};
     })};

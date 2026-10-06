@@ -20,7 +20,7 @@ function classify(name){
   const whole=/שלם|whole/.test(n);
   const skinless=/ללא עור|בלי עור|בשר בלבד|meat only|skinless|without skin/.test(n);
   const skinOn=/עם עור|עם העור|בשר ועור|with skin|meat and skin/.test(n);
-  const rules=[[/כנפ|wing/,'כנפיים',.40,.25,true],[/שוק|כרע|drumstick/,'שוק',.30,.12,true],[/ירך|thigh/,'ירך',.20,.15,true],[/גב|back/,'גב',.45,.20,true],[/רבע|quarter/,'רבע עוף',.25,.13,true],[/חזה|breast/,'חזה',.15,.08,false]];
+  const rules=[[/כנפ|wing/,'כנפיים',.40,.25,true],[/שוק|כרע|drumstick/,'שוק',.30,.12,true],[/ירך|פרגי|thigh/,'ירך',.20,.15,true],[/גב|back/,'גב',.45,.20,true],[/רבע|quarter/,'רבע עוף',.25,.13,true],[/חזה|breast/,'חזה',.15,.08,false]];
   const cut=poultry?rules.find(x=>x[0].test(n)):null;
   const skin=poultry?(cut?cut[3]:.12):fish?.08:0;
   const bone=poultry?(whole?.30:cut?cut[2]:.25):fish?(whole?.35:.05):.30;

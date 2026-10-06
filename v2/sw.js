@@ -1,4 +1,4 @@
-const CACHE='fitpro2-2.4.1';
+const CACHE='fitpro2-2.4.2';
 const ASSETS=['./','index.html','server.js','fp2-core.js','fp2.js','fp2-nutrition.js','fp2-improvements.js','manifest.webmanifest','../icon-180.png','../icon-192.png','../icon-512.png'];
 const FB='https://www.gstatic.com/firebasejs/';
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>Promise.all(ASSETS.map(async u=>{try{const r=await fetch(new Request(u,{cache:'reload'}));if(r.ok)await c.put(u,r)}catch(_){}}))).then(()=>self.skipWaiting())));

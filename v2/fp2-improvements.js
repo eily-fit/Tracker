@@ -198,8 +198,8 @@ const PLAIN_POULTRY=[
   ['ירך עוף',121,19.66,4.12,179,24.76,8.15,'173627','172388'],
   ['חזה עוף',120,22.5,2.62,165,31.02,3.57,'171077','171477']
 ].flatMap(([cut,k,p,f,ck,cp,cf,rid,cid])=>[
-  {name:cut+' נא — ללא עור, עצם ושמן נוסף',calories:k,protein:p,fat:f,sourceId:rid},
-  {name:cut+' צלוי — ללא עור, עצם ושמן נוסף',calories:ck,protein:cp,fat:cf,sourceId:cid}
+  {name:cut+' נא — ללא עור וללא עצם · ללא שמן נוסף',calories:k,protein:p,fat:f,sourceId:rid},
+  {name:cut+' צלוי — ללא עור וללא עצם · ללא שמן נוסף',calories:ck,protein:cp,fat:cf,sourceId:cid}
 ].map(x=>({...x,baseQty:100,unit:'גרם',carbs:0,units:[],source:'USDA · חומר גלם בסיסי',plainIngredient:true})));
 (function(){
   const search=localFoodSearch;localFoodSearch=function(q,limit=40){
@@ -245,4 +245,88 @@ applyFit=function(){
   const s=state.fit?.result;if(!s)return;
   s.rows.forEach(r=>{const x=state.customIngredients[r.i];if(!x)return;if(x.per){x.unit=r.unit;x.amount=r.amount;recalcCustomIngredient(x)}else{const ratio=x.amount?r.amount/x.amount:0;['calories','protein','carbs','fat'].forEach(k=>x[k]=fmt(Number(x[k]||0)*ratio));x.amount=r.amount}if(x.cut){const factor=boneEdible(x,100)/100;x.weighed=factor?r.amount/factor:r.amount}});
   closeSheet('fitSheet');renderCustomIngredients();toast('הכמויות עודכנו לפי הבחירה שלך');
+};
+
+/* 2.4.2: compact portions, workout library separate from the running session. */
+previewFit=function(){
+  const K=Math.max(0,Number($('fitKcal').value)||0),P=Math.max(0,Number($('fitProtein').value)||0),s=suggestPortions(K,P,state.fit.prefs);state.fit.result=s;
+  $('fitPreview').innerHTML=s.rows.map(r=>`<div class="fit-row"><div class="history-top"><span>${esc(r.name)}</span><label class="fit-amount"><input aria-label="כמות ${esc(r.name)}" type="number" min="0" step="0.1" inputmode="decimal" value="${r.amount}" oninput="setFitAmount(${r.i},this.value)"> ${esc(r.unit)}</label></div><div class="fit-ctl">${[[.5,'פחות'],[1,'רגיל'],[2,'יותר']].map(([v,l])=>`<button class="chip mini ${r.fixed==null&&r.w===v?'active':''}" onclick="setFitPref(${r.i},'w',${v})">${l}</button>`).join('')}<button class="chip mini ${r.fixed!=null?'active':''}" onclick="setFitPref(${r.i},'fixed',null)">אוטומטי</button></div><small id="fitMacro-${r.i}" class="muted"></small></div>`).join('')+'<p id="fitTotal" style="font-weight:700"></p>';
+  updateFitTotals();
+};
+(function(){const style=document.createElement('style');style.textContent='.fit-amount{display:flex;align-items:center;gap:5px;white-space:nowrap}.fit-amount input{width:76px!important;padding:5px 7px!important;margin:0!important;font:inherit;color:var(--brand);background:var(--card);border:1px solid var(--line);border-radius:8px}.fit-row{padding:8px!important}.fit-row .fit-ctl{margin:5px 0}.fit-row small{font-size:11px}.sub-tabs{flex-wrap:wrap}#currentWorkoutRunner[hidden]{display:none!important}#currentWorkoutRunner.plan-running #muscleTabs,#currentWorkoutRunner.plan-running #equipmentTabs,#currentWorkoutRunner.plan-running .session-edit-name,#currentWorkoutRunner.plan-running .manual-session-tools{display:none!important}';document.head.appendChild(style)})();
+function hiddenWorkoutPlans(){try{const x=JSON.parse(state.data.settings.hidden_workout_plans||'[]');return Array.isArray(x)?x:[]}catch(_){return []}}
+visibleLibraryPlans=function(){
+  const place=state.libraryPlace||(getProfile()?.place==='home'?'home':'gym'),category=state.planFilter||'',mode=state.libraryMode==='machines'?'machines':'free',hidden=hiddenWorkoutPlans();
+  return planList().map((p,i)=>[p,i]).filter(([p])=>!hidden.includes(p.id)&&(category==='personal'?!p.library:p.category===category&&(p.library?p.libraryPlace===place&&p.libraryMode===mode:(!p.trainingPlace||p.trainingPlace===place)&&(!p.trainingMode||p.trainingMode===mode))));
+};
+function renderCurrentWorkoutView(){
+  const active=!!(state.activePlan||state.sessionId||state.editingWorkoutId),runner=$('currentWorkoutRunner');runner.hidden=!active;$('currentWorkoutEmpty').hidden=active;
+  runner.classList.toggle('plan-running',!!state.activePlan&&!state.editingWorkoutId);
+  const name=$('sessionName')?.closest('.card');if(name)name.classList.add('session-edit-name');
+  const freestyle=$('workoutStartType')?.closest('details');if(freestyle)freestyle.classList.add('manual-session-tools');
+  const manager=$('exerciseManager')?.closest('details');if(manager)manager.classList.add('manual-session-tools');
+  const extra=runner.querySelector('button[onclick="addCustomExercise()"]')?.parentElement;if(extra)extra.classList.add('manual-session-tools');
+  const picker=$('exercisePickBtn');if(picker){picker.disabled=!!state.activePlan&&!state.editingWorkoutId;picker.setAttribute('aria-label',state.activePlan?'התרגיל הנבחר מתוך התוכנית':'בחר תרגיל')}
+  const plus=runner.querySelector('button[onclick="openNewExerciseSheet()"]');if(plus)plus.hidden=!!state.activePlan&&!state.editingWorkoutId;
+  const strength=picker?.closest('.card');if(strength)strength.hidden=!!state.activePlan&&!state.editingWorkoutId&&(state.activePlan.category==='אירובי'||state.activePlanDone.length===state.activePlan.items.length);
+  const date=$('libraryStartDate');if(date&&!date.value)date.value=state.date;
+}
+async function setBuiltinPlanHidden(id,hide){const ids=hiddenWorkoutPlans().filter(x=>x!==id);if(hide)ids.push(id);const r=await call('saveSettings',{hidden_workout_plans:JSON.stringify(ids)});state.data.settings=r.settings;renderWorkoutPlans()}
+async function restoreBuiltinPlans(){try{const r=await call('saveSettings',{hidden_workout_plans:'[]'});state.data.settings=r.settings;renderWorkoutPlans();toast('התוכניות המובנות הוחזרו')}catch(e){toast(e.message,true)}}
+(function(){
+  const remove=removeWorkoutPlan;removeWorkoutPlan=async function(i,skipConfirm){const p=planList()[i];if(!p?.builtin)return remove.apply(this,arguments);if(!skipConfirm&&!confirm('להסיר את התוכנית מהאימונים שלי? האימון הפעיל והיומן יישארו.'))return;try{await setBuiltinPlanHidden(p.id,true);undoToast('התוכנית הוסרה',()=>setBuiltinPlanHidden(p.id,false))}catch(e){toast(e.message,true)}};
+  const plans=renderWorkoutPlans;renderWorkoutPlans=function(){const r=plans.apply(this,arguments);const box=$('workoutPlans');box.querySelectorAll('.plan-line').forEach(el=>{const button=el.querySelector('button[onclick^="startWorkoutPlan"]');if(!button)return;const i=Number(button.getAttribute('onclick').match(/\d+/)?.[0]);if(planList()[i]?.builtin&&!el.querySelector('.trash'))el.querySelector('.inline-actions').insertAdjacentHTML('beforeend',`<button class="trash mini" aria-label="הסר תוכנית" onclick="removeWorkoutPlan(${i})">✕</button>`)});if(hiddenWorkoutPlans().length)$('planLibraryInfo').insertAdjacentHTML('beforeend','<button class="btn light mini" onclick="restoreBuiltinPlans()">החזר תוכניות מובנות שהוסרו</button>');renderCurrentWorkoutView();return r};
+  const workouts=renderWorkouts;renderWorkouts=function(){const r=workouts.apply(this,arguments);if(state.activePlan&&state.activePlan.category!=='אירובי'&&state.activePlanIndex==null&&!state.editingWorkoutId){const next=state.activePlan.items.findIndex((_,i)=>!state.activePlanDone.includes(i));if(next>=0)selectPlanExercise(next)}renderCurrentWorkoutView();return r};
+  const select=selectPlanExercise;selectPlanExercise=function(i){const r=select.apply(this,arguments),x=state.activePlan?.items[i];if(x&&x.group!=='אירובי'){state.setCount=Math.max(1,Math.min(10,Number(x.sets)||1));renderSetRows(false);if(x.reps)document.querySelectorAll('.set-reps').forEach(input=>input.value=x.reps)}return r};
+  const start=startWorkoutPlan;startWorkoutPlan=async function(i){const date=$('libraryStartDate').value||state.date;$('workoutStartDate').value=date;$('workoutStartDate').dataset.touched='1';const r=await start.apply(this,arguments);if(r){showView('workouts');renderCurrentWorkoutView()}return r};
+  const begin=beginCurrentPlan;beginCurrentPlan=async function(){const r=await begin.apply(this,arguments);if(r){showView('workouts');renderCurrentWorkoutView()}return r};
+  const open=openWorkoutPlanBuilder;openWorkoutPlanBuilder=function(i){const p=Number.isInteger(i)?planList()[i]:null;state.workoutBuilderPlace=p?.trainingPlace||p?.libraryPlace||state.libraryPlace||'gym';state.equipment=(p?.trainingMode||p?.libraryMode||state.libraryMode)==='machines'?'מכונה':'משקולות חופשיות';const r=open.apply(this,arguments);return r};
+  const context=renderBuilderContext;renderBuilderContext=function(){const r=context.apply(this,arguments);if(state.workoutBuilderMode==='fixed')$('workoutBuilderContext').insertAdjacentHTML('afterbegin',`<div class="field"><label>מקום האימון</label><select onchange="state.workoutBuilderPlace=this.value"><option value="gym" ${state.workoutBuilderPlace==='gym'?'selected':''}>חדר כושר</option><option value="home" ${state.workoutBuilderPlace==='home'?'selected':''}>בית</option></select></div>`);return r};
+  const save=saveWorkoutPlan;saveWorkoutPlan=async function(){if(state.workoutBuilderMode==='fixed'&&state.planItems.length)state.planItems[0].planContext={place:state.workoutBuilderPlace||'gym',mode:equipmentBucket(state.equipment)==='מכונה'?'machines':'free'};return save.apply(this,arguments)};
+})();
+
+// Nutrition pairs: matching cut and cooking state; no arbitrary skin percentage.
+const POULTRY_SKIN_REFERENCE={
+  thigh:{raw:{noSkin:{calories:121,protein:19.66,carbs:0,fat:4.12},skin:{calories:221,protein:16.52,carbs:.25,fat:16.61}},roasted:{noSkin:{calories:179,protein:24.76,carbs:0,fat:8.15},skin:{calories:232,protein:23.26,carbs:0,fat:14.71}}},
+  breast:{raw:{noSkin:{calories:120,protein:22.5,carbs:0,fat:2.62},skin:{calories:172,protein:20.85,carbs:0,fat:9.25}},roasted:{noSkin:{calories:165,protein:31.02,carbs:0,fat:3.57},skin:{calories:197,protein:29.8,carbs:0,fat:7.78}}}
+};
+function poultryReferenceCut(name){const n=String(name||'');if(/הודו|turkey|ברווז|duck|רוטב|מרינדה|מטוגן|fried/i.test(n))return null;return /פרגי|ירך|ירכיים|thigh/i.test(n)?'thigh':/חזה.*עוף|עוף.*חזה|chicken.*breast|breast.*chicken/i.test(n)?'breast':null}
+function skinCookingState(name){return /(^|[^א-ת])נא(?=$|[^א-ת])|לפני בישול|\braw\b/i.test(name)?'raw':/צלוי|אפוי|roasted|baked/i.test(name)?'roasted':''}
+(function(){
+  const ensure=ensureVariants;ensureVariants=function(name,vals,prep){
+    ensure(name,vals);
+    if(vals&&!state.cutVariants[name]?.verified){
+      const norm=f=>Object.fromEntries(['calories','protein','carbs','fat'].map(k=>[k,Number(f[k]||0)*100/(Number(f.baseQty)||100)])),clean=s=>String(s).toLowerCase().replace(/\s+/g,' ').trim(),n=String(vals.name||name);
+      const pool=[...(tz.ready?tz.foods:[]),...(state.data?.myFoods||[]),...(state.localResults||[]),...(state.customSearchResults||[]),...(state.dishEstimate?.items||[]).flatMap(x=>x.choices||[])];
+      for(const [a,b] of [['נאכל עם עור','נאכל ללא עור'],['בשר ועור','בשר בלבד'],['כולל עור','ללא עור'],['with skin','without skin'],['meat and skin','meat only'],['skin-on','skinless']]){
+        const skin=clean(n).includes(a),without=clean(n).includes(b);if(!skin&&!without)continue;const target=clean(n).replace(skin?a:b,skin?b:a),twin=pool.find(f=>clean(f.name)===target);if(!twin)continue;
+        const me=norm(vals),other=norm(twin);state.cutVariants[name]={skin:skin?me:other,noSkin:skin?other:me,verified:true,source:twin.source||'מאגר · זוג ערכים תואם'};break;
+      }
+    }
+    const cut=poultryReferenceCut(name),cooking=prep||skinCookingState(name),pair=cut&&POULTRY_SKIN_REFERENCE[cut][cooking];
+    if(pair&&(prep||!state.cutVariants[name]?.verified))state.cutVariants[name]={...pair,verified:true,source:'USDA · '+(cooking==='raw'?'נא':'צלוי'),preparation:cooking};
+  };
+})();
+function skinObject(kind,i){return preparationObject(kind,i)}
+function skinObjectName(kind,i){const x=skinObject(kind,i);return x?.nutritionName||(kind==='food'?$('foodName').value:kind==='choice'?state.selectedFood?.name:x?.name||x?.label||'')}
+function skinPairFor(kind,i){const x=skinObject(kind,i),name=skinObjectName(kind,i);if(!x)return null;const vals=x.per||state.selectedFood||x.manual||x.choices?.[x.choice||0]||x;ensureVariants(name,vals,x.skinPreparation);const v=state.cutVariants[name];return v?.verified&&['calories','protein','carbs','fat'].some(k=>Math.abs(v.skin[k]-v.noSkin[k])>.01)?v:null}
+function setSkinPreparation(kind,i,prep){const x=skinObject(kind,i);if(!x)return;x.skinPreparation=prep;changeNutritionSkin(kind,i,x.skin===true)}
+function skinAdjustedName(name,on,prep){const plain=String(name).replace(/(?:נאכל\s+)?(?:ללא|בלי|עם(?: ה)?)\s*עור|בשר ועור|בשר בלבד/g,'').replace(/—\s*ו?ללא עצם/,'— ללא עצם').replace(/\s*·\s*$/,'').replace(/\s{2,}/g,' ').trim();return plain+(prep&&!skinCookingState(plain)?' · '+(prep==='raw'?'נא':'צלוי'):'')+' · '+(on?'עם עור':'ללא עור')}
+function changeNutritionSkin(kind,i,on){
+  const x=skinObject(kind,i),pair=skinPairFor(kind,i);if(!x||!pair)return toast('אין זוג ערכים תואם. בחר צורת הכנה או תקן את הערכים לפי המזון.',true);
+  const values=pair[on?'skin':'noSkin'];x.nutritionName=skinObjectName(kind,i);x.skin=on;const name=skinAdjustedName(x.nutritionName,on,pair.preparation);state.cutVariants[name]=pair;
+  if(kind==='ingredient')x.name=name;else if(kind==='dish')x.label=name;else{x.name=name;$('foodName').value=name;if(state.selectedFood){state.selectedFood.name=name;state.selectedFood.sourceId='';state.selectedFood.source=pair.source||'מאגר · בחירת עור'}}
+  if(kind==='ingredient'){if(!x.per){const b=Number(x.amount)||100;x.per={baseQty:b,unit:x.unit,calories:x.calories,protein:x.protein,carbs:x.carbs,fat:x.fat}}const scale=(Number(x.per.baseQty)||100)/100;Object.keys(values).forEach(k=>x.per[k]=values[k]*scale);x.amount=boneEdible(x,x.weighed);recalcCustomIngredient(x);renderCustomIngredients()}
+  else if(kind==='dish'){x.manual={...values};x.manualOverride=true;x.source=pair.source||'מאגר · בחירת עור';x.amount=boneEdible(x,x.bw);renderDishEstimate()}
+  else if(kind==='choice'){setChoiceValues(values);$('foodAmount').value=boneEdible(x,x.weighed);updateFoodChoice();renderFoodOil(true)}
+  else{const scale=(Number($('foodBase').value)||100)/100;Object.keys(values).forEach(k=>{const v=values[k]*scale;$('food'+k[0].toUpperCase()+k.slice(1)).value=v;if(state.selectedFood)state.selectedFood[k]=v});renderFoodBone();renderFoodOil()}
+}
+ingSkin=(i,v)=>changeNutritionSkin('ingredient',i,v);
+dishSkin=(i,v)=>changeNutritionSkin('dish',i,v);
+choiceSkin=v=>changeNutritionSkin('choice',0,v);
+foodSkin=v=>changeNutritionSkin('food',0,v);
+boneLine=function(w,e,k,p,k100,p100,skin,onSkin,bone,onBone){
+  let kind='food',i=0;const ing=String(onBone).match(/ingBone\.bind\(null,(\d+)\)/),dish=String(onBone).match(/dishBone\.bind\(null,(\d+)\)/);if(ing){kind='ingredient';i=Number(ing[1])}else if(dish){kind='dish';i=Number(dish[1])}else if(onBone==='choiceBoneSet')kind='choice';
+  const x=skinObject(kind,i),c=x?.cutInfo,pair=skinPairFor(kind,i),name=skinObjectName(kind,i),cut=poultryReferenceCut(name),prep=x?.skinPreparation||skinCookingState(name),hasSkin=!!c?.skin;
+  return `<div class="bone-line"><div class="skin-chips"><button type="button" class="chip${bone?' active':''}" onclick="${onBone}(true)">המשקל כולל עצם</button><button type="button" class="chip${!bone?' active':''}" onclick="${onBone}(false)">המשקל ללא עצם</button></div>${cut&&hasSkin?`<label class="muted">צורת הכנה לערכי העור <select aria-label="צורת הכנה לערכי העור" onchange="setSkinPreparation('${kind}',${i},this.value)"><option value="" ${!prep?'selected':''}>בחר נא או צלוי</option><option value="raw" ${prep==='raw'?'selected':''}>נא</option><option value="roasted" ${prep==='roasted'?'selected':''}>צלוי / אפוי ללא שמן נוסף</option></select></label>`:''}${hasSkin&&onSkin?`<div class="skin-chips"><button type="button" class="chip${skin?' active':''}" ${!pair?'disabled':''} onclick="${onSkin}(true)">נאכל עם עור</button><button type="button" class="chip${!skin?' active':''}" ${!pair?'disabled':''} onclick="${onSkin}(false)">נאכל בלי עור</button></div>`:''}<div>שקלת <b>${fmt(w)} ג׳</b> · משקל אכיל <b>${fmt(e)} ג׳</b></div><small class="muted">${fmt(k)} קל׳ · ${fmt(p)} חלבון${k100!=null?` · ל־100 ג׳: ${fmt(k100)} קל׳, ${fmt(p100)} חלבון`:''}</small>${hasSkin?`<div class="skin-chips"><button type="button" class="chip${c.weighedSkin?' active':''}" onclick="setWeighedSkin('${kind}',${i},true)">המשקל כולל עור</button><button type="button" class="chip${!c.weighedSkin?' active':''}" onclick="setWeighedSkin('${kind}',${i},false)">שקלתי ללא עור</button></div>`:''}<small class="muted prep-assumption">הפחתת עצם ועור מהמשקל היא אומדן. ${hasSkin&&!pair?'אין כרגע זוג ערכים תואם עם ובלי עור; הכפתורים מושבתים. '+(cut?'בחר צורת הכנה כדי להשתמש בערכי הבסיס, והוסף שמן בנפרד.':'אפשר לתקן ערכים לפי תווית או מקור מתאים.'):'בחירת עור משנה את ערכי המזון; בחירת עצם משנה רק את המשקל האכיל.'}${pair?.source?' מקור: '+esc(pair.source):''}</small></div>`;
 };
