@@ -162,7 +162,13 @@ async function notificationAPI(name,data){
   if(!auth.currentUser)throw new Error('התחבר קודם לחשבון');
   const idToken=await auth.currentUser.getIdToken();
   /* plain text body = a simple request, no CORS preflight (same way as the old server) */
-  const res=await fetch(url,{method:'POST',redirect:'follow',body:JSON.stringify(Object.assign({},data||{},{push:name,idToken}))});
+  const body=JSON.stringify(Object.assign({},data||{},{push:name,idToken}));
+  /* Apps Script sometimes drops the first request (cold start / redirect): retry a network failure up to 2 more times. */
+  let res,lastErr;
+  for(let i=0;i<3&&!res;i++){
+    try{res=await fetch(url,{method:'POST',redirect:'follow',body})}catch(e){lastErr=e;if(i<2)await new Promise(r=>setTimeout(r,900*(i+1)))}
+  }
+  if(!res)throw new Error('אין חיבור לשירות ההתראות ('+String(lastErr&&lastErr.message||lastErr)+'). נסה שוב בעוד רגע');
   let j;try{j=await res.json()}catch(_){throw new Error('שירות ההתראות לא ענה')}
   if(!j.ok)throw new Error(j.error==='AUTH'?'ההתחברות פגה. התחבר מחדש':String(j.error||'שגיאה'));
   return j.result;
