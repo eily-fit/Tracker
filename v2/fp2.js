@@ -61,12 +61,12 @@ function persist(ch,wait,retried){
 }
 
 /* ---------- screens: sign-in and first import ---------- */
-const CSS=`.fp2-ov{position:fixed;inset:0;z-index:10000;background:#1f1f1d;display:flex;align-items:flex-start;justify-content:center;padding:calc(40px + env(safe-area-inset-top)) 18px 20px;overflow:auto;direction:rtl;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
-.fp2-box{width:100%;max-width:420px;background:#2C2C2A;color:#F1EFE8;border-radius:20px;padding:22px;box-shadow:none}
-.fp2-box h1{margin:0 0 4px;font-size:28px;color:#EF9F27}.fp2-box p{color:#B4B2A9;line-height:1.55;margin:6px 0 14px}
-.fp2-box input{width:100%;box-sizing:border-box;font-size:17px;padding:13px 14px;border:1px solid #444441;border-radius:12px;margin:6px 0;direction:ltr;text-align:left;background:#363634;color:#F1EFE8}
-.fp2-btn{display:block;width:100%;border:0;border-radius:14px;padding:14px;font-size:17px;font-weight:700;margin-top:10px;background:#EF9F27;color:#2a1a03}.fp2-btn.light{background:#3a352a;color:#EF9F27}.fp2-link{background:none;border:0;color:#EF9F27;font-size:15px;margin-top:12px;padding:6px}
-.fp2-msg{min-height:22px;color:#F09595;font-size:15px;margin-top:8px}.fp2-bar{height:10px;background:#444441;border-radius:6px;overflow:hidden;margin:14px 0 6px}.fp2-bar i{display:block;height:100%;background:#EF9F27;width:0;transition:width .3s}`;
+const CSS=`.fp2-ov{position:fixed;inset:0;z-index:10000;background:#0E1217;display:flex;align-items:flex-start;justify-content:center;padding:calc(40px + env(safe-area-inset-top)) 18px 20px;overflow:auto;direction:rtl;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+.fp2-box{width:100%;max-width:420px;background:#171C22;color:#F2F5F7;border-radius:20px;padding:22px;box-shadow:none}
+.fp2-box h1{margin:0 0 4px;font-size:28px;color:#D7F36B}.fp2-box p{color:#A3ADB8;line-height:1.55;margin:6px 0 14px}
+.fp2-box input{width:100%;box-sizing:border-box;font-size:17px;padding:13px 14px;border:1px solid #2C3640;border-radius:12px;margin:6px 0;direction:ltr;text-align:left;background:#1F262E;color:#F2F5F7}
+.fp2-btn{display:block;width:100%;border:0;border-radius:14px;padding:14px;font-size:17px;font-weight:700;margin-top:10px;background:#D7F36B;color:#1A2205}.fp2-btn.light{background:#26301A;color:#D7F36B}.fp2-link{background:none;border:0;color:#D7F36B;font-size:15px;margin-top:12px;padding:6px}
+.fp2-msg{min-height:22px;color:#F09595;font-size:15px;margin-top:8px}.fp2-bar{height:10px;background:#2C3640;border-radius:6px;overflow:hidden;margin:14px 0 6px}.fp2-bar i{display:block;height:100%;background:#D7F36B;width:0;transition:width .3s}`;
 function overlay(html){
   if(!$id('fp2css')){const s=document.createElement('style');s.id='fp2css';s.textContent=CSS;document.head.appendChild(s)}
   let o=$id('fp2ov');if(!o){o=document.createElement('div');o.id='fp2ov';o.className='fp2-ov';document.body.appendChild(o)}

@@ -3,7 +3,7 @@ window.FitServerSheetNames=["App_BodyMeasurements", "App_DailySummary", "App_Ent
 window.FitServerFactory=function(__env,__user){
   var SpreadsheetApp=__env.SpreadsheetApp,PropertiesService=__env.PropertiesService,CacheService=__env.CacheService,LockService=__env.LockService,Session=__env.Session,Utilities=__env.Utilities,UrlFetchApp=__env.UrlFetchApp,DriveApp=__env.DriveApp,MailApp=__env.MailApp,GmailApp=__env.GmailApp,ScriptApp=__env.ScriptApp,HtmlService=__env.HtmlService,ContentService=__env.ContentService,Logger=__env.Logger,XmlService=__env.XmlService;
 const APP = Object.freeze({
-  version: '0.35.0',
+  version: '0.35.1',
   spreadsheetId: '15ICIt6QZIytJyoO6Cj4dYfp2UdY5MisExvnBcXm6S1I',
   timezone: 'Asia/Jerusalem',
   sheets: {
@@ -1449,6 +1449,7 @@ function saveSettings(payload) {
   const newUsdaKey = payload && String(payload.usda_api_key || '').trim();
   if (newUsdaKey) verifyUsdaKey_(newUsdaKey);
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'checkin_day')){const d=Number(payload.checkin_day);if(!Number.isInteger(d)||d<0||d>6)throw new Error('יום לא תקין');setSetting_('checkin_day',d);}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'meal_hours')){const h=String(payload.meal_hours||'').split(',').map(Number);if(h.length!==3||h.some(x=>!Number.isInteger(x)||x<0||x>23)||!(h[0]<h[1]&&h[1]<h[2]))throw new Error('שעות לא תקינות');setSetting_('meal_hours','h:'+h.join(','));}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'chicken_skin')){setSetting_('chicken_skin',payload.chicken_skin==='with'?'with':'without');}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'display_name')){const name=String(payload.display_name||'').trim();if(!name||name.length>40)throw new Error('כתוב שם עד 40 תווים');setSetting_('display_name',name);}
   const allowed = ['calorie_goal','protein_goal','free_calories_goal','shake_calories','shake_protein','shake_carbs','shake_fat','day_rollover_hour'];
