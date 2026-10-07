@@ -42,7 +42,12 @@ function renderBuilderOil(){
   $('customIngredients').insertAdjacentHTML('beforebegin',oilControls('mealOilControls',state.mealOil,'setMealOil',(state.customIngredients||[]).reduce((s,x)=>s+ingredientMass(x),0)));
   const rows=document.querySelectorAll('#customIngredients .custom-ingredient');state.customIngredients.forEach((x,i)=>{
     if(!rows[i])return;
-    rows[i].insertAdjacentHTML('beforeend',`<details class="prep-details"><summary>שמן למרכיב הזה${x.extraOil?' · בחירה אישית':''}</summary>${oilControls('ingredientOil-'+i,x.extraOil||state.mealOil,`setIngredientOil.bind(null,${i})`,ingredientMass(x))}</details>`);
+    const og=FP2Nutrition.oilGrams(x.extraOil||(state.mealOil&&state.mealOil.mode!=='exact'?state.mealOil:null),ingredientMass(x));
+    if(og>0){const kc=fmt((Number(x.calories)||0)+og*9),wide=rows[i].querySelector('.macro-wide'),short=rows[i].querySelector('.macro-short');
+      if(wide)wide.textContent=`${kc} קל׳ (כולל ${fmt(og)} ג׳ שמן) · ${fmt(x.protein)} חלבון · ${fmt(x.carbs)} פחמ׳ · ${fmt((Number(x.fat)||0)+og)} שומן`;
+      if(short)short.innerHTML=`${kc} קל׳<br>+${fmt(og)} ג׳ שמן`}
+    state.openOilRows=state.openOilRows||{};
+    rows[i].insertAdjacentHTML('beforeend',`<details class="prep-details"${state.openOilRows[i]?' open':''} ontoggle="state.openOilRows=state.openOilRows||{};state.openOilRows[${i}]=this.open"><summary>שמן למרכיב הזה${x.extraOil?' · בחירה אישית':''}</summary>${oilControls('ingredientOil-'+i,x.extraOil||state.mealOil,`setIngredientOil.bind(null,${i})`,ingredientMass(x))}</details>`);
   });
 }
 (function(){
@@ -50,7 +55,7 @@ function renderBuilderOil(){
   const manual=manualFoodFromQuery;manualFoodFromQuery=function(){state.foodOil=null;const r=manual.apply(this,arguments);renderFoodOil();return r};
   const update=updateFoodChoice;updateFoodChoice=function(){const r=update.apply(this,arguments);renderFoodOil(true);return r};
   const totals=updateFoodChoiceTotals;updateFoodChoiceTotals=function(){const r=totals.apply(this,arguments),el=$('quickFoodTotals'),g=foodOilGrams();if(el&&g){const f=state.selectedFood,u=$('foodUnit').value,m=portionMacros(f,$('foodAmount').value,u,u==='גרם'||u==='מ״ל'?0:Number(state.foodGramsPerUnit)||foodUnitGrams(f,u));el.textContent=`סה״כ עם השמן: ${fmt(m.calories+g*9)} קל׳ · ${fmt(m.protein)} ג׳ חלבון · ${fmt(m.carbs)} ג׳ פחמימות · ${fmt(m.fat+g)} ג׳ שומן`}return r};
-  const open=openCustomMealBuilder;openCustomMealBuilder=function(){state.mealOil=null;const r=open.apply(this,arguments);state.customIngredients.forEach(x=>{const c=boneCutFor(x.name);if(c&&x.unit==='גרם'&&!x.cut){x.cut=c.label;x.cutInfo={...c,weighedSkin:false};x.bone=false;x.skin=c.skinOn;x.weighed=x.amount}});renderCustomIngredients();return r};
+  const open=openCustomMealBuilder;openCustomMealBuilder=function(){state.mealOil=null;state.openOilRows={};const r=open.apply(this,arguments);state.customIngredients.forEach(x=>{const c=boneCutFor(x.name);if(c&&x.unit==='גרם'&&!x.cut){x.cut=c.label;x.cutInfo={...c,weighedSkin:false};x.bone=false;x.skin=c.skinOn;x.weighed=x.amount}});renderCustomIngredients();return r};
   const close=closeCustomMealBuilder;closeCustomMealBuilder=function(){state.mealOil=null;return close.apply(this,arguments)};
   const raw=renderCustomIngredientsRaw;renderCustomIngredientsRaw=function(){const r=raw.apply(this,arguments);renderBuilderOil();return r};
   const customTotals=renderCustomTotals;renderCustomTotals=function(){const r=customTotals.apply(this,arguments),el=$('customTotals'),g=customOilGrams();if(el&&state.customIngredients.length){const xs=customPayloadIngredients(),sum=k=>xs.reduce((s,x)=>s+(Number(x[k])||0),0);el.innerHTML=`סה״כ הארוחה: ${fmt(sum('calories'))} קל׳ · ${fmt(sum('protein'))} ג׳ חלבון<small>${fmt(sum('carbs'))} פחמימות · ${fmt(sum('fat'))} שומן${g?` · כולל ${fmt(g)} ג׳ שמן נוסף`:''}</small>`}return r};
@@ -66,7 +71,7 @@ function mealOilGrams(i){const meal=state.data.meals[state.category][i],s=mealOi
 function renderSavedMealOil(i){
   const meal=state.data.meals[state.category][i],body=$('meal-'+i),s=mealOilState(i);if(!body)return;
   body.querySelectorAll('.saved-prep').forEach(el=>el.remove());const button=body.querySelector('button[onclick="addMeal('+i+')"]');if(!button)return;
-  button.insertAdjacentHTML('beforebegin',`<div class="saved-prep">${oilControls('savedOil-'+i,s.all,`setSavedMealOil.bind(null,${i},-1)`,meal.ingredients.reduce((n,x,j)=>n+ingredientMass(x,Number($(`meal-${i}-${j}`).value)),0))}<details><summary>שמן לכל מרכיב בנפרד</summary>${meal.ingredients.map((x,j)=>`<div><b>${esc(x.name)}</b>${oilControls('savedOil-'+i+'-'+j,s.items[j]||s.all,`setSavedMealOil.bind(null,${i},${j})`,ingredientMass(x,Number($(`meal-${i}-${j}`).value)))}</div>`).join('')}</details><button type="button" class="btn light full" onclick="openCustomMealBuilder('${esc(meal.isCustom?meal.id:meal.key)}')">עריכת מרכיבים, עור ועצמות</button></div>`);
+  button.insertAdjacentHTML('beforebegin',`<div class="saved-prep">${oilControls('savedOil-'+i,s.all,`setSavedMealOil.bind(null,${i},-1)`,meal.ingredients.reduce((n,x,j)=>n+ingredientMass(x,Number($(`meal-${i}-${j}`).value)),0))}<details${(state.savedOilOpen||{})[i]?' open':''} ontoggle="state.savedOilOpen=state.savedOilOpen||{};state.savedOilOpen[${i}]=this.open"><summary>שמן לכל מרכיב בנפרד</summary>${meal.ingredients.map((x,j)=>`<div><b>${esc(x.name)}</b>${oilControls('savedOil-'+i+'-'+j,s.items[j]||s.all,`setSavedMealOil.bind(null,${i},${j})`,ingredientMass(x,Number($(`meal-${i}-${j}`).value)))}</div>`).join('')}</details><button type="button" class="btn light full" onclick="openCustomMealBuilder('${esc(meal.isCustom?meal.id:meal.key)}')">עריכת מרכיבים, עור ועצמות</button></div>`);
 }
 (function(){
   const render=renderMeals;renderMeals=function(){const r=render.apply(this,arguments);((state.data.meals||{})[state.category]||[]).forEach((m,i)=>{renderSavedMealOil(i);updateMealPreview(i)});return r};
@@ -336,4 +341,67 @@ boneLine=function(w,e,k,p,k100,p100,skin,onSkin,bone,onBone){
 (function(){
   const plans=renderWorkoutPlans;renderWorkoutPlans=function(){if(state.planFilter==null)state.planFilter=(state.data?.workout?.plans||[]).length?'personal':'';return plans.apply(this,arguments)};
   const render=renderWorkouts;renderWorkouts=function(){const r=render.apply(this,arguments);try{renderWorkoutHome()}catch(e){console.error(e)}return r};
+})();
+
+/* ---------- Calendar link: one calendar (iCloud / Google / Outlook) feeds the events list ---------- */
+let calBusy=false,calStarted=false;
+function calStatusText(){
+  const url=window.FP2?.getProp?.('CAL_URL');if(!url)return 'לא מחובר.';
+  const last=Number(window.FP2.getProp('CAL_LAST'))||0,n=Object.keys(JSON.parse(window.FP2.getProp('CAL_MAP')||'{}')).length;
+  return `מחובר · ${n} אירועים מהיומן${last?' · סונכרן '+new Date(last).toLocaleString('he-IL',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}):''}`;
+}
+function renderCalendarSettings(){
+  const sec=$('settings');if(!sec||!state.data||!window.FP2?.getProp)return;
+  let box=$('calendarSettings');if(!box){box=document.createElement('details');box.id='calendarSettings';box.className='settings-section';const n=$('notificationSettings');(n||sec.querySelector('h2')).insertAdjacentElement('afterend',box)}
+  const keepOpen=box.open,url=window.FP2.getProp('CAL_URL');
+  box.innerHTML=`<summary>📅 חיבור יומן</summary><div class="settings-body"><p class="muted">האירועים מיומן אחד שתבחר יתווספו לאפליקציה בעצמם, בלי להקליד אותם פעמיים. מומלץ ליצור יומן נפרד (למשל ״FitPro״) ולשים בו רק אירועי אוכל: מסעדות וארוחות משפחתיות.</p><p class="muted" id="calStatus">${esc(calStatusText())}</p><div class="field"><label>קישור ליומן</label><input id="calUrlInput" type="url" inputmode="url" placeholder="webcal://… או https://…" value="${esc(url)}"></div><button class="btn full" id="calConnect">${url?'עדכן קישור וסנכרן':'חבר יומן'}</button>${url?'<button class="btn light full" style="margin-top:8px" id="calSync">סנכרן עכשיו</button><button class="btn light full" style="margin-top:8px" id="calDisconnect">נתק את היומן</button>':''}<details style="margin-top:10px"><summary class="muted">איך מקבלים קישור?</summary><p class="muted"><b>iPhone (iCloud):</b> ביומן ← יומנים ← לחץ ⓘ ליד היומן ← הפעל ״יומן ציבורי״ ← ״שתף קישור״ ← העתק. היומן חייב להיות ב-iCloud, לא ״באייפון שלי״.</p><p class="muted"><b>Google / Galaxy:</b> ב-Google Calendar מהמחשב (או בדפדפן במצב ״אתר למחשב״): ⚙ הגדרות ← בחר את היומן ← ״כתובת סודית בפורמט iCal״ ← העתק.</p><p class="muted"><b>Outlook:</b> הגדרות ← יומן ← יומנים משותפים ← פרסום יומן ← קישור ICS.</p><p class="muted">אירוע שנמחק מהיומן יוסר גם מהאפליקציה. אירוע חוזר פשוט (יומי, שבועי, חודשי, שנתי) נתמך. בכל תאריך אפשר אירוע אחד.</p></details></div>`;
+  box.open=keepOpen;
+  $('calConnect').onclick=connectCalendar;if($('calSync'))$('calSync').onclick=()=>syncCalendar(true);if($('calDisconnect'))$('calDisconnect').onclick=disconnectCalendar;
+}
+async function connectCalendar(){
+  const v=($('calUrlInput').value||'').trim().replace(/^webcal:\/\//i,'https://');
+  if(!/^https:\/\/\S+$/.test(v))return toast('הדבק קישור תקין ליומן',true);
+  try{
+    const old=window.FP2.getProp('CAL_URL');window.FP2.setProp('CAL_URL',v);if(old&&old!==v){window.FP2.setProp('CAL_MAP','')}
+    await syncCalendar(true,true);
+  }catch(e){toast(e.message,true)}
+  renderCalendarSettings();
+}
+function disconnectCalendar(){
+  if(!confirm('לנתק את היומן? אירועים שכבר נוספו יישארו באפליקציה.'))return;
+  try{window.FP2.setProp('CAL_URL','');window.FP2.setProp('CAL_MAP','');window.FP2.setProp('CAL_LAST','')}catch(e){return toast(e.message,true)}
+  toast('היומן נותק');renderCalendarSettings();
+}
+async function syncCalendar(manual,fresh){
+  if(calBusy||!window.FP2?.getProp||!state.data)return;
+  const url=window.FP2.getProp('CAL_URL');if(!url){if(manual)toast('הדבק קישור ליומן',true);return}
+  calBusy=true;
+  try{
+    const res=await window.FP2.calendarFetch(url),fetched=res.events||[];
+    let map={};try{map=JSON.parse(window.FP2.getProp('CAL_MAP')||'{}')}catch(_){}
+    const bank=(await call('getBootstrapData',state.date)).bank||{events:[]},byId={},taken=new Set();
+    (bank.events||[]).forEach(e=>{byId[e.id]=e;taken.add(e.date)});
+    let added=0,removed=0,updated=0;const seen={};
+    for(const ev of fetched){
+      seen[ev.id]=true;const m=map[ev.id],ex=m&&byId[m[0]];
+      if(m&&!ex)continue; // the user removed it in the app: leave it removed
+      if(ex){if(m[1]!==ev.title){try{await call('saveBankEvent',{id:m[0],date:ex.date,type:ex.type,size:ex.size,method:ex.method==='later'?'half':ex.method,note:ev.title.slice(0,120)});m[1]=ev.title;updated++}catch(_){}}continue}
+      if(taken.has(ev.date)||added>=60)continue; // one event per date
+      try{const r=await call('saveBankEvent',{date:ev.date,type:'other',size:'medium',method:'half',note:ev.title.slice(0,120)});if(r&&r.savedId){map[ev.id]=[r.savedId,ev.title];taken.add(ev.date);added++}}catch(_){}
+    }
+    for(const k of Object.keys(map)){
+      if(seen[k])continue;const ex=byId[map[k][0]];
+      if(ex&&ex.date>=(res.today||'')){try{await call('deleteBankEvent',{id:ex.id});removed++}catch(_){}}
+      delete map[k];
+    }
+    window.FP2.setProp('CAL_MAP',JSON.stringify(map));window.FP2.setProp('CAL_LAST',String(Date.now()));
+    if(added||removed||updated){state.data=await call('getBootstrapData',state.date);renderAll()}
+    if(manual)toast(added||removed||updated?`היומן סונכרן: ${added} נוספו${removed?`, ${removed} הוסרו`:''}${updated?`, ${updated} עודכנו`:''}`:'היומן מעודכן');
+  }catch(e){if(manual)toast(e.message==='push-not-configured'?'שירות הענן עוד לא מוגדר':e.message,true)}
+  finally{calBusy=false;const st=$('calStatus');if(st)st.textContent=calStatusText()}
+}
+(function(){
+  const r=renderSettings;renderSettings=function(){const result=r.apply(this,arguments);try{renderCalendarSettings()}catch(e){console.error(e)}return result};
+  const all=renderAll;renderAll=function(){const result=all.apply(this,arguments);if(!calStarted&&window.FP2?.getProp?.('CAL_URL')){calStarted=true;setTimeout(()=>syncCalendar(false),2500)}return result};
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&window.FP2?.getProp?.('CAL_URL')){const last=Number(window.FP2.getProp('CAL_LAST'))||0;if(Date.now()-last>30*60*1000)syncCalendar(false)}});
 })();

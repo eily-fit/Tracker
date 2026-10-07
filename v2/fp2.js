@@ -130,7 +130,7 @@ function listen(){
 
 /* ---------- after the app is on screen ---------- */
 let lastHealth=0;
-function pullHealth(){if(!oldConf()||Date.now()-lastHealth<10*60*1000)return;lastHealth=Date.now();
+function pullHealth(){if(!oldConf()||Date.now()-lastHealth<30*1000)return;lastHealth=Date.now();
   core.pullHealth().then(ch=>{if(ch)scheduleRefresh()}).catch(e=>console.warn('health',e))}
 function accountCard(){
   const view=$id('settings');if(!view||$id('fp2Account'))return;
@@ -195,6 +195,7 @@ async function disablePush(){if(!user)return;await notificationAPI('unregisterNo
 window.FP2={
   oldConfig:oldConf,
   userId:()=>user?.uid,
+  calendarFetch:url=>notificationAPI('fetchCalendar',{url}),getProp:k=>String((core&&core.store&&core.store.props&&core.store.props[k])||''),setProp:(k,v)=>{if(!core)throw new Error('האפליקציה עוד נטענת');if(v)core.store.props[k]=String(v);else delete core.store.props[k];core.store.propsDirty=true;core.flush()},
   enablePush,disablePush,sendTestPush,pushEnabled:()=>!!user&&localStorage.getItem(pushKey())==='on'&&typeof Notification!=='undefined'&&Notification.permission==='granted',
   async refreshHealth(){if(!core||!oldConf())throw new Error("חבר קודם את שרת השעון בחשבון וענן");await core.pullHealth();const fresh=await core.call("getBootstrapData",[]);if(typeof state!=="undefined"&&state.data)state.data.health=fresh.health},
   call:async(fn,args)=>{if(!core)throw new Error('האפליקציה עוד נטענת');const r=await core.call(fn,args);if(['saveBankEvent','deleteBankEvent','restoreBankEvent','saveSettings','getBootstrapData','activateBankEvent'].includes(fn))queueNotificationSync();return r},
