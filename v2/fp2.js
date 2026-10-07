@@ -74,7 +74,7 @@ function overlay(html){
   const b=document.getElementById('bootSlow');if(b)b.remove();
   return o;
 }
-const AUTH_ERRORS={'auth/invalid-credential':'האימייל או הסיסמה לא נכונים','auth/wrong-password':'הסיסמה לא נכונה','auth/user-not-found':'אין משתמש עם האימייל הזה','auth/email-already-in-use':'כבר יש משתמש עם האימייל הזה. נסה להיכנס','auth/weak-password':'הסיסמה צריכה להיות לפחות 6 תווים','auth/invalid-email':'האימייל לא תקין','auth/network-request-failed':'אין חיבור לאינטרנט','auth/too-many-requests':'יותר מדי ניסיונות. חכה כמה דקות'};
+const AUTH_ERRORS={'auth/user-disabled':'החשבון הזה נחסם. פנה למנהל','auth/invalid-credential':'האימייל או הסיסמה לא נכונים','auth/wrong-password':'הסיסמה לא נכונה','auth/user-not-found':'אין משתמש עם האימייל הזה','auth/email-already-in-use':'כבר יש משתמש עם האימייל הזה. נסה להיכנס','auth/weak-password':'הסיסמה צריכה להיות לפחות 6 תווים','auth/invalid-email':'האימייל לא תקין','auth/network-request-failed':'אין חיבור לאינטרנט','auth/too-many-requests':'יותר מדי ניסיונות. חכה כמה דקות'};
 const authErr=e=>AUTH_ERRORS[e&&e.code]||('שגיאה: '+(e&&e.message||e));
 function showAuth(mode){
   const reg=mode==='register';
@@ -92,9 +92,11 @@ function showAuth(mode){
 }
 function showImport(){
   const c=oldConf();
-  overlay(`<h1>ברוך הבא 👋</h1><p>זו הכניסה הראשונה לחשבון הזה. להעביר את כל הנתונים מהאפליקציה הישנה? ארוחות, אימונים, משקלים, תוכניות, אירועים ודופק. זה לוקח בערך דקה, פעם אחת.</p>
-    ${c?'<p style="color:#5DCAA5">✓ השרת הישן מחובר בטלפון הזה</p>':`<input id="fp2Url" placeholder="כתובת השרת הישן (מסתיימת ב-/exec)"><input id="fp2Code" type="password" placeholder="הקוד האישי מהאפליקציה הישנה">`}
-    <button class="fp2-btn" id="fp2Imp">העבר את הנתונים שלי</button><button class="fp2-btn light" id="fp2Fresh">התחל מאפס</button>
+  overlay(`<h1>ברוך הבא 👋</h1><p>זו הכניסה הראשונה לחשבון הזה. נתחיל בהיכרות קצרה, שאלון קצר להתאמת היעדים וסיור באפליקציה.</p>
+    <button class="fp2-btn" id="fp2Fresh">בוא נתחיל</button>
+    <details style="margin-top:18px;text-align:right"><summary style="color:#8a9690;font-size:14px;cursor:pointer">יש לי נתונים באפליקציה הישנה</summary>
+    <div style="margin-top:10px">${c?'<p style="color:#5DCAA5">✓ השרת הישן מחובר בטלפון הזה</p>':`<input id="fp2Url" placeholder="כתובת השרת הישן (מסתיימת ב-/exec)"><input id="fp2Code" type="password" placeholder="הקוד האישי מהאפליקציה הישנה">`}
+    <button class="fp2-btn light" id="fp2Imp">העבר את הנתונים שלי</button></div></details>
     <div class="fp2-bar"><i id="fp2Prog"></i></div><div id="fp2Step" style="color:#5f6b68;font-size:15px"></div><div class="fp2-msg" id="fp2Msg"></div>`);
   $id('fp2Imp').onclick=async()=>{
     if(!c){const url=$id('fp2Url').value.trim(),pass=$id('fp2Code').value;if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(url)||!pass)return $id('fp2Msg').textContent='כתוב את הכתובת והקוד';localStorage.setItem('elaiApi',JSON.stringify({url,pass}))}
@@ -103,7 +105,8 @@ function showImport(){
     try{core=newCore();const cc=oldConf();await core.importFromOld(say);if(cc){core.store.props.OLD_URL=cc.url;core.store.props.OLD_PASS=cc.pass;core.store.propsDirty=true}await Promise.all(pendingCommits);say('מסיים…',98);await flushAll(true);say('הכול הועבר ✓',100);setTimeout(()=>location.reload(),600)}
     catch(e){$id('fp2Msg').textContent='ההעברה נכשלה: '+e.message+'. אפשר לנסות שוב.';$id('fp2Imp').disabled=$id('fp2Fresh').disabled=false}
   };
-  $id('fp2Fresh').onclick=async()=>{core=newCore();core.start();await flushAll(true);location.reload()};
+  /* brand-new account: NEW_ACCOUNT makes the app run name -> questionnaire -> tour on first open */
+  $id('fp2Fresh').onclick=async()=>{core=newCore();core.start();core.store.props.NEW_ACCOUNT='1';core.store.propsDirty=true;await flushAll(true);location.reload()};
 }
 function newCore(){return new window.FP2Core.Core({user:{uid:user.uid,email:user.email},remote,onChanges:ch=>persist(ch)})}
 async function flushAll(wait){const ch=core.store.takeChanges();await persist(ch,wait);if(wait)await Promise.all(pendingCommits)}
@@ -195,6 +198,8 @@ async function disablePush(){if(!user)return;await notificationAPI('unregisterNo
 window.FP2={
   oldConfig:oldConf,
   userId:()=>user?.uid,
+  push:(name,data)=>notificationAPI(name,data),
+  register:name=>{if(!user||!pushUrl())return;notificationAPI('registerUser',{name:String(name||'').slice(0,40)}).catch(()=>{})},
   calendarFetch:url=>notificationAPI('fetchCalendar',{url}),getProp:k=>String((core&&core.store&&core.store.props&&core.store.props[k])||''),setProp:(k,v)=>{if(!core)throw new Error('האפליקציה עוד נטענת');if(v)core.store.props[k]=String(v);else delete core.store.props[k];core.store.propsDirty=true;core.flush()},
   enablePush,disablePush,sendTestPush,pushEnabled:()=>!!user&&localStorage.getItem(pushKey())==='on'&&typeof Notification!=='undefined'&&Notification.permission==='granted',
   async refreshHealth(){if(!core||!oldConf())throw new Error("חבר קודם את שרת השעון בחשבון וענן");await core.pullHealth();const fresh=await core.call("getBootstrapData",[]);if(typeof state!=="undefined"&&state.data)state.data.health=fresh.health},

@@ -416,14 +416,40 @@ function addEventToPhoneCalendar(){
   const a=document.createElement('a');a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);a.download='fitpro-event.ics';document.body.appendChild(a);a.click();a.remove();
 }
 (function(){
+  const oo=openEventSheet;openEventSheet=function(opts){
+    const r=oo.apply(this,arguments);
+    try{const o=opts||{},e=o.edit?bankEvents().find(x=>x.id===o.edit):null;
+      state.ev.note=e?String(e.note||''):'';state.ev.locked=!!(o.date||o.edit);renderEventSheet()}catch(err){console.error(err)}
+    return r};
+  const oe=eventRow;eventRow=function(e){return oe.call(this,e&&e.note?Object.assign({},e,{label:e.note}):e)};
   const o=renderEventSheet;renderEventSheet=function(){
     const result=o.apply(this,arguments);
-    try{const ev=state.ev,body=$('eventBody');
-      if(ev&&ev.date&&ev.type&&body&&!body.querySelector('#evAddCal')){
-        const b=document.createElement('button');b.id='evAddCal';b.type='button';b.className='btn light full';b.style.marginTop='8px';b.textContent='📅 הוסף ליומן שלי';b.onclick=addEventToPhoneCalendar;
-        const save=[...body.querySelectorAll('button.btn.full')].find(x=>/שמור/.test(x.textContent));
-        if(save)save.after(b);else body.appendChild(b)}}catch(e){console.error(e)}
+    try{const ev=state.ev,body=$('eventBody');if(!ev||!body)return result;
+      const fields=[...body.querySelectorAll('.field')];
+      if(ev.locked&&ev.date&&fields[0]&&/מתי\?/.test(fields[0].textContent)){
+        const d=document.createElement('div');d.className='field';d.innerHTML='<label>📅 '+esc(dayName(ev.date)+' '+displayDate(ev.date))+'</label>';fields[0].replaceWith(d);
+        const hint=body.querySelector(':scope > p.muted');if(hint&&/עד חצי שנה/.test(hint.textContent))hint.remove()}
+      const typeField=[...body.querySelectorAll('.field')].find(x=>/מה האירוע\?/.test(x.textContent));
+      if(typeField&&!body.querySelector('#evName')){
+        const f=document.createElement('div');f.className='field';
+        f.innerHTML='<label>'+(ev.type==='other'?'איך קוראים לאירוע?':'שם לאירוע (לא חובה)')+'</label><input id="evName" type="text" maxlength="60" placeholder="'+(ev.type==='other'?'למשל: יום הולדת של דנה':'למשל: ארוחת ערב אצל סבתא')+'">';
+        f.querySelector('input').value=ev.note||'';f.querySelector('input').oninput=function(){state.ev.note=this.value};
+        typeField.after(f)}
+      const save=[...body.querySelectorAll('button.btn.full')].find(x=>/שמור|בחר תאריך/.test(x.textContent));
+      if(save&&!body.querySelector('#evSaveCal')){
+        const ready=ev.date&&ev.type&&!save.disabled;
+        save.onclick=function(){saveEventUI(false)};
+        const b=document.createElement('button');b.id='evSaveCal';b.type='button';b.className='btn light full';b.style.marginTop='8px';b.textContent='📅 שמור והוסף ליומן שלי';
+        if(!ready){b.disabled=true;b.style.opacity='.5'}
+        b.onclick=function(){saveEventUI(true)};save.after(b)}}catch(e){console.error(e)}
     return result};
+  saveEventUI=async function(addCal){const ev=state.ev;if(!ev||!ev.date||!ev.type)return;
+    const note=String(ev.note||'').trim().slice(0,60);
+    if(ev.type==='other'&&!note&&!ev.id&&false)return;
+    const r=await bankMutate('saveBankEvent',{id:ev.id||'',date:ev.date,type:ev.type,size:ev.size,method:ev.method,note});if(!r)return;
+    const ws=weekStartOf(bankToday());if(state.data.settings&&ev.date>=ws&&ev.date<=isoAdd(ws,6))state.data.settings.bank_week_asked='w:'+ws;closeSheet('eventSheet');renderBankCard();
+    const p=r.plan||{};toast(p.mode==='pending'?`האירוע נשמר · תזכורת ב${relDate(remindDate(ev.date))}`:p.mode==='past'?'האירוע נרשם':p.banked?`האירוע נשמר · ${kc(p.banked)} קל׳ בבנק`:'האירוע נשמר · ביום עצמו תקבל תוכנית');
+    if(addCal)setTimeout(addEventToPhoneCalendar,350)};
   function addHeaderBtn(){
     const h=document.querySelector('header');if(!h||h.querySelector('#hdrCal'))return;
     const b=document.createElement('button');b.id='hdrCal';b.type='button';b.setAttribute('aria-label','יומן אירועים');b.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D7F36B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';b.onclick=()=>openCalendar();h.appendChild(b)}
@@ -437,3 +463,51 @@ function addEventToPhoneCalendar(){
 (function(){const st=document.createElement('style');
 st.textContent='@media(min-width:700px){.app{padding-top:calc(env(safe-area-inset-top) + 14px)!important}header{position:relative;z-index:35;padding-top:18px!important;padding-bottom:16px!important;align-items:center}.brand h1,#personalTitle{font-size:28px!important;color:#F2F5F7!important;opacity:1!important;-webkit-text-fill-color:#F2F5F7!important;background:none!important;filter:none!important;text-shadow:none!important;letter-spacing:0!important}.brand small{font-size:15px!important;color:#A3ADB8!important}.header-logo{font-size:30px!important}#hdrCal{width:48px;height:48px}.plus-fab{left:max(16px,calc(50% - 380px))!important}}';
 document.head.appendChild(st)})();
+
+/* ===== ניהול משתמשים (רק למנהל): רשימה, חסימה ומחיקה. השרת בודק לפי האימייל, ולמנהל אין גישה לנתוני האוכל של אחרים ===== */
+(function(){
+  const fmtD=iso=>{if(!iso)return '—';try{return new Date(iso).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}catch(_){return '—'}};
+  let busy=false;
+  function box(){return document.getElementById('adminUsers')}
+  async function load(){
+    const b=box();if(!b||busy||!window.FP2||!FP2.push)return;busy=true;
+    b.innerHTML='<p class="muted">טוען משתמשים…</p>';
+    try{
+      const r=await FP2.push('adminListUsers');const users=r.users||[];
+      b.innerHTML=`<div class="row" style="justify-content:space-between;align-items:center;margin:14px 0 6px"><b>👥 כל המשתמשים (${users.length})</b><button class="btn light" style="min-height:36px;padding:6px 12px" onclick="adminLoadUsers()">רענן</button></div>`+
+      users.map(u=>`<div class="manage-row" style="align-items:flex-start;gap:8px"><span style="flex:1;min-width:0"><b>${esc(u.name||u.email.split('@')[0]||'ללא שם')}</b>${u.me?' <small class="muted">(אתה)</small>':''}${u.disabled?' <small style="color:var(--danger)">· חסום</small>':''}<div class="muted" dir="ltr" style="text-align:right;overflow-wrap:anywhere">${esc(u.email)}</div><div class="muted">נרשם ${fmtD(u.created)} · כניסה אחרונה ${fmtD(u.lastLogin)}</div></span>${u.me?'':`<span style="display:flex;flex-direction:column;gap:6px"><button class="btn light" style="min-height:36px;padding:6px 12px" onclick="adminBlockUser('${u.uid}',${!u.disabled})">${u.disabled?'שחרר':'חסום'}</button><button class="btn light" style="min-height:36px;padding:6px 12px;color:var(--danger)" onclick="adminDeleteUserUI('${u.uid}','${esc(u.name||u.email).replace(/'/g,'')}')">מחק</button></span>`}</div>`).join('')+
+      '<p class="muted">חסימה מונעת כניסה (אפשר לשחרר). מחיקה מסירה את המשתמש וכל הנתונים שלו לצמיתות. לא מוצגים כאן נתוני אוכל או אימונים.</p>';
+    }catch(e){
+      const m=String(e&&e.message||e);
+      b.innerHTML=/^Firebase /.test(m)?`<p class="muted" style="color:var(--danger)">רשימת המשתמשים לא נטענה: ${esc(m)}</p>`:'';
+    }finally{busy=false}
+    loadReq();
+  }
+  async function loadReq(){
+    const b=document.getElementById('adminExReq');if(!b||!window.FP2||!FP2.push)return;
+    try{
+      const r=await FP2.push('adminListExerciseRequests');const it=r.items||[];
+      b.innerHTML=`<div style="margin:18px 0 6px"><b>🏋 תרגילים שהמשתמשים הוסיפו (${it.length})</b></div>`+(it.length?it.map(x=>`<div class="manage-row"><span style="flex:1;min-width:0"><b>${esc(x.name)}</b>${x.count>1?` <small class="muted">· ${x.count} משתמשים</small>`:''}<div class="muted">${esc([x.group,x.equipment].filter(Boolean).join(' · '))}${x.by&&x.by.length?' · '+esc(x.by.join(', ')):''}</div></span><button class="btn light" style="min-height:36px;padding:6px 12px" onclick="adminResolveEx(this)" data-n="${esc(x.name)}">בוצע</button></div>`).join('')+'<p class="muted">אלה תרגילים שאין להם עדיין אנימציה. אחרי שתוסיף אנימציה באפליקציה, לחץ ״בוצע״.</p>':'<p class="muted">אין בקשות פתוחות.</p>');
+    }catch(e){b.innerHTML=''}
+  }
+  window.adminResolveEx=async function(btn){try{await FP2.push('adminResolveExerciseRequest',{name:btn.dataset.n});loadReq()}catch(e){toast(e.message||'שגיאה',true)}};
+  window.adminLoadUsers=load;
+  window.adminBlockUser=async function(uid,blocked){
+    if(blocked&&!confirm('לחסום את המשתמש? הוא לא יוכל להיכנס עד שתשחרר אותו.'))return;
+    try{loading()}catch(_){}
+    try{await FP2.push('adminSetBlocked',{uid,blocked});toast(blocked?'המשתמש נחסם':'המשתמש שוחרר')}catch(e){toast(e.message||'שגיאה',true)}
+    try{loading(false)}catch(_){}busy=false;load();
+  };
+  window.adminDeleteUserUI=async function(uid,name){
+    if(!confirm(`למחוק את "${name}" לצמיתות? כל הנתונים שלו יימחקו ואי אפשר לשחזר.`))return;
+    try{loading()}catch(_){}
+    try{const r=await FP2.push('adminDeleteUser',{uid});toast('המשתמש נמחק'+(r&&r.note?' (חלק מהנתונים לא נמחקו)':''))}catch(e){toast(e.message||'שגיאה',true)}
+    try{loading(false)}catch(_){}busy=false;load();
+  };
+  const t=setInterval(()=>{
+    const s=[...document.querySelectorAll('#settings summary')].find(x=>/משתמשים/.test(x.textContent));if(!s)return;
+    clearInterval(t);const d=s.parentElement,body=d.querySelector('.settings-body');
+    if(!box())body.insertAdjacentHTML('beforeend','<div id="adminUsers"></div><div id="adminExReq"></div>');
+    d.addEventListener('toggle',()=>{if(d.open)load()});
+  },700);
+})();
