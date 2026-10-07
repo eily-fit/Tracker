@@ -403,5 +403,37 @@ async function syncCalendar(manual,fresh){
 (function(){
   const r=renderSettings;renderSettings=function(){const result=r.apply(this,arguments);try{renderCalendarSettings()}catch(e){console.error(e)}return result};
   const all=renderAll;renderAll=function(){const result=all.apply(this,arguments);if(!calStarted&&window.FP2?.getProp?.('CAL_URL')){calStarted=true;setTimeout(()=>syncCalendar(false),2500)}return result};
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&window.FP2?.getProp?.('CAL_URL')){const last=Number(window.FP2.getProp('CAL_LAST'))||0;if(Date.now()-last>30*60*1000)syncCalendar(false)}});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&window.FP2?.getProp?.('CAL_URL')){const last=Number(window.FP2.getProp('CAL_LAST'))||0;if(Date.now()-last>20*1000)syncCalendar(false)}});
 })();
+
+/* ===== כפתור יומן בכותרת + "הוסף ליומן שלי" באירוע ===== */
+function addEventToPhoneCalendar(){
+  const ev=state.ev;if(!ev||!ev.date)return toast('בחר תאריך',true);
+  const t=(BANK_TYPES_UI.find(x=>x[0]===ev.type)||['','🎉','אירוע']),title=(ev.note||(t[1]+' '+t[2])).replace(/[\r\n]+/g,' ');
+  const d=s=>s.replace(/-/g,''),end=isoAdd(ev.date,1);
+  const esc2=s=>s.replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,');
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FitPro//HE','BEGIN:VEVENT','UID:fitpro-'+d(ev.date)+'-'+Date.now()+'@fitpro','DTSTAMP:'+new Date().toISOString().replace(/[-:]|\.\d+/g,''),'DTSTART;VALUE=DATE:'+d(ev.date),'DTEND;VALUE=DATE:'+d(end),'SUMMARY:'+esc2(title),'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const a=document.createElement('a');a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);a.download='fitpro-event.ics';document.body.appendChild(a);a.click();a.remove();
+}
+(function(){
+  const o=renderEventSheet;renderEventSheet=function(){
+    const result=o.apply(this,arguments);
+    try{const ev=state.ev,body=$('eventBody');
+      if(ev&&ev.date&&ev.type&&body&&!body.querySelector('#evAddCal')){
+        const b=document.createElement('button');b.id='evAddCal';b.type='button';b.className='btn light full';b.style.marginTop='8px';b.textContent='📅 הוסף ליומן שלי';b.onclick=addEventToPhoneCalendar;
+        const save=[...body.querySelectorAll('button.btn.full')].find(x=>/שמור/.test(x.textContent));
+        if(save)save.after(b);else body.appendChild(b)}}catch(e){console.error(e)}
+    return result};
+  function addHeaderBtn(){
+    const h=document.querySelector('header');if(!h||h.querySelector('#hdrCal'))return;
+    const b=document.createElement('button');b.id='hdrCal';b.type='button';b.setAttribute('aria-label','יומן אירועים');b.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D7F36B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';b.onclick=()=>openCalendar();h.appendChild(b)}
+  const st=document.createElement('style');
+  st.textContent='#hdrCal{justify-self:end;width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:#171C22;font-size:20px;line-height:1;display:grid;place-items:center;padding:0;box-shadow:var(--shadow);color:inherit}#hdrCal:active{transform:scale(.94);background:#2B3A1B}';
+  document.head.appendChild(st);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addHeaderBtn);else addHeaderBtn();
+})();
+
+/* ===== אייפד: כותרת ברורה ומרווח עליון ===== */
+(function(){const st=document.createElement('style');
+st.textContent='@media(min-width:700px){.app{padding-top:calc(env(safe-area-inset-top) + 14px)!important}header{position:relative;z-index:35;padding-top:18px!important;padding-bottom:16px!important;align-items:center}.brand h1,#personalTitle{font-size:28px!important;color:#F2F5F7!important;opacity:1!important;-webkit-text-fill-color:#F2F5F7!important;background:none!important;filter:none!important;text-shadow:none!important;letter-spacing:0!important}.brand small{font-size:15px!important;color:#A3ADB8!important}.header-logo{font-size:30px!important}#hdrCal{width:48px;height:48px}.plus-fab{left:max(16px,calc(50% - 380px))!important}}';
+document.head.appendChild(st)})();
