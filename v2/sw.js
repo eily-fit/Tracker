@@ -1,5 +1,5 @@
-const CACHE='fitpro2-2.6.5';
-const ASSETS=['./','index.html','server.js','fp2-core.js','fp2.js','fp2-nutrition.js','fp2-improvements.js','fp2-tour.js','fp2-anim.js','fp2-exlib.js','manifest.webmanifest','../icon-180.png','../icon-192.png','../icon-512.png'];
+const CACHE='fitpro2-2.6.6';
+const ASSETS=['./','index.html','server.js','fp2-core.js','fp2.js','fp2-nutrition.js','fp2-improvements.js','fp2-foods.js','fp2-tour.js','fp2-anim.js','fp2-exlib.js','manifest.webmanifest','../icon-180.png','../icon-192.png','../icon-512.png'];
 const FB='https://www.gstatic.com/firebasejs/';
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>Promise.all(ASSETS.map(async u=>{try{const r=await fetch(new Request(u,{cache:'reload'}));if(r.ok)await c.put(u,r)}catch(_){}}))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('fitpro2-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
