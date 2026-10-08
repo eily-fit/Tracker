@@ -1,7 +1,7 @@
 /* FitPro 2: Firebase sign-in, storage and sync. The app logic itself lives in fp2-core.js + server.js. */
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,sendPasswordResetEmail} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,writeBatch,getDocs,getDocsFromCache,onSnapshot,setDoc,deleteDoc,getDoc} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,writeBatch,getDocs,getDocsFromCache,onSnapshot,setDoc,deleteDoc,getDoc,query,where} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 
 const firebaseConfig={apiKey:"AIzaSyCNaUpS96A4wiZ_ahFWX1fr5omzjP9qm9M",authDomain:"fitpro-250c7.firebaseapp.com",projectId:"fitpro-250c7",storageBucket:"fitpro-250c7.firebasestorage.app",messagingSenderId:"753223506846",appId:"1:753223506846:web:59b211f5f9d206d729d48f"};
 const app=initializeApp(firebaseConfig);
@@ -274,6 +274,28 @@ async function calPut(k,u,g){
   const id=(k+'|'+u).replace(/\//g,'_').slice(0,700);
   await setDoc(doc(db,'unitCal',id),{k:String(k),u:String(u),v:{[user.uid]:Math.round(Number(g)*10)/10},ts:Date.now()},{merge:true});
 }
+/* ===== requests and ideas (2.9.0): requests/{id}; per-user upgrades: flags/{uid} = {features:{key:true}} ===== */
+const isAdminUser=()=>!!user&&ADMIN_EMAILS.indexOf(String(user.email||'').toLowerCase())>-1;
+async function reqAdd(r){
+  if(!user)throw new Error('צריך להתחבר');
+  const text=String(r&&r.text||'').trim().slice(0,2000),audio=String(r&&r.audio||'');
+  if(!text&&!audio)throw new Error('כתוב או הקלט משהו');
+  if(audio.length>900000)throw new Error('ההקלטה ארוכה מדי');
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const d={uid:user.uid,email:String(user.email||''),name:String(r.name||'').slice(0,40),text,audio,audioType:String(r.audioType||''),scope:r.scope==='all'?'all':'me',status:'new',note:'',ts:Date.now(),updated:Date.now()};
+  await setDoc(doc(db,'requests',id),d);return Object.assign({id},d);
+}
+async function reqList(all){
+  if(!user)return [];
+  const snap=await getDocs(all&&isAdminUser()?collection(db,'requests'):query(collection(db,'requests'),where('uid','==',user.uid)));
+  const out=[];snap.forEach(d=>out.push(Object.assign({id:d.id},d.data())));return out.sort((a,b)=>(b.ts||0)-(a.ts||0));
+}
+async function reqUpdate(id,patch){if(!isAdminUser())throw new Error('רק למנהל');const p={};['status','note'].forEach(k=>{if(patch&&patch[k]!==undefined)p[k]=String(patch[k]).slice(0,500)});p.updated=Date.now();await setDoc(doc(db,'requests',String(id)),p,{merge:true})}
+async function reqDelete(id){await deleteDoc(doc(db,'requests',String(id)))}
+let myFlags=null;
+async function flagsLoad(){if(!user)return {};try{const d=await getDoc(doc(db,'flags',user.uid));myFlags=(d.exists()&&d.data().features)||{}}catch(_){myFlags=myFlags||{}}return myFlags}
+async function flagsGet(uid){if(!isAdminUser())throw new Error('רק למנהל');const d=await getDoc(doc(db,'flags',String(uid)));return (d.exists()&&d.data().features)||{}}
+async function flagSet(uid,key,on){if(!isAdminUser())throw new Error('רק למנהל');key=String(key||'').trim().replace(/[^\w\u0590-\u05FF-]/g,'').slice(0,40);if(!key)throw new Error('שם שדרוג לא תקין');await setDoc(doc(db,'flags',String(uid)),{features:{[key]:!!on},updated:Date.now()},{merge:true})}
 async function offLookup(code){
   try{
     const r=await fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields=product_name,product_name_he,brands,nutriments,serving_quantity,serving_quantity_unit');
@@ -313,6 +335,7 @@ function shareHook(fn,args){
 
 window.FP2={
   calLoad,calPut,
+  reqAdd,reqList,reqUpdate,reqDelete,flagsLoad,flagsGet,flagSet,flag:k=>!!(myFlags&&myFlags[k]),
   sharedAll:()=>sharedList||[],sharedLoad,sharedPut,sharedDel:async id=>{await deleteDoc(doc(db,'sharedFoods',String(id)));if(sharedList)sharedList=sharedList.filter(f=>f.sharedId!==String(id))},
   oldConfig:oldConf,
   userId:()=>user?.uid,
@@ -323,7 +346,7 @@ window.FP2={
   enablePush,disablePush,sendTestPush,pushEnabled:()=>!!user&&localStorage.getItem(pushKey())==='on'&&typeof Notification!=='undefined'&&Notification.permission==='granted',
   async refreshHealth(){if(!core||!oldConf())throw new Error("חבר קודם את שרת השעון בחשבון וענן");await core.pullHealth();const fresh=await core.call("getBootstrapData",[]);if(typeof state!=="undefined"&&state.data)state.data.health=fresh.health},
   call:async(fn,args)=>{if(!core)throw new Error('האפליקציה עוד נטענת');if(PHOTO_FNS.has(fn))return photoCall(fn,args);if(fn==='lookupBarcode')return lookupBarcodeAll(args);const r=await core.call(fn,args);if(fn==='saveFood'||fn==='saveMyFoods')shareHook(fn,args);if(['saveBankEvent','deleteBankEvent','restoreBankEvent','saveSettings','getBootstrapData','activateBankEvent'].includes(fn))queueNotificationSync();return r},
-  afterBoot(){accountCard();sharedLoad();try{if(user&&pushUrl())notificationAPI('registerUser',{}).catch(()=>{})}catch(_){}pullHealth();queueNotificationSync();refreshPushRegistration();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){pullHealth();queueNotificationSync()}})}
+  afterBoot(){accountCard();sharedLoad();flagsLoad().then(()=>{try{window.dispatchEvent(new Event('fp-flags'))}catch(_){}});try{if(user&&pushUrl())notificationAPI('registerUser',{}).catch(()=>{})}catch(_){}pullHealth();queueNotificationSync();refreshPushRegistration();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){pullHealth();queueNotificationSync()}})}
 };
 
 onAuthStateChanged(auth,async u=>{

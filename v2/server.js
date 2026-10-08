@@ -2096,14 +2096,14 @@ function calculateTotals_(date) {
 // - Yesterday under/over the goal: today gets exactly that gap, up to the limit of the process (10% cut, 12% recomp/maintain, 15% mass).
 //   The gap is measured against yesterday's planned goal (without its own shift), so it never chains day after day.
 // - A day in the week of an event (after the event was added) sends its gap to the event day instead of the next day.
-// - The day after an event day gets nothing.
+// - 2.9.0: the day after an event is like any day: the gap against the event day's goal (regular + saved + carried), within the same limit.
 // - The user may change today's cut after a day over the goal (day_cuts[date] = amount, 0 = none).
 // - The goal the app suggests never goes below the daily minimum (bankContext_).
 const GOAL_RULES={lose:{shift:.10,save:[.05,.10],event:.30,name:'חיטוב'},recomp:{shift:.12,save:[.05,.12],event:.35,name:'שמירה על שריר וירידה בשומן'},maintain:{shift:.12,save:[.05,.12],event:.35,name:'שמירה'},gain:{shift:.15,save:[.10,.15],event:.45,name:'מסה נקייה'}};
 function goalRules_(settings){let p={};try{p=JSON.parse((settings||getSettings_()).profile_json||'{}')}catch(_){}return GOAL_RULES[p.goal]||GOAL_RULES.recomp;}
 function dayCuts_(settings){try{const m=JSON.parse(String((settings||getSettings_()).day_cuts||'{}'));return m&&typeof m==='object'?m:{}}catch(_){return {}}}
-function dayGap_(d,events,s,base,cap){
-  const eaten=getEntriesForDate_(d).reduce((n,x)=>n+(Number(x.calories)||0),0),goal=base+bankAdjust_(d,events,s).delta,gap=goal-eaten;
+function dayGap_(d,events,s,base,cap,extra){
+  const eaten=getEntriesForDate_(d).reduce((n,x)=>n+(Number(x.calories)||0),0),goal=base+bankAdjust_(d,events,s).delta+(Number(extra)||0),gap=goal-eaten;
   if(eaten<=0)return 0;                       // nothing logged: not counted
   if(gap>0&&eaten<goal*0.5)return 0;          // looks like a day that was not fully logged
   if(Math.abs(gap)<20)return 0;
@@ -2124,12 +2124,13 @@ function dayShift_(date,settings,goalBefore){
     const evCap=Math.round(base*rules.event/10)*10,already=Number(own.plan&&own.plan.adj&&own.plan.adj[date])||0;
     if(sum>0)sum=Math.max(0,Math.min(sum,evCap-already));
     out.toEvent=sum;if(sum>0)out.plus=sum;else if(sum<0)out.cut=-sum;out.source='event';
-  }else if(!events.some(e=>e.date===y)&&!eventOfDay_(y,events)){
-    const gap=dayGap_(y,events,s,base,cap),cuts=dayCuts_(s);
+  }else if(!eventOfDay_(y,events)){
+    const yEvent=events.some(e=>e.date===y),extra=yEvent?Number(dayShift_(y,s,base+bankAdjust_(y,events,s).delta).toEvent)||0:0;
+    const gap=dayGap_(y,events,s,base,cap,extra),cuts=dayCuts_(s);
     if(gap>0)out.plus=gap;
     else if(gap<0){out.cut=-gap;out.over=-gap;if(Object.prototype.hasOwnProperty.call(cuts,date))out.cut=Math.max(0,Math.min(-gap,Number(cuts[date])||0));}
-    out.source='yesterday';
-  }else out.source=events.some(e=>e.date===y)?'after-event':'event-week';
+    out.source=yEvent?'after-event':'yesterday';
+  }else out.source='event-week';
   let total=out.plus-out.cut;
   const floor=ctx.noDeficit?Math.max(goalBefore,ctx.minDay):ctx.minDay;
   if(goalBefore+total<floor)total=Math.min(0,floor-goalBefore);
@@ -2728,7 +2729,7 @@ function nullableNumber_(v){return v===''||v===null||v===undefined?'':Number(v);
 // v0.31: calorie bank for planned and late events ("free day"), plus the "+" menu settings.
 const BANK_SIZES={small:400,medium:700,large:1000};
 const BANK_TYPES={restaurant:'מסעדה',family:'ארוחה משפחתית',friends:'יציאה עם חברים',other:'אירוע'};
-const PLUS_MENU_IDS=['treat','event','calendar','mealPhoto','food','weight','workout','whatToEat','checkin','shortcuts'];
+const PLUS_MENU_IDS=['treat','event','calendar','mealPhoto','food','weight','workout','whatToEat','checkin','shortcuts','request'];
 function bankContext_(settings){
   const s=settings||getSettings_();let profile={};try{profile=JSON.parse(s.profile_json||'{}')}catch(_){}
   const goal=Number(s.calorie_goal)||2200,protein=Number(s.protein_goal)||130;
