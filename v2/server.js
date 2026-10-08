@@ -217,7 +217,7 @@ function saveMyFoods(list){
   (Array.isArray(list)?list:[]).slice(0,30).forEach(x=>{
     const name=String(x&&x.name||'').trim(),amount=Number(x&&x.amount)||0;
     if(!name||!(amount>0)||![x.calories,x.protein,x.carbs,x.fat].some(v=>Number(v)>0))return;
-    cacheFood_({name,baseQty:amount,unit:String(x.unit||'מנה'),sourceBaseUnit:String(x.unit||'מנה'),calories:Number(x.calories)||0,protein:Number(x.protein)||0,carbs:Number(x.carbs)||0,fat:Number(x.fat)||0,source:'הזנה ידנית',units:Array.isArray(x.units)?x.units:[]});
+    cacheFood_({name,baseQty:amount,unit:String(x.unit||'מנה'),sourceBaseUnit:String(x.unit||'מנה'),calories:Number(x.calories)||0,protein:Number(x.protein)||0,carbs:Number(x.carbs)||0,fat:Number(x.fat)||0,source:'הזנה ידנית',sourceId:String(x.sourceId||''),brand:String(x.brand||''),units:Array.isArray(x.units)?x.units:[]});
   });
   return getMyFoods_();
 }
@@ -2330,7 +2330,8 @@ function getDayView(date){
 }
 
 function getRecentFoods_(limit) {
-  const rows=getHistoryEntries_().filter(x=>x.sourceType!=='meal');
+  /* "recent foods" remember what was eaten even if the entry was later deleted from the day */
+  const rows=readValues_(APP.sheets.entries).slice(1).filter(r=>r[0]).reverse().map(r=>({name:String(r[6]),amount:Number(r[7])||0,unit:String(r[8]),calories:Number(r[9])||0,protein:Number(r[10])||0,carbs:Number(r[11])||0,fat:Number(r[12])||0,source:String(r[13]||''),sourceType:String(r[4]||''),baseQty:Number(r[7])||1})).filter(x=>x.sourceType!=='meal');
   const seen=new Set(); const out=[];
   rows.forEach(x=>{const k=normalize_(x.name); if(!seen.has(k)){seen.add(k);out.push(x);}});
   return out.slice(0,limit||12);

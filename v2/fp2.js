@@ -1,7 +1,7 @@
 /* FitPro 2: Firebase sign-in, storage and sync. The app logic itself lives in fp2-core.js + server.js. */
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,sendPasswordResetEmail} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,writeBatch,getDocs,getDocsFromCache,onSnapshot} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,writeBatch,getDocs,getDocsFromCache,onSnapshot,setDoc,deleteDoc,getDoc} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 
 const firebaseConfig={apiKey:"AIzaSyCNaUpS96A4wiZ_ahFWX1fr5omzjP9qm9M",authDomain:"fitpro-250c7.firebaseapp.com",projectId:"fitpro-250c7",storageBucket:"fitpro-250c7.firebasestorage.app",messagingSenderId:"753223506846",appId:"1:753223506846:web:59b211f5f9d206d729d48f"};
 const app=initializeApp(firebaseConfig);
@@ -9,9 +9,15 @@ const auth=getAuth(app);
 const db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
 
 let core=null,col=null,user=null,pendingCommits=[];
+const ADMIN_EMAILS=['eilybshimon@gmail.com'];
 const $id=id=>document.getElementById(id);
-const oldConf=()=>{try{const c=JSON.parse(localStorage.getItem('elaiApi')||'null');if(c&&c.url&&c.pass)return c}catch(_){}
-  const p=core&&core.store&&core.store.props;return p&&p.OLD_URL&&p.OLD_PASS?{url:p.OLD_URL,pass:p.OLD_PASS}:null};
+const oldConf=()=>{
+  const p=core&&core.store&&core.store.props;
+  if(p&&p.OLD_URL&&p.OLD_PASS)return {url:p.OLD_URL,pass:p.OLD_PASS};
+  /* the device-wide copy (kept on the device for the admin) belongs to whoever connected the old server (the admin); other accounts must never inherit it */
+  if(user&&ADMIN_EMAILS.indexOf(String(user.email||'').toLowerCase())>-1){try{const c=JSON.parse(localStorage.getItem('elaiApi')||'null');if(c&&c.url&&c.pass)return c}catch(_){}}
+  return null};
+const wipeDeviceData=()=>{['elaiStateCache','elaiWorkoutSession','elaiActiveWorkoutPlan','elaiPlanTiming','elaiEquipment','elaiRestEnd','elaiRestSec','elaiRestOff','elaiOutbox','fp_last_ci'].forEach(k=>{try{localStorage.removeItem(k)}catch(_){}});try{Object.keys(localStorage).filter(k=>/^(tz|TZ|fp2Tour)/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(_){}};
 function rememberOld(url,pass){try{localStorage.setItem('elaiApi',JSON.stringify({url,pass}))}catch(_){}if(core&&core.store){core.store.props.OLD_URL=url;core.store.props.OLD_PASS=pass;core.store.propsDirty=true;core.flush()}}
 /* The old server is reached with a normal POST first (works best inside installed iPhone/iPad apps),
    and only if that fails with the older script-tag method. */
@@ -151,7 +157,7 @@ function accountCard(){
   $id('fp2Repair').onclick=async()=>{if(!oldConf())return toast('חבר קודם את השרת הישן',true);const b=$id('fp2Repair'),m=$id('fp2RepairMsg');b.disabled=true;
     try{const n=await core.repairFromOld((t,p)=>{m.textContent=t+' · '+p+'%'});await flushAll(true);m.textContent='✓ הושלם. נוספו '+n+' שורות שהיו חסרות.';scheduleRefresh()}
     catch(e){m.textContent='לא הצליח: '+e.message}finally{b.disabled=false}};
-  $id('fp2Out').onclick=async()=>{if(!confirm('להתנתק? הנתונים שמורים בענן ויחזרו בכניסה הבאה.'))return;await Promise.all(pendingCommits).catch(()=>{});if(localStorage.getItem(pushKey())==='on'){try{await disablePush()}catch(e){if(!confirm('אין חיבור לשירות ההתראות, ולכן ההתראות של החשבון עלולות להמשיך להגיע למכשיר הזה. להתנתק בכל זאת?'))return;try{localStorage.removeItem(pushKey())}catch(_){}}}await signOut(auth);location.reload()};
+  $id('fp2Out').onclick=async()=>{if(!confirm('להתנתק? הנתונים שמורים בענן ויחזרו בכניסה הבאה.'))return;await Promise.all(pendingCommits).catch(()=>{});if(localStorage.getItem(pushKey())==='on'){try{await disablePush()}catch(e){if(!confirm('אין חיבור לשירות ההתראות, ולכן ההתראות של החשבון עלולות להמשיך להגיע למכשיר הזה. להתנתק בכל זאת?'))return;try{localStorage.removeItem(pushKey())}catch(_){}}}await signOut(auth);wipeDeviceData();location.reload()};
 }
 /* Push goes through a free Google Apps Script web app (backend/apps-script/Push.gs), signed in with the user's Firebase login.
    No server keys live in the app. After deploying Push.gs, paste its web-app URL (ends with /exec) between the quotes. */
@@ -195,21 +201,119 @@ async function refreshPushRegistration(){if(!user||localStorage.getItem(pushKey(
 async function sendTestPush(){await notificationAPI('sendTestNotification')}
 async function disablePush(){if(!user)return;await notificationAPI('unregisterNotificationDevice',{deviceId:pushDevice()});localStorage.removeItem(pushKey());try{const sdk=await messagingSDK();await sdk.deleteToken(sdk.getMessaging(app))}catch(_){} }
 
+
+/* ---- progress photos: private to the signed-in account (this device + a best-effort Firestore mirror) ---- */
+const PHOTO_FNS=new Set(['saveProgressPhoto','getProgressPhotos','getProgressPhoto','deleteProgressPhoto']);
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('fp2photos',1);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('p')){const st=d.createObjectStore('p',{keyPath:'id'});st.createIndex('uid','uid')}};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const idbDo=async(mode,fn)=>{const d=await idb();return new Promise((res,rej)=>{const t=d.transaction('p',mode),st=t.objectStore('p');let out;try{out=fn(st)}catch(e){return rej(e)}t.oncomplete=()=>res(out&&out.result!==undefined?out.result:out);t.onerror=()=>rej(t.error)})};
+const photoCol=()=>collection(db,'users',user.uid,'photos');
+async function photosLocal(){const all=await idbDo('readonly',st=>st.index('uid').getAll(user.uid));return all||[]}
+async function photosSync(){
+  let list=await photosLocal();
+  if(!list.length&&navigator.onLine!==false){try{const snap=await getDocs(photoCol());for(const d of snap.docs){const x=d.data();if(x&&x.id)await idbDo('readwrite',st=>st.put(Object.assign({uid:user.uid},x)))}list=await photosLocal()}catch(_){}}
+  return list}
+async function photoCall(fn,args){
+  const admin=window.FP2.isAdmin(),a=args||[];
+  if(fn==='saveProgressPhoto'){
+    const p=a[0]||{},id=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));
+    const pose=['front','right','left','back'].includes(p.pose)?p.pose:'front';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(p.date||'')))throw new Error('תאריך לא תקין');
+    const img=String(p.image||'');if(!/^[A-Za-z0-9+/=]+$/.test(img)||img.length<200||img.length>900000)throw new Error('התמונה לא תקינה או גדולה מדי');
+    const rec={id,uid:user.uid,date:p.date,pose,image:img,thumb:String(p.thumb||''),weight:'',note:String(p.note||'').slice(0,200),created:Date.now()};
+    await idbDo('readwrite',st=>st.put(rec));
+    try{await setDoc(doc(photoCol(),id),{id,date:rec.date,pose,image:rec.image,thumb:rec.thumb,weight:'',note:rec.note,created:rec.created})}catch(e){console.warn('photo mirror',e&&e.code)}
+    return {id,date:rec.date,pose};
+  }
+  if(fn==='getProgressPhotos'){
+    let list=(await photosSync()).map(x=>({id:x.id,date:x.date,pose:x.pose,weight:x.weight===undefined?'':x.weight,note:x.note||'',thumb:x.thumb||''}));
+    if(admin&&oldConf()){try{const old=await core.call('getProgressPhotos',[]);list=list.concat((old||[]).map(x=>Object.assign({},x,{old:true})))}catch(_){}}
+    return list.sort((x,y)=>String(y.date).localeCompare(String(x.date))||0).slice(0,80)}
+  if(fn==='getProgressPhoto'){
+    const id=String(a[0]||''),x=(await photosLocal()).find(v=>v.id===id);
+    if(x)return {id:x.id,date:x.date,pose:x.pose,weight:x.weight===undefined?'':x.weight,image:x.image};
+    if(admin&&oldConf())return core.call('getProgressPhoto',a);
+    throw new Error('התמונה לא נמצאה')}
+  if(fn==='deleteProgressPhoto'){
+    const id=String(a[0]||''),x=(await photosLocal()).find(v=>v.id===id);
+    if(x){await idbDo('readwrite',st=>st.delete(id));try{await deleteDoc(doc(photoCol(),id))}catch(_){}return true}
+    if(admin&&oldConf())return core.call('deleteProgressPhoto',a);
+    throw new Error('התמונה לא נמצאה')}
+}
+
+
+/* ===== shared food DB (2.6.5) ===== */
+const BC=/^\d{8,14}$/;
+let sharedList=null;
+try{sharedList=JSON.parse(localStorage.getItem('fp2Shared')||'null')}catch(_){}
+const sharedNorm=(id,d)=>({name:String(d.name||''),brand:String(d.brand||''),baseQty:Number(d.baseQty)||100,unit:String(d.unit||'גרם'),calories:Number(d.calories)||0,protein:Number(d.protein)||0,carbs:Number(d.carbs)||0,fat:Number(d.fat)||0,sourceId:String(d.sourceId||''),units:Array.isArray(d.units)?d.units:[],source:'מאגר משותף',sharedId:id});
+const hasMacros=x=>['calories','protein','carbs','fat'].some(k=>Number(x[k])>0);
+async function sharedLoad(force){
+  if(!user)return sharedList||[];
+  if(sharedList&&!force&&sharedList._t&&Date.now()-sharedList._t<6*3600*1000)return sharedList;
+  try{const snap=await getDocs(collection(db,'sharedFoods'));const l=[];snap.forEach(d=>l.push(sharedNorm(d.id,d.data())));l._t=Date.now();sharedList=l;try{localStorage.setItem('fp2Shared',JSON.stringify(Object.assign([],l,{})));localStorage.setItem('fp2SharedT',String(l._t))}catch(_){}}catch(_){}
+  return sharedList||[];
+}
+if(sharedList){sharedList._t=Number(localStorage.getItem('fp2SharedT')||0)}
+async function sharedPut(id,x){
+  const d={name:String(x.name||'').slice(0,120),brand:String(x.brand||'').slice(0,80),baseQty:Number(x.baseQty||x.amount)||100,unit:String(x.unit||'גרם'),calories:Number(x.calories)||0,protein:Number(x.protein)||0,carbs:Number(x.carbs)||0,fat:Number(x.fat)||0,sourceId:BC.test(String(x.sourceId||''))?String(x.sourceId):'',units:Array.isArray(x.units)?x.units.filter(u=>Array.isArray(u)&&u[0]&&Number(u[1])>0).slice(0,12).map(u=>[String(u[0]),Number(u[1]),u[2]?1:0]):[],ts:Date.now()};
+  await setDoc(doc(db,'sharedFoods',String(id)),d);
+  if(sharedList){sharedList=sharedList.filter(f=>f.sharedId!==String(id));sharedList.push(sharedNorm(String(id),d));sharedList._t=Date.now()}
+}
+async function offLookup(code){
+  try{
+    const r=await fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields=product_name,product_name_he,brands,nutriments,serving_quantity,serving_quantity_unit');
+    if(!r.ok)return null;const b=await r.json();const p=b&&b.product;if(!p)return null;const n=p.nutriments||{};
+    const base=String(p.product_name_he||p.product_name||'').trim(),brand=String(p.brands||'').split(',')[0].trim();
+    const x={name:base?(brand&&base.indexOf(brand)<0?base+' – '+brand:base):'',brand:p.brands||'',baseQty:100,unit:'גרם',
+      units:(Number(p.serving_quantity)>0&&String(p.serving_quantity_unit||'g').toLowerCase()!=='ml')?[['מנה מהאריזה',Math.round(Number(p.serving_quantity)*10)/10,false]]:[],
+      calories:Number(n['energy-kcal_100g'])||0,protein:Number(n.proteins_100g)||0,carbs:Number(n.carbohydrates_100g)||0,fat:Number(n.fat_100g)||0,source:'Open Food Facts',sourceId:code};
+    if(!hasMacros(x))x.incomplete=true;
+    return x;
+  }catch(_){return null}
+}
+async function lookupBarcodeAll(args){
+  const code=String(args[0]||'').replace(/\D/g,'');
+  if(code.length<8)throw new Error('ברקוד לא תקין');
+  try{const mine=await core.call('saveMyFoods',[[]]);const f=(mine||[]).find(x=>x.sourceId===code);if(f)return f}catch(_){}
+  try{const d=await getDoc(doc(db,'sharedFoods',code));if(d.exists()){const x=sharedNorm(code,d.data());if(hasMacros(x))return x}}catch(_){}
+  const off=await offLookup(code);
+  if(off&&!off.incomplete)return off;
+  if(oldConf()){try{const o=await core.call('lookupBarcode',[code]);if(o&&hasMacros(o))return o}catch(_){}}
+  if(off)return off;
+  throw new Error('המוצר לא נמצא');
+}
+function shareHook(fn,args){
+  try{
+    const list=fn==='saveFood'?[args[0]]:(fn==='saveMyFoods'?(args[0]||[]):[]);
+    list.forEach(x=>{
+      if(!x||!hasMacros(x))return;
+      const name=String(x.name||'').trim();if(!name)return;
+      const code=String(x.sourceId||'').trim();
+      if(BC.test(code)&&!/צמרת/.test(String(x.source||''))){sharedPut(code,x).catch(()=>{});return}
+      const manual=fn==='saveFood'?(!code&&x.source==='הזנה ידנית'):!!x.propose;
+      if(manual&&pushUrl())notificationAPI('submitFoodProposal',{food:{name,brand:x.brand||'',baseQty:Number(x.baseQty||x.amount)||100,unit:x.unit||'גרם',calories:+x.calories||0,protein:+x.protein||0,carbs:+x.carbs||0,fat:+x.fat||0}}).catch(()=>{});
+    });
+  }catch(_){}
+}
+
 window.FP2={
+  sharedAll:()=>sharedList||[],sharedLoad,sharedPut,sharedDel:async id=>{await deleteDoc(doc(db,'sharedFoods',String(id)));if(sharedList)sharedList=sharedList.filter(f=>f.sharedId!==String(id))},
   oldConfig:oldConf,
   userId:()=>user?.uid,
+  isAdmin:()=>!!user&&ADMIN_EMAILS.indexOf(String(user.email||'').toLowerCase())>-1,
   push:(name,data)=>notificationAPI(name,data),
   register:name=>{if(!user||!pushUrl())return;notificationAPI('registerUser',{name:String(name||'').slice(0,40)}).catch(()=>{})},
   calendarFetch:url=>notificationAPI('fetchCalendar',{url}),getProp:k=>String((core&&core.store&&core.store.props&&core.store.props[k])||''),setProp:(k,v)=>{if(!core)throw new Error('האפליקציה עוד נטענת');if(v)core.store.props[k]=String(v);else delete core.store.props[k];core.store.propsDirty=true;core.flush()},
   enablePush,disablePush,sendTestPush,pushEnabled:()=>!!user&&localStorage.getItem(pushKey())==='on'&&typeof Notification!=='undefined'&&Notification.permission==='granted',
   async refreshHealth(){if(!core||!oldConf())throw new Error("חבר קודם את שרת השעון בחשבון וענן");await core.pullHealth();const fresh=await core.call("getBootstrapData",[]);if(typeof state!=="undefined"&&state.data)state.data.health=fresh.health},
-  call:async(fn,args)=>{if(!core)throw new Error('האפליקציה עוד נטענת');const r=await core.call(fn,args);if(['saveBankEvent','deleteBankEvent','restoreBankEvent','saveSettings','getBootstrapData','activateBankEvent'].includes(fn))queueNotificationSync();return r},
-  afterBoot(){accountCard();pullHealth();queueNotificationSync();refreshPushRegistration();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){pullHealth();queueNotificationSync()}})}
+  call:async(fn,args)=>{if(!core)throw new Error('האפליקציה עוד נטענת');if(PHOTO_FNS.has(fn))return photoCall(fn,args);if(fn==='lookupBarcode')return lookupBarcodeAll(args);const r=await core.call(fn,args);if(fn==='saveFood'||fn==='saveMyFoods')shareHook(fn,args);if(['saveBankEvent','deleteBankEvent','restoreBankEvent','saveSettings','getBootstrapData','activateBankEvent'].includes(fn))queueNotificationSync();return r},
+  afterBoot(){accountCard();sharedLoad();try{if(user&&pushUrl())notificationAPI('registerUser',{}).catch(()=>{})}catch(_){}pullHealth();queueNotificationSync();refreshPushRegistration();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){pullHealth();queueNotificationSync()}})}
 };
 
 onAuthStateChanged(auth,async u=>{
   if(!u){user=null;showAuth('login');return}
   if(user&&user.uid===u.uid)return;
+  try{const last=localStorage.getItem('fp2LastUid');if(last&&last!==u.uid)wipeDeviceData();localStorage.setItem('fp2LastUid',u.uid)}catch(_){}
   user=u;col=collection(db,'users',u.uid,'chunks');
   let snap=null;
   try{snap=await getDocsFromCache(col)}catch(_){}

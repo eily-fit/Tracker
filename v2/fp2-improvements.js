@@ -413,7 +413,12 @@ function addEventToPhoneCalendar(){
   const d=s=>s.replace(/-/g,''),end=isoAdd(ev.date,1);
   const esc2=s=>s.replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,');
   const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FitPro//HE','BEGIN:VEVENT','UID:fitpro-'+d(ev.date)+'-'+Date.now()+'@fitpro','DTSTAMP:'+new Date().toISOString().replace(/[-:]|\.\d+/g,''),'DTSTART;VALUE=DATE:'+d(ev.date),'DTEND;VALUE=DATE:'+d(end),'SUMMARY:'+esc2(title),'END:VEVENT','END:VCALENDAR'].join('\r\n');
-  const a=document.createElement('a');a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);a.download='fitpro-event.ics';document.body.appendChild(a);a.click();a.remove();
+  const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'}),file=new File([blob],'fitpro-event.ics',{type:'text/calendar'});
+  (async()=>{
+    try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title});toast('בחר "יומן" כדי להוסיף את האירוע');return}}catch(e){if(e&&e.name==='AbortError')return}
+    try{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='fitpro-event.ics';a.rel='noopener';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(url)},4000);toast('הקובץ ירד. פתח אותו כדי להוסיף ליומן')}
+    catch(e){toast('לא הצלחתי להוסיף ליומן. האירוע נשמר באפליקציה',true)}
+  })();
 }
 (function(){
   const oo=openEventSheet;openEventSheet=function(opts){
@@ -434,7 +439,7 @@ function addEventToPhoneCalendar(){
         const f=document.createElement('div');f.className='field';
         f.innerHTML='<label>'+(ev.type==='other'?'איך קוראים לאירוע?':'שם לאירוע (לא חובה)')+'</label><input id="evName" type="text" maxlength="60" placeholder="'+(ev.type==='other'?'למשל: יום הולדת של דנה':'למשל: ארוחת ערב אצל סבתא')+'">';
         f.querySelector('input').value=ev.note||'';f.querySelector('input').oninput=function(){state.ev.note=this.value};
-        typeField.after(f)}
+        typeField.before(f)}
       const save=[...body.querySelectorAll('button.btn.full')].find(x=>/שמור|בחר תאריך/.test(x.textContent));
       if(save&&!body.querySelector('#evSaveCal')){
         const ready=ev.date&&ev.type&&!save.disabled;
@@ -445,11 +450,11 @@ function addEventToPhoneCalendar(){
     return result};
   saveEventUI=async function(addCal){const ev=state.ev;if(!ev||!ev.date||!ev.type)return;
     const note=String(ev.note||'').trim().slice(0,60);
+    if(addCal){try{addEventToPhoneCalendar()}catch(e){console.error(e)}}
     if(ev.type==='other'&&!note&&!ev.id&&false)return;
     const r=await bankMutate('saveBankEvent',{id:ev.id||'',date:ev.date,type:ev.type,size:ev.size,method:ev.method,note});if(!r)return;
     const ws=weekStartOf(bankToday());if(state.data.settings&&ev.date>=ws&&ev.date<=isoAdd(ws,6))state.data.settings.bank_week_asked='w:'+ws;closeSheet('eventSheet');renderBankCard();
-    const p=r.plan||{};toast(p.mode==='pending'?`האירוע נשמר · תזכורת ב${relDate(remindDate(ev.date))}`:p.mode==='past'?'האירוע נרשם':p.banked?`האירוע נשמר · ${kc(p.banked)} קל׳ בבנק`:'האירוע נשמר · ביום עצמו תקבל תוכנית');
-    if(addCal)setTimeout(addEventToPhoneCalendar,350)};
+    const p=r.plan||{};toast(p.mode==='pending'?`האירוע נשמר · תזכורת ב${relDate(remindDate(ev.date))}`:p.mode==='past'?'האירוע נרשם':p.banked?`האירוע נשמר · ${kc(p.banked)} קל׳ בבנק`:'האירוע נשמר · ביום עצמו תקבל תוכנית');};
   function addHeaderBtn(){
     const h=document.querySelector('header');if(!h||h.querySelector('#hdrCal'))return;
     const b=document.createElement('button');b.id='hdrCal';b.type='button';b.setAttribute('aria-label','יומן אירועים');b.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D7F36B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';b.onclick=()=>openCalendar();h.appendChild(b)}
@@ -469,20 +474,42 @@ document.head.appendChild(st)})();
   const fmtD=iso=>{if(!iso)return '—';try{return new Date(iso).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'})}catch(_){return '—'}};
   let busy=false;
   function box(){return document.getElementById('adminUsers')}
-  async function load(){
-    const b=box();if(!b||busy||!window.FP2||!FP2.push)return;busy=true;
-    b.innerHTML='<p class="muted">טוען משתמשים…</p>';
-    try{
-      const r=await FP2.push('adminListUsers');const users=r.users||[];
-      b.innerHTML=`<div class="row" style="justify-content:space-between;align-items:center;margin:14px 0 6px"><b>👥 כל המשתמשים (${users.length})</b><button class="btn light" style="min-height:36px;padding:6px 12px" onclick="adminLoadUsers()">רענן</button></div>`+
+  function draw(b,users){
+b.innerHTML=`<div class="row" style="justify-content:space-between;align-items:center;margin:14px 0 6px"><b>👥 כל המשתמשים (${users.length})</b><button class="btn light" style="min-height:36px;padding:6px 12px" onclick="adminLoadUsers()">רענן</button></div>`+
       users.map(u=>`<div class="manage-row" style="align-items:flex-start;gap:8px"><span style="flex:1;min-width:0"><b>${esc(u.name||u.email.split('@')[0]||'ללא שם')}</b>${u.me?' <small class="muted">(אתה)</small>':''}${u.disabled?' <small style="color:var(--danger)">· חסום</small>':''}<div class="muted" dir="ltr" style="text-align:right;overflow-wrap:anywhere">${esc(u.email)}</div><div class="muted">נרשם ${fmtD(u.created)} · כניסה אחרונה ${fmtD(u.lastLogin)}</div></span>${u.me?'':`<span style="display:flex;flex-direction:column;gap:6px"><button class="btn light" style="min-height:36px;padding:6px 12px" onclick="adminBlockUser('${u.uid}',${!u.disabled})">${u.disabled?'שחרר':'חסום'}</button><button class="btn light" style="min-height:36px;padding:6px 12px;color:var(--danger)" onclick="adminDeleteUserUI('${u.uid}','${esc(u.name||u.email).replace(/'/g,'')}')">מחק</button></span>`}</div>`).join('')+
       '<p class="muted">חסימה מונעת כניסה (אפשר לשחרר). מחיקה מסירה את המשתמש וכל הנתונים שלו לצמיתות. לא מוצגים כאן נתוני אוכל או אימונים.</p>';
+  }
+  async function load(){
+    const b=box();if(!b||busy||!window.FP2||!FP2.push)return;busy=true;
+    let cached=null;try{cached=JSON.parse(localStorage.getItem('fp2AdminUsers')||'null')}catch(_){}
+    if(cached&&cached.length){draw(b,cached)}else b.innerHTML='<p class="muted">טוען משתמשים…</p>';
+    try{
+      const r=await FP2.push('adminListUsers');const users=r.users||[];
+      try{localStorage.setItem('fp2AdminUsers',JSON.stringify(users))}catch(_){}
+      draw(b,users);
     }catch(e){
       const m=String(e&&e.message||e);
-      b.innerHTML=/^Firebase /.test(m)?`<p class="muted" style="color:var(--danger)">רשימת המשתמשים לא נטענה: ${esc(m)}</p>`:'';
+      if(/^Firebase /.test(m))b.innerHTML=`<p class="muted" style="color:var(--danger)">רשימת המשתמשים לא נטענה: ${esc(m)}</p>`;else if(!(cached&&cached.length))b.innerHTML='';
     }finally{busy=false}
-    loadReq();
+    loadReq();loadFoods();
   }
+  async function loadFoods(){
+    if(!window.FP2||!FP2.push)return;let b=document.getElementById('adminFoodReq');
+    if(!b){const a=document.getElementById('adminExReq');if(!a)return;a.insertAdjacentHTML('afterend','<div id="adminFoodReq"></div>');b=document.getElementById('adminFoodReq')}
+    try{
+      const r=await FP2.push('adminListFoodProposals');const it=r.items||[];window.__foodProps={};it.forEach(x=>window.__foodProps[x.id]=x);
+      const mac=f=>`${Math.round(f.calories)} קל׳ · ח ${Math.round(f.protein*10)/10} · פ ${Math.round(f.carbs*10)/10} · ש ${Math.round(f.fat*10)/10} (ל-${f.baseQty} ${esc(f.unit)})`;
+      b.innerHTML=`<div style="margin:18px 0 6px"><b>🍽 מזונות לאישור (${it.length})</b></div>`+(it.length?it.map(x=>x.kind==='report'?`<div class="manage-row"><span style="flex:1;min-width:0"><b>⚠ דיווח: ${esc(x.name||x.code)}</b><div class="muted">${esc(x.note||'ללא הערה')}${x.by&&x.by.length?' · '+esc(x.by.join(', ')):''}</div></span><button class="btn secondary" data-i="${esc(x.id)}" onclick="adminFoodAct(this,'del')">הסר מהמאגר</button><button class="btn secondary" data-i="${esc(x.id)}" onclick="adminFoodAct(this,'skip')">התעלם</button></div>`:`<div class="manage-row"><span style="flex:1;min-width:0"><b>${esc(x.food.name)}</b>${x.count>1?` <small class="muted">· ${x.count} משתמשים</small>`:''}<div class="muted">${mac(x.food)}${x.by&&x.by.length?' · '+esc(x.by.join(', ')):''}</div></span><button class="btn" data-i="${esc(x.id)}" onclick="adminFoodAct(this,'share')">שתף עם כולם</button><button class="btn secondary" data-i="${esc(x.id)}" onclick="adminFoodAct(this,'skip')">השאר פרטי</button></div>`).join(''):'<p class="muted">אין מזונות שממתינים.</p>');
+    }catch(e){b.innerHTML=''}
+  }
+  window.adminFoodAct=async function(btn,act){
+    const x=(window.__foodProps||{})[btn.dataset.i];if(!x)return;btn.disabled=true;
+    try{
+      if(act==='share')await FP2.sharedPut(x.id,x.food);
+      if(act==='del')await FP2.sharedDel(x.code);
+      await FP2.push('adminResolveFoodProposal',{id:x.id});toast(act==='share'?'שותף עם כולם':act==='del'?'הוסר מהמאגר':'נסגר');loadFoods();
+    }catch(e){btn.disabled=false;toast(e.message||'שגיאה',true)}
+  };
   async function loadReq(){
     const b=document.getElementById('adminExReq');if(!b||!window.FP2||!FP2.push)return;
     try{
@@ -504,10 +531,109 @@ document.head.appendChild(st)})();
     try{const r=await FP2.push('adminDeleteUser',{uid});toast('המשתמש נמחק'+(r&&r.note?' (חלק מהנתונים לא נמחקו)':''))}catch(e){toast(e.message||'שגיאה',true)}
     try{loading(false)}catch(_){}busy=false;load();
   };
+  setTimeout(()=>{try{if(window.FP2&&FP2.isAdmin&&FP2.isAdmin()&&FP2.push)FP2.push('adminListFoodProposals').then(r=>{const n=(r.items||[]).length;if(n)toast('יש '+n+' מזונות שממתינים לאישור (הגדרות › משתמשים)')}).catch(()=>{})}catch(_){}},9000);
+  setTimeout(()=>{try{if(window.FP2&&FP2.isAdmin&&FP2.isAdmin()&&FP2.push)FP2.push('adminListUsers').then(r=>{try{localStorage.setItem('fp2AdminUsers',JSON.stringify(r.users||[]))}catch(_){}}).catch(()=>{})}catch(_){}},6000);
   const t=setInterval(()=>{
     const s=[...document.querySelectorAll('#settings summary')].find(x=>/משתמשים/.test(x.textContent));if(!s)return;
     clearInterval(t);const d=s.parentElement,body=d.querySelector('.settings-body');
-    if(!box())body.insertAdjacentHTML('beforeend','<div id="adminUsers"></div><div id="adminExReq"></div>');
+    if(!box())body.insertAdjacentHTML('beforeend','<div id="adminUsers"></div><div id="adminExReq"></div><div id="adminFoodReq"></div>');
     d.addEventListener('toggle',()=>{if(d.open)load()});
   },700);
+})();
+
+
+/* ===== הרשאות לפי תפקיד: רק המנהל רואה ניהול, מפתחות ומאגרים טכניים. משתמש רגיל רואה מעקב ואימונים ===== */
+(function(){
+  const isAdmin=()=>!!(window.FP2&&FP2.isAdmin&&FP2.isAdmin());
+  const TECH=/צמרת|USDA|OpenAI|מתקדם|משתמשים/;
+  function mark(){const sec=document.getElementById('settings');if(!sec)return;
+    sec.querySelectorAll('details.settings-section').forEach(d=>{const s=d.querySelector(':scope > summary');if(s&&TECH.test(s.textContent))d.classList.add('admin-only')})}
+  function apply(){mark();document.body.classList.toggle('hide-admin',!isAdmin());document.body.classList.toggle('is-admin',isAdmin())}
+  const old=window.applyRole;
+  window.applyRole=function(){try{if(typeof old==='function')old.apply(this,arguments)}catch(e){}apply()};
+  const rs=window.renderSettings;if(typeof rs==='function')window.renderSettings=function(){const r=rs.apply(this,arguments);try{apply()}catch(e){}return r};
+  document.addEventListener('DOMContentLoaded',apply);
+  let n=0;const t=setInterval(()=>{apply();if(++n>40)clearInterval(t)},500);
+})();
+
+/* ===== מאגר צמרת לכולם: קובץ סטטי tzameret.json (ללא שרת ישן) + ייצוא למנהל ===== */
+(function(){
+  let tried=false;
+  const ol=window.loadTzameret;
+  if(typeof ol==='function')window.loadTzameret=function(force){
+    return ol.apply(this,arguments).then(async ready=>{
+      if(!tz.ready&&!tried){tried=true;
+        try{const r=await fetch('tzameret.json',{cache:'no-cache'});if(r.ok){const t=await r.text();tzIngest(t);try{localStorage.setItem(TZ_STORE_KEY,t)}catch(_){}try{renderTzStatus()}catch(_){}}}catch(_){}}
+      return tz.ready});
+  };
+  const boot=setInterval(()=>{if(typeof state!=='undefined'&&state.data){clearInterval(boot);setTimeout(()=>{try{loadTzameret()}catch(_){}},1200)}},700);
+  async function exportTz(){
+    let t='';try{t=localStorage.getItem(TZ_STORE_KEY)||''}catch(_){}
+    if(!t)return toast('המאגר עוד לא נטען במכשיר הזה. פתח חיפוש מזון ונסה שוב',true);
+    const blob=new Blob([t],{type:'application/json'}),file=new File([blob],'tzameret.json',{type:'application/json'});
+    try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return}}catch(e){if(e&&e.name==='AbortError')return}
+    const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='tzameret.json';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},4000);toast('הקובץ ירד. העלה אותו ל-GitHub ליד index.html')}
+  window.exportTzameretFile=exportTz;
+  function inject(){const s=[...document.querySelectorAll('#settings summary')].find(x=>/צמרת/.test(x.textContent));if(!s)return;const b=s.parentElement.querySelector('.settings-body');if(b&&!b.querySelector('#tzExport'))b.insertAdjacentHTML('beforeend','<button id="tzExport" type="button" class="btn light full" style="margin-top:8px" onclick="exportTzameretFile()">⬇️ ייצוא המאגר לקובץ (לפרסום לכל המשתמשים)</button><p class="muted">מעלים את tzameret.json ל-GitHub ליד index.html, וכל משתמש חדש יקבל את המאגר בלי חיבור לשרת הישן.</p>')}
+  const rs=window.renderSettings;if(typeof rs==='function')window.renderSettings=function(){const r=rs.apply(this,arguments);try{inject()}catch(e){}return r};
+})();
+
+/* ===== פירוק משפט למוצרים גם בלי פסיקים: כמות חדשה או סוף כמות+יחידה פותחים פריט חדש ===== */
+(function(){
+  const UNITS=new Set(['גרם','גרמים','גר','ג','ג׳',"ג'",'מ״ל','מל','יחידה','יחידות','פרוסה','פרוסות','כוס','כוסות','כף','כפות','כפית','כפיות','מנה','מנות','פחית','פחיות','גביע','גביעים','קילו','ק״ג','ליטר']);
+  const NUMW=new Set(['חצי','רבע','שתי','שני','שתיים','שניים','שלוש','שלושה','ארבע','ארבעה','חמש','חמישה','שש','שישה','שבע','שבעה','שמונה','תשע','תשעה','עשר','עשרה']);
+  const isNum=t=>/^\d+(?:[.,]\d+)?$/.test(t)||NUMW.has(t);
+  function smart(part){
+    const w=part.split(/\s+/).filter(Boolean);if(w.length<3)return [part];
+    const out=[];let cur=[];
+    if(isNum(w[0])){ /* quantity first: "2 ביצים 100 גרם אורז" */
+      w.forEach((t,i)=>{if(i>0&&isNum(t)&&cur.some(x=>!isNum(x)&&!UNITS.has(x))&&!UNITS.has(w[i-1])&&!(isNum(w[i-1])))if(!NUMW.has(w[i-1])){out.push(cur.join(' '));cur=[]}cur.push(t)});
+    }else{ /* name first: "אורז 100 גרם ביצה 2 יחידות" */
+      let seenNum=false;
+      w.forEach((t,i)=>{
+        if(seenNum&&!isNum(t)&&!UNITS.has(t)){out.push(cur.join(' '));cur=[];seenNum=false}
+        cur.push(t);if(isNum(t)&&cur.some(x=>!isNum(x)&&!UNITS.has(x)))seenNum=true;
+      });
+    }
+    if(cur.length)out.push(cur.join(' '));
+    return out.length>1&&out.every(x=>x.length>=2)?out:[part];
+  }
+  if(typeof window.splitSentence==='function'){
+    const base=window.splitSentence;
+    window.splitSentence=function(q){return base(q).flatMap(smart)};
+    window.__smartSplit=smart;
+  }
+})();
+
+
+/* ===== מאגר מזונות משותף (2.6.5) ===== */
+(function(){
+  const oSearch=window.localFoodSearch;
+  if(typeof oSearch==='function'){
+    window.localFoodSearch=function(q,limit){
+      const sh=(window.FP2&&FP2.sharedAll&&FP2.sharedAll())||[];
+      if(!sh.length||!window.state||!state.data)return oSearch.apply(this,arguments);
+      const mf=state.data.myFoods||[],codes=new Set(mf.map(x=>x.sourceId).filter(Boolean)),names=new Set(mf.map(x=>String(x.name||'').trim().toLowerCase()));
+      const extra=sh.filter(x=>!(x.sourceId&&codes.has(x.sourceId))&&!names.has(String(x.name||'').trim().toLowerCase()));
+      state.data.myFoods=mf.concat(extra);
+      try{return oSearch.apply(this,arguments)}finally{state.data.myFoods=mf}
+    };
+  }
+  const oUpd=window.updateFoodChoice;
+  if(typeof oUpd==='function'){
+    window.updateFoodChoice=function(){
+      const r=oUpd.apply(this,arguments);
+      try{
+        const x=state.selectedFood,box=document.getElementById('foodChoice');
+        if(x&&x.source==='מאגר משותף'&&box&&box.firstElementChild&&!box.querySelector('.rep-shared'))
+          box.firstElementChild.insertAdjacentHTML('beforeend','<button class="btn secondary rep-shared" style="margin-top:8px" onclick="reportSharedFoodUI()">⚠ דווח על נתון שגוי</button>');
+      }catch(_){}
+      return r;
+    };
+  }
+  window.reportSharedFoodUI=async function(){
+    const x=state.selectedFood;if(!x)return;
+    const note=prompt('מה לא נכון בנתונים של "'+x.name+'"?','');if(note===null)return;
+    try{await FP2.push('reportSharedFood',{code:x.sharedId||x.sourceId||x.name,name:x.name,note});toast('תודה, הדיווח נשלח')}catch(e){toast(e.message||'שגיאה',true)}
+  };
 })();
