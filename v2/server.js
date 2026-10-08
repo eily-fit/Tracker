@@ -1477,9 +1477,10 @@ function saveSettings(payload) {
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'hidden_workout_plans')){const ids=JSON.parse(String(payload.hidden_workout_plans||'[]'));if(!Array.isArray(ids)||ids.length>300||ids.some(x=>typeof x!=='string'||x.length>200))throw new Error('רשימת תוכניות לא תקינה');setSetting_('hidden_workout_plans',JSON.stringify(ids));}
   ['has_watch','shake_hidden','notifications_in_app'].forEach(k=>{if(payload&&Object.prototype.hasOwnProperty.call(payload,k))setSetting_(k,payload[k]==='on'?'on':'off');});
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'meal_hours')){const h=String(payload.meal_hours||'').split(',').map(Number);if(h.length!==3||h.some(x=>!Number.isInteger(x)||x<0||x>23)||!(h[0]<h[1]&&h[1]<h[2]))throw new Error('שעות לא תקינות');setSetting_('meal_hours','h:'+h.join(','));}
-  if(payload&&payload.day_cut){const c=payload.day_cut,d=String(c.date||''),amt=Math.round(Number(c.amount)/10)*10,cap=Math.round((Number(getSettings_().calorie_goal)||2200)*0.2/10)*10;
+  if(payload&&payload.day_cut){const c=payload.day_cut,d=String(c.date||''),amt=Math.round(Number(c.amount)/10)*10,cap=Math.round((Number(getSettings_().calorie_goal)||2200)*goalRules_().shift/10)*10;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!(amt>=0&&amt<=cap))throw new Error('אפשר להוריד עד '+cap+' קל׳');
     const m=dayCuts_(),keep=addDays_(d,-14);Object.keys(m).forEach(k=>{if(k<keep)delete m[k]});m[d]=amt;setSetting_('day_cuts',JSON.stringify(m));}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'event_cut_pct')){const v=Math.round(Number(payload.event_cut_pct)),r=goalRules_().save;if(!(v>=Math.round(r[0]*100)&&v<=Math.round(r[1]*100)))throw new Error('אפשר בין '+Math.round(r[0]*100)+'% ל-'+Math.round(r[1]*100)+'%');setSetting_('event_cut_pct',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'oil_profile')){const v=String(payload.oil_profile||'');if(['s','r','g'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('oil_profile',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'chicken_skin')){setSetting_('chicken_skin',payload.chicken_skin==='with'?'with':'without');}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'display_name')){const name=String(payload.display_name||'').trim();if(!name||name.length>40)throw new Error('כתוב שם עד 40 תווים');setSetting_('display_name',name);}
@@ -2091,29 +2092,48 @@ function calculateTotals_(date) {
 }
 
 
-// 2.7.0: day-to-day shift of the goal.
-// No event this week: what was not eaten yesterday moves to today (up to 300).
-// Yesterday over the goal: the user chose how much to take off today (saved in day_cuts, up to 20% of the goal).
-// Never below the daily minimum of bankContext_.
+// 2.8.0: day-to-day shift of the goal, in percent of the goal by the user's process.
+// - Yesterday under/over the goal: today gets exactly that gap, up to the limit of the process (10% cut, 12% recomp/maintain, 15% mass).
+//   The gap is measured against yesterday's planned goal (without its own shift), so it never chains day after day.
+// - A day in the week of an event (after the event was added) sends its gap to the event day instead of the next day.
+// - The day after an event day gets nothing.
+// - The user may change today's cut after a day over the goal (day_cuts[date] = amount, 0 = none).
+// - The goal the app suggests never goes below the daily minimum (bankContext_).
+const GOAL_RULES={lose:{shift:.10,save:[.05,.10],event:.30,name:'חיטוב'},recomp:{shift:.12,save:[.05,.12],event:.35,name:'שמירה על שריר וירידה בשומן'},maintain:{shift:.12,save:[.05,.12],event:.35,name:'שמירה'},gain:{shift:.15,save:[.10,.15],event:.45,name:'מסה נקייה'}};
+function goalRules_(settings){let p={};try{p=JSON.parse((settings||getSettings_()).profile_json||'{}')}catch(_){}return GOAL_RULES[p.goal]||GOAL_RULES.recomp;}
 function dayCuts_(settings){try{const m=JSON.parse(String((settings||getSettings_()).day_cuts||'{}'));return m&&typeof m==='object'?m:{}}catch(_){return {}}}
+function dayGap_(d,events,s,base,cap){
+  const eaten=getEntriesForDate_(d).reduce((n,x)=>n+(Number(x.calories)||0),0),goal=base+bankAdjust_(d,events,s).delta,gap=goal-eaten;
+  if(eaten<=0)return 0;                       // nothing logged: not counted
+  if(gap>0&&eaten<goal*0.5)return 0;          // looks like a day that was not fully logged
+  if(Math.abs(gap)<20)return 0;
+  return Math.max(-cap,Math.min(cap,Math.round(gap/10)*10));
+}
+// the event that day d "belongs to": d is in the 6 days before it, and the event was already added on that day
+function eventOfDay_(d,events){return events.find(e=>d<e.date&&d>=addDays_(e.date,-6)&&(!e.created||e.created<=d))||null;}
 function dayShift_(date,settings,goalBefore){
-  const s=settings||getSettings_(),today=getWorkingDateFromSettings_(s),out={total:0,plus:0,cut:0};
-  if(date>today)return out;
-  const base=Number(s.calorie_goal)||2200,ctx=bankContext_(s);
-  const y=addDays_(date,-1),events=listBankEvents_(s);
-  const eventSoon=events.some(e=>e.date>=y&&e.date<=addDays_(date,6));
-  if(!eventSoon){
-    const ye=getEntriesForDate_(y),eaten=ye.reduce((n,x)=>n+(Number(x.calories)||0),0);
-    const goalY=base+bankAdjust_(y,events,s).delta;
-    const under=goalY-eaten;
-    if(eaten>=goalY*0.5&&under>=50)out.plus=Math.min(300,Math.round(under/10)*10);
-  }
-  const cut=Number(dayCuts_(s)[date])||0;
-  if(cut>0)out.cut=Math.min(cut,Math.round(base*0.2/10)*10);
+  const s=settings||getSettings_(),today=getWorkingDateFromSettings_(s),out={total:0,plus:0,cut:0,toEvent:0,eventId:'',source:''};
+  const base=Number(s.calorie_goal)||2200,ctx=bankContext_(s),rules=goalRules_(s),cap=Math.round(base*rules.shift/10)*10;
+  const y=addDays_(date,-1),events=listBankEvents_(s),own=events.find(e=>e.date===date),mine=eventOfDay_(date,events);
+  if(mine)out.eventId=mine.id;
+  if(date>today&&!own)return out;
+  if(own){
+    // event day: the gaps of the days before it (since it was added) come here, within the event limit
+    out.eventId=own.id;let sum=0;
+    for(let d=addDays_(date,-6);d<date;d=addDays_(d,1)){if(d<today&&(!own.created||own.created<=d)&&!events.some(e=>e.date===d))sum+=dayGap_(d,events,s,base,cap);}
+    const evCap=Math.round(base*rules.event/10)*10,already=Number(own.plan&&own.plan.adj&&own.plan.adj[date])||0;
+    if(sum>0)sum=Math.max(0,Math.min(sum,evCap-already));
+    out.toEvent=sum;if(sum>0)out.plus=sum;else if(sum<0)out.cut=-sum;out.source='event';
+  }else if(!events.some(e=>e.date===y)&&!eventOfDay_(y,events)){
+    const gap=dayGap_(y,events,s,base,cap),cuts=dayCuts_(s);
+    if(gap>0)out.plus=gap;
+    else if(gap<0){out.cut=-gap;out.over=-gap;if(Object.prototype.hasOwnProperty.call(cuts,date))out.cut=Math.max(0,Math.min(-gap,Number(cuts[date])||0));}
+    out.source='yesterday';
+  }else out.source=events.some(e=>e.date===y)?'after-event':'event-week';
   let total=out.plus-out.cut;
   const floor=ctx.noDeficit?Math.max(goalBefore,ctx.minDay):ctx.minDay;
   if(goalBefore+total<floor)total=Math.min(0,floor-goalBefore);
-  out.total=total;return out;
+  out.total=total;out.cap=cap;return out;
 }
 function calculateTotalsFromEntries_(entries,settings,date){
   const total = key => round1_(entries.reduce((s,x)=>s+(Number(x[key])||0),0));
@@ -2551,7 +2571,7 @@ function ensureStructure_() {
     App_WorkoutSessions:['session_id','date','name','started_at','ended_at','duration_minutes','status','type'],
     App_BodyMeasurements:['date','waist_navel_cm','arm_cm','chest_cm','thigh_cm','bloating_0_3','note','updated_at'],
     App_Health:['date','sleep_h','resting_hr','hrv_ms','body_battery','source','updated_at'],
-    App_Events:['event_id','date','type','size','extra_kcal','method','plan_json','status','created_at','note'],
+    App_Events:['event_id','date','type','size','extra_kcal','method','plan_json','status','created_at','note','created_day'],
     'מאגר מרכיבים':['קטגוריה','אופציה','סדר','מרכיב','כמות מקורית','יחידה','קלוריות מקור','חלבון מקור','פחמימות מקור','שומן מקור','שם ארוחה','מקור','פעיל','meal_id']
   };
   Object.keys(specs).forEach(name=>{
@@ -2713,10 +2733,14 @@ function bankContext_(settings){
   const s=settings||getSettings_();let profile={};try{profile=JSON.parse(s.profile_json||'{}')}catch(_){}
   const goal=Number(s.calorie_goal)||2200,protein=Number(s.protein_goal)||130;
   const weight=Number(profile.weight)||75,male=profile.sex==='m';
-  const fatMin=Math.round(weight*0.6),minDay=Math.max(male?1500:1200,Math.round(protein*4+fatMin*9+320));
+  const tdee=Number(profile.calculation&&profile.calculation.tdee)||0;
+  // 2.8.0: the goal the app suggests is never below the minimum for the sex, the protein+fat minimum, or 25% under the daily burn
+  const fatMin=Math.round(weight*0.6),minDay=Math.max(male?1500:1200,Math.round(protein*4+fatMin*9+320),tdee?Math.round(tdee*0.75/10)*10:0);
   const noDeficit=Number(profile.age)<18||profile.medical===true;
-  const maxCut=noDeficit?0:Math.max(0,Math.min(Math.round(goal*0.10/10)*10,goal-minDay));
-  return {goal,protein,fatMin,minDay,maxCut,noDeficit};
+  const rules=GOAL_RULES[profile.goal]||GOAL_RULES.recomp,range=rules.save;
+  let pct=Number(s.event_cut_pct)/100;if(!(pct>=range[0]&&pct<=range[1]))pct=range[1];
+  const maxCut=noDeficit?0:Math.max(0,Math.min(Math.round(goal*pct/10)*10,goal-minDay));
+  return {goal,protein,fatMin,minDay,maxCut,noDeficit,savePct:Math.round(pct*100),saveRange:[Math.round(range[0]*100),Math.round(range[1]*100)],eventPct:Math.round(rules.event*100),eventCap:Math.round(goal*rules.event/10)*10,goalType:profile.goal||'recomp',goalName:rules.name,shiftPct:Math.round(rules.shift*100)};
 }
 // v0.32: an event far ahead is saved without a plan ("pending"). Its reminder opens on the Sunday of its week,
 // or on the Thursday before when the event is on Sunday–Tuesday, and the plan is built then with the goal of that time.
@@ -2726,7 +2750,8 @@ function listBankEvents_(settings){
   const s=settings||getSettings_(),today=getWorkingDateFromSettings_(s);let ctx=null;
   return values.slice(1).filter(r=>r[0]&&String(r[7])==='active').map(r=>{let plan={};try{plan=JSON.parse(String(r[6]||'{}'))}catch(_){}
     const date=formatDateValue_(r[1]);
-    const e={id:String(r[0]),date,type:String(r[2]),label:BANK_TYPES[String(r[2])]||'אירוע',size:String(r[3]),extra:Number(r[4])||0,method:String(r[5]),plan,note:String(r[9]||''),remind:bankRemindDate_(date)};
+    const created=r[10]?formatDateValue_(r[10]):(r[8]?formatDateValue_(r[8]):'');
+    const e={id:String(r[0]),date,created,type:String(r[2]),label:String(r[9]||'').trim()||BANK_TYPES[String(r[2])]||'אירוע',size:String(r[3]),extra:Number(r[4])||0,method:String(r[5]),plan,note:String(r[9]||''),remind:bankRemindDate_(date)};
     // No method was chosen in time: on the day itself the event is handled "on the day".
     if(plan.mode==='pending'&&date<=today){ctx=ctx||bankContext_(s);e.plan=bankPlan({goal:ctx.goal,protein:ctx.protein,maxCut:0,noDeficit:true,today:date,date,extra:e.extra,method:'day'});e.plan.auto=true;}
     return e;
@@ -2746,6 +2771,8 @@ function bankResponse_(viewDate){
   return {bank:getBankState_(),day:getDayData_(date)};
 }
 function computeBankPlan_(ctx,today,date,extra,method,others){
+  if(ctx.eventCap)extra=Math.min(extra,ctx.eventCap);
+  if(method==='none')return {mode:date===today?'today':'future',method:'none',days:[],banked:0,onDay:0,overflow:0,adj:{},preBudget:ctx.goal,eventMeal:0,proteinBefore:Math.round(ctx.protein*0.7),dayGoal:ctx.goal,forced:''};
   const used={};others.forEach(e=>Object.keys((e.plan&&e.plan.adj)||{}).forEach(d=>{const v=Number(e.plan.adj[d])||0;if(v<0)used[d]=(used[d]||0)+v;}));
   return bankPlan({goal:ctx.goal,protein:ctx.protein,maxCut:ctx.maxCut,noDeficit:ctx.noDeficit,today,date,extra,method,used,skip:others.map(e=>e.date)});
 }
@@ -2760,14 +2787,14 @@ function saveBankEvent(payload){
   const settings=getSettings_(),today=getWorkingDateFromSettings_(settings);
   if(date<addDays_(today,-14)||date>addDays_(today,183))throw new Error('אפשר לרשום אירוע עד שבועיים אחורה או חצי שנה קדימה');
   const type=BANK_TYPES[p.type]?p.type:'other',size=BANK_SIZES[p.size]?p.size:'medium';
-  const method=['spread','day','half'].includes(p.method)?p.method:'half';
+  const method=['spread','day','half','none'].includes(p.method)?p.method:'half';
   const others=listBankEvents_(settings).filter(e=>e.id!==id);
   if(others.some(e=>e.date===date))throw new Error('כבר יש אירוע בתאריך הזה');
   const plan=date>today&&bankRemindDate_(date)>today?{mode:'pending',method:'later',adj:{}}:computeBankPlan_(bankContext_(settings),today,date,BANK_SIZES[size],method,others);
   const stored=plan.mode==='pending'?'later':plan.method,note=String(p.note||'').trim().slice(0,120);
   let savedId=id;
   if(id){const f=findBankEventRow_(id);f.sh.getRange(f.row,2,1,9).setValues([[date,type,size,BANK_SIZES[size],stored,JSON.stringify(plan),'active',new Date(),note]]);}
-  else{savedId=Utilities.getUuid();sheet_('App_Events').appendRow([savedId,date,type,size,BANK_SIZES[size],stored,JSON.stringify(plan),'active',new Date(),note]);}
+  else{savedId=Utilities.getUuid();sheet_('App_Events').appendRow([savedId,date,type,size,BANK_SIZES[size],stored,JSON.stringify(plan),'active',new Date(),note,today]);}
   const weekStart=addDays_(today,-new Date(today+'T12:00:00Z').getUTCDay());
   if(date>=weekStart&&date<=addDays_(weekStart,6))setSetting_('bank_week_asked','w:'+weekStart);
   const out=bankResponse_(p.viewDate);out.savedId=savedId;out.plan=plan;return out;
@@ -2777,7 +2804,7 @@ function chooseBankMethod(payload){
   const p=payload||{},settings=getSettings_(),today=getWorkingDateFromSettings_(settings);
   const all=listBankEvents_(settings),e=all.find(x=>x.id===String(p.id||''));if(!e)throw new Error('האירוע לא נמצא');
   if(e.date<today)throw new Error('האירוע כבר עבר');
-  const method=['spread','day','half'].includes(p.method)?p.method:'half';
+  const method=['spread','day','half','none'].includes(p.method)?p.method:'half';
   const plan=computeBankPlan_(bankContext_(settings),today,e.date,e.extra,method,all.filter(x=>x.id!==e.id));
   const f=findBankEventRow_(e.id);f.sh.getRange(f.row,6,1,2).setValues([[plan.method,JSON.stringify(plan)]]);
   const out=bankResponse_(p.viewDate);out.plan=plan;return out;
@@ -2810,7 +2837,7 @@ function bankPlan(p){
   else if(p.noDeficit&&out.method!=='day'){out.forced='safety';out.method='day';}
   var spreadPart=out.method==='spread'?extra:out.method==='half'?r10(extra/2):0;
   if(spreadPart>0){
-    var list=[];for(var d=addD(p.date,-6);d<p.date;d=addD(d,1)){if(d>=p.today&&skip.indexOf(d)<0)list.push({date:d,cap:Math.max(0,maxCut-Math.max(0,-(Number(used[d])||0))),cut:0});}
+    var list=[];for(var d=addD(p.date,-4);d<p.date;d=addD(d,1)){if(d>=p.today&&skip.indexOf(d)<0)list.push({date:d,cap:Math.max(0,maxCut-Math.max(0,-(Number(used[d])||0))),cut:0});}
     var left=spreadPart;
     for(var k=0;k<8&&left>0;k++){var open=list.filter(function(x){return x.cap-x.cut>=10;});if(!open.length)break;var share=Math.max(10,r10(left/open.length));
       open.forEach(function(x){if(left<=0)return;var g=Math.min(share,x.cap-x.cut,left);g=Math.floor(g/10)*10;x.cut+=g;left-=g;});}

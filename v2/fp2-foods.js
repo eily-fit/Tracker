@@ -327,7 +327,7 @@ function injectSettings(force){
 const oSettings=window.renderSettings;
 if(typeof oSettings==='function')window.renderSettings=function(){const r=oSettings.apply(this,arguments);try{injectSettings(true)}catch(e){}return r};
 
-/* ---------- layer 5: the weight trend checks the food log (every 7 days, last 14 days) ---------- */
+/* ---------- layer 5: the weight trend checks the food log (every 10 days, last 14 days), by the goal of the process ---------- */
 const CALIB_KEY='fp2.calibShown';
 const daysBetween=(a,b)=>Math.round((new Date(b+'T12:00:00Z')-new Date(a+'T12:00:00Z'))/86400000);
 async function calibCheck(force){
@@ -335,15 +335,19 @@ async function calibCheck(force){
     if(typeof call!=='function'||!state.data||!state.data.settings||$('fpOilSheet'))return;
     const today=state.todayDate||state.data.date;if(!today)return;
     let last='';try{last=localStorage.getItem(CALIB_KEY)||''}catch(_){}
-    if(!force&&last&&daysBetween(last,today)<7)return;
+    if(!force&&last&&daysBetween(last,today)<10)return;
     const lc=String(state.data.settings.last_checkin||'').replace(/^ci:/,'');
     if(!force&&lc&&daysBetween(lc,today)<3)return;            // a check-in just showed the same numbers
     const r=await call('getWeeklyReview',today),s=r&&r.suggestion;
+    if(s&&s.ready&&s.onTrack&&(s.weighIns||0)>=6){try{localStorage.setItem(CALIB_KEY,today)}catch(_){}toast(`בדקתי את השבועיים האחרונים: ${goalMonthLine(s)} ✓ ממשיכים ככה`);return}
     if(!s||!s.ready||s.onTrack||(s.weighIns||0)<6){if(force)toast(s&&!s.ready?s.message:'הכל בקצב. אין מה לשנות.');return}
     try{localStorage.setItem(CALIB_KEY,today)}catch(_){}
     showCalib(s);
   }catch(e){console.warn('calib',e&&e.message)}
 }
+const GOAL_NAMES={lose:'חיטוב',gain:'מסה נקייה',recomp:'שמירה על שריר וירידה בשומן',maintain:'שמירה'};
+const kgMonth=w=>{const m=Math.round(w*4.3*10)/10;return (m>0?'+':m<0?'−':'')+Math.abs(m).toFixed(1)+' ק״ג בחודש'};
+function goalMonthLine(s){return `${GOAL_NAMES[s.goal]||'המטרה'}: מתוכנן ${kgMonth(s.plannedWeek||0)}, בפועל ${kgMonth(s.actualWeek||0)}`}
 function showCalib(s){
   if($('fpCalibSheet'))return;
   let prof={};try{prof=JSON.parse(state.data.settings.profile_json||'{}')}catch(_){}
@@ -351,6 +355,7 @@ function showCalib(s){
   const lines=[`לפי היומן אכלת בממוצע <b>${s.intake}</b> קל׳ ביום.`];
   if(est){const exp=(s.intake-est)*7/7700;lines.push(`לפי זה היית אמור: <b>${kgWeek(exp)}</b>.`)}
   lines.push(`בפועל: <b>${kgWeek(s.actualWeek)}</b>.`);
+  lines.push(`🎯 ${goalMonthLine(s)}.`);
   let why='';
   if(est){const gap=Math.round((est-s.tdee)/10)*10;
     if(gap>=50)why=`כלומר בערך <b>${gap} קל׳ ביום</b> לא נכנסים לחשבון: שמן, רטבים, יחידות גדולות ממה שחשבנו. זה קורה כמעט לכולם, ולכן מתקנים את היעד ולא את הרישום.`;
@@ -362,7 +367,7 @@ function showCalib(s){
     <p style="margin:12px 0 0"><b>ההמלצה: ${up?'להעלות':'להוריד'} את היעד היומי ל-${s.suggested} קל׳</b> <span class="muted">(${Math.abs(s.delta)} ${up?'יותר':'פחות'}. משנים עד 150 בכל פעם)</span></p>
     <button type="button" class="btn full" style="margin-top:12px" onclick="fpCalibApply(${s.suggested})">עדכן ל-${s.suggested}</button>
     <button type="button" class="btn light full" style="margin-top:8px" onclick="fpCalibClose()">לא עכשיו</button>
-    <p class="muted" style="font-size:12px;margin:8px 0 0">החישוב לפי ${s.loggedDays} ימי רישום ו-${s.weighIns} שקילות. נבדוק שוב בעוד שבוע.</p></div></div>`);
+    <p class="muted" style="font-size:12px;margin:8px 0 0">החישוב לפי ${s.loggedDays} ימי רישום ו-${s.weighIns} שקילות. נבדוק שוב בעוד 10 ימים.</p></div></div>`);
 }
 window.fpCalibClose=function(){const el=$('fpCalibSheet');if(el)el.remove()};
 window.fpCalibApply=async function(cal){

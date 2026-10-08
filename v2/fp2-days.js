@@ -1,93 +1,185 @@
-/* FitPro 2.7.0 — יעד יומי שזז לפי אתמול:
-   - בלי אירוע השבוע: מה שלא אכלת אתמול עובר להיום (עד 300). מחושב בשרת (dayShift_).
-   - אתמול מעל היעד: הודעה בבוקר, עם בחירה כמה להוריד היום (200 / כמות אחרת עד 20% / לא).
-   - יתרת פינוק: מסבירה כמה מזה מהיום וכמה מהימים הקודמים.
-   - יום אירוע: "נשאר לך עכשיו לאירוע". */
+/* FitPro 2.8.0 — the daily goal that moves with yesterday, by percent of the goal:
+   - yesterday under/over: today gets exactly that gap, up to the limit of the process (computed on the server, dayShift_).
+   - in the week of an event the gap goes to the event day instead.
+   - morning message after a day over the goal (the cut is already applied; the user can change it).
+   - two days in a row more than 10% away from the goal: "was there an event?".
+   - crossing the daily quota: an alert (logging is never blocked).
+   - an event that came from the calendar: ask once how to prepare.
+   - "יתרת פינוק": where the number comes from. */
 (function(){
 'use strict';
 if(typeof recalcTotalsLocal!=='function')return;
+const LS={get(k){try{return localStorage.getItem(k)}catch(_){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(_){}}};
+const addD=(d,n)=>{const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)};
+const todayISO=()=>state.todayDate||(state.data&&state.data.bank&&state.data.bank.today)||(state.data&&state.data.date);
+const busy=()=>{try{return $('fpWelcome')||$('fpTour')||document.documentElement.classList.contains('onboarding-mode')||document.documentElement.classList.contains('entry-mode')||[...document.querySelectorAll('.overlay')].some(o=>!o.classList.contains('hide')&&getComputedStyle(o).display!=='none')}catch(_){return false}};
+function whenFree(fn,tries){tries=tries||0;if(busy()){if(tries<200)setTimeout(()=>whenFree(fn,tries+1),3000);return}fn()}
 
-/* the server knows the shift of each day; keep it when the device recalculates by itself */
-const SHIFT={};
-function keepShift(day){try{if(day&&day.totals&&day.totals.shift)SHIFT[day.date||state.date]=day.totals.shift}catch(_){}}
-const oApply=applyDay;
-applyDay=function(day){const r=oApply.apply(this,arguments);keepShift(day);return r};
-if(typeof applyDayKeepJournal==='function'){const o=applyDayKeepJournal;applyDayKeepJournal=function(day){const r=o.apply(this,arguments);keepShift(day);return r}}
+/* The server sends the shift with every day it returns. When the device recalculates a day by itself it keeps
+   the shift of the totals it replaces (same day only). There is no separate cache, so a shift that the server
+   changed (an event was added, an older day was fixed) is never kept by mistake. */
 const oRecalc=recalcTotalsLocal;
 recalcTotalsLocal=function(){
+  let prev=null;try{const t=state.data&&state.data.totals;if(t&&t.shift&&(state.data.date||state.date)===state.date)prev=t.shift}catch(_){}
   const r=oRecalc.apply(this,arguments);
-  try{const sh=SHIFT[state.date],t=state.data.totals;if(sh&&sh.total&&t){t.calorieGoal=Math.round(t.calorieGoal+sh.total);t.remaining=Math.round((t.calorieGoal-t.calories)*10)/10;t.shift=sh}}catch(_){}
+  try{const t=state.data.totals;if(prev&&t){t.shift=prev;if(prev.total){t.calorieGoal=Math.round(t.calorieGoal+prev.total);t.remaining=Math.round((t.calorieGoal-t.calories)*10)/10}}}catch(_){}
   return r;
 };
-const boot0=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.totals){clearInterval(boot0);if(state.data.totals.shift)SHIFT[state.date]=state.data.totals.shift}},800);
 
 /* small line under the ring: why today's goal is different */
 function shiftNote(){
   try{
     const t=state.data&&state.data.totals,sh=t&&t.shift;let el=$('fpShiftNote');
-    if(!sh||!sh.total){if(el)el.remove();return}
-    const parts=[];if(sh.plus)parts.push(`+${sh.plus} שלא אכלת אתמול`);if(sh.cut)parts.push(`−${sh.cut} שבחרת להוריד`);
-    if(!parts.length)parts.push((sh.total>0?'+':'')+sh.total);
+    let text='';
+    if(sh&&sh.source==='event'&&sh.toEvent)text=sh.toEvent>0?`ליום האירוע נוספו ${kc(sh.toEvent)} שנשארו מהימים שלפני`:`מיום האירוע ירדו ${kc(-sh.toEvent)} כי עברת בימים שלפני`;
+    else if(sh&&sh.total){const parts=[];if(sh.plus)parts.push(`+${kc(sh.plus)} שלא אכלת אתמול`);if(sh.cut)parts.push(`−${kc(sh.cut)} כי אתמול עברת את היעד`);if(!parts.length)parts.push((sh.total>0?'+':'')+kc(sh.total));text='היעד היום: '+parts.join(' · ')}
+    else if(sh&&sh.source==='event-week'&&state.date===todayISO())text='השבוע יש אירוע: מה שנשאר מאתמול נשמר ליום האירוע';
+    if(!text){if(el)el.remove();return}
     const anchor=document.querySelector('#today .progress-wrap');if(!anchor)return;
     if(!el){anchor.insertAdjacentHTML('afterend','<div id="fpShiftNote" class="muted" style="text-align:center;font-size:13px;margin:6px 0"></div>');el=$('fpShiftNote')}
-    el.textContent='היעד היום: '+parts.join(' · ');
+    el.textContent=text;
   }catch(_){}
 }
-if(typeof renderTotals==='function'){const o=renderTotals;renderTotals=function(){const r=o.apply(this,arguments);shiftNote();return r}}
 
-/* ---------- yesterday over the goal: ask once in the morning ---------- */
-const ASK_KEY='fp2.cutAsked';
-const busy=()=>{try{return $('fpWelcome')||$('fpTour')||document.documentElement.classList.contains('onboarding-mode')||document.documentElement.classList.contains('entry-mode')||[...document.querySelectorAll('.overlay')].some(o=>!o.classList.contains('hide')&&getComputedStyle(o).display!=='none')}catch(_){return false}};
-const addD=(d,n)=>{const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)};
-async function overCheck(tries){
-  tries=tries||0;
+/* ---------- crossing the quota: an alert, logging continues ---------- */
+const overSeen={};
+function quotaCheck(){
   try{
-    if(busy()){if(tries<200)setTimeout(()=>overCheck(tries+1),3000);return}
-    const today=state.todayDate||state.data.date;if(!today)return;
-    let asked='';try{asked=localStorage.getItem(ASK_KEY)||''}catch(_){}
-    if(asked===today)return;
-    let cuts={};try{cuts=JSON.parse(String(state.data.settings.day_cuts||'{}'))||{}}catch(_){}
-    if(Object.prototype.hasOwnProperty.call(cuts,today))return;
-    const y=addD(today,-1),t=(await call('getDayView',y)).totals;
-    const over=Math.round((Number(t.calories)||0)-(Number(t.calorieGoal)||0));
-    if(over<100)return;
-    try{localStorage.setItem(ASK_KEY,today)}catch(_){}
-    showOver(today,over);
-  }catch(e){console.warn('overCheck',e&&e.message)}
+    const t=state.data&&state.data.totals,d=state.date;if(!t||!d||d!==todayISO())return;
+    const over=Number(t.calories)>Number(t.calorieGoal)+5,key=d+':'+Math.round(t.calorieGoal);
+    if(overSeen[key]===undefined){overSeen[key]=over;return}       // first look at this day: no alert for what was already there
+    if(over&&!overSeen[key]){
+      const ev=(state.data.bank&&state.data.bank.events||[]).some(e=>e.date===d&&e.plan&&e.plan.mode!=='past'),sh=t.shift||{};
+      const what=ev?'של יום האירוע':sh.plus?'של היום (כולל התוספת מאתמול)':'היומית';
+      quotaAlert(`עברת את המכסה ${what} ב-${kc(t.calories-t.calorieGoal)} קל׳`);
+    }
+    overSeen[key]=over;
+  }catch(_){}
 }
-function showOver(today,over){
-  const base=Number(state.data.settings.calorie_goal)||2200,cap=Math.min(Math.round(base*0.2/10)*10,Math.round(over/10)*10),def=Math.min(200,cap);
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpOverSheet"><div class="sheet"><h3 style="margin:0 0 8px">אתמול אכלת ${fmt(over)} קל׳ מעל היעד</h3>
-    <p class="muted" style="margin:0">להוריד משהו מהיעד של היום? זה לא חובה, ואחרי יום אחד חוזרים ליעד הרגיל.</p>
-    <button type="button" class="btn full" style="margin-top:12px" onclick="fpSetCut(${def})">להוריד ${def} קל׳</button>
-    <div style="display:flex;gap:8px;margin-top:8px;align-items:center"><input id="fpCutAmt" type="number" inputmode="numeric" min="10" max="${cap}" step="10" placeholder="כמות אחרת (עד ${cap})" style="flex:1"><button type="button" class="btn light" onclick="fpSetCut(Number(document.getElementById('fpCutAmt').value))">שמור</button></div>
-    <p class="muted" style="font-size:12px;margin:6px 0 0">אפשר עד ${cap} קל׳. אם צריך יותר, עדיף לפזר על יומיים.</p>
-    <button type="button" class="btn secondary full" style="margin-top:10px" onclick="fpSetCut(0)">לא, תודה</button></div></div>`);
+function quotaAlert(text){
+  const old=$('fpQuota');if(old)old.remove();
+  document.body.insertAdjacentHTML('beforeend',`<div id="fpQuota" role="status" style="position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:60;background:#3a1d1f;color:#fff;border:1px solid #E5484D;border-radius:14px;padding:12px 14px 12px 34px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:14px;line-height:1.45">
+    <b>⚠️ ${esc(text)}</b><div style="opacity:.85;margin-top:2px">אפשר להמשיך לרשום. מחר היעד יתאזן לבד, עד הגבול של התהליך שלך.</div>
+    <button type="button" onclick="this.parentNode.remove()" style="position:absolute;top:6px;left:8px;background:none;border:0;color:#fff;font-size:18px" aria-label="סגור">✕</button></div>`);
+  setTimeout(()=>{const e=$('fpQuota');if(e)e.remove()},9000);
+}
+window.fpQuotaPreview=quotaAlert;
+
+if(typeof renderTotals==='function'){const o=renderTotals;renderTotals=function(){const r=o.apply(this,arguments);shiftNote();quotaCheck();return r}}
+
+/* ---------- morning: yesterday over the goal (already applied, can be changed) ---------- */
+function showOver(today,sh){
+  const cap=Number(sh.cap)||Math.round((Number(state.data.settings.calorie_goal)||2200)*0.1/10)*10,over=Number(sh.over)||0,cut=Number(sh.cut)||0;
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpOverSheet"><div class="sheet"><h3 style="margin:0 0 8px">אתמול עברת את היעד ב-${kc(over)} קל׳</h3>
+    <p style="margin:0">לכן היעד של היום ירד ב-<b>${kc(cut)}</b> קל׳${over>cut?` (זה הגבול ליום אחד בתהליך שלך)`:''}.</p>
+    <p class="muted" style="margin:6px 0 0">זה רק ליום אחד. מחר חוזרים ליעד הרגיל.</p>
+    <button type="button" class="btn full" style="margin-top:12px" onclick="fpSetCut(-1)">בסדר 👍</button>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center"><input id="fpCutAmt" type="number" inputmode="numeric" min="0" max="${Math.min(cap,over)}" step="10" placeholder="כמות אחרת (עד ${kc(Math.min(cap,over))})" style="flex:1"><button type="button" class="btn light" onclick="fpSetCut(Number(document.getElementById('fpCutAmt').value))">שמור</button></div>
+    <button type="button" class="btn secondary full" style="margin-top:10px" onclick="fpSetCut(0)">לא להוריד היום</button></div></div>`);
   window.fpSetCut=async function(amount){
+    const s=$('fpOverSheet');
+    if(amount<0){if(s)s.remove();return}
     amount=Math.round((Number(amount)||0)/10)*10;
-    if(amount<0||amount>cap)return toast('אפשר בין 0 ל-'+cap,true);
-    const s=$('fpOverSheet');if(s)s.remove();
+    if(amount<0||amount>Math.min(cap,over))return toast('אפשר בין 0 ל-'+kc(Math.min(cap,over)),true);
+    if(s)s.remove();
     try{await call('saveSettings',{day_cut:{date:today,amount}});
       let m={};try{m=JSON.parse(String(state.data.settings.day_cuts||'{}'))||{}}catch(_){}m[today]=amount;state.data.settings.day_cuts=JSON.stringify(m);
       if(state.date===today){const d=await call('getDayView',today);applyDay(d);renderDay()}
-      toast(amount?`היעד של היום ירד ב-${amount}`:'בסדר, היעד נשאר רגיל')}
+      toast(amount?`היעד של היום ירד ב-${kc(amount)}`:'בסדר, היעד של היום נשאר רגיל')}
     catch(e){toast(e.message,true)}
   };
 }
-const boot1=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.settings&&typeof call==='function'){clearInterval(boot1);setTimeout(()=>overCheck(0),7000)}},1000);
+window.fpOverPreview=()=>showOver(todayISO(),{over:380,cut:245,cap:245});
+
+/* ---------- two days in a row more than 10% from the goal ---------- */
+function showTwoDays(rows){
+  const line=r=>{const pct=Math.round((r.cal-r.goal)/r.goal*100);return `<div class="bank-line"><span>${esc(r.name)}</span><span>${kc(r.cal)} מתוך ${kc(r.goal)} <b style="color:${pct>0?'#FF8A8A':'#7FB2FF'}">(${pct>0?'+':''}${pct}%)</b></span></div>`};
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpTwoDays"><div class="sheet"><h3 style="margin:0 0 6px">יומיים שאתה לא בטווח</h3>
+    <p class="muted" style="margin:0 0 8px">הטווח הוא עד 10% מעל או מתחת ליעד.</p>${rows.map(line).join('')}
+    <div id="fpTwoBody"><p style="margin:12px 0 0"><b>היה אירוע באחד הימים?</b></p>
+    <div class="quick-grid" style="margin-top:8px"><button type="button" class="btn" onclick="fpTwoYes('${rows[0].date}')">כן, להוסיף אירוע</button><button type="button" class="btn light" onclick="fpTwoNo()">לא</button></div></div></div></div>`);
+  window.fpTwoYes=function(d){const s=$('fpTwoDays');if(s)s.remove();try{openEventSheet({date:d})}catch(e){toast(e.message,true)}};
+  window.fpTwoNo=function(){$('fpTwoBody').innerHTML=`<p style="margin:12px 0 0">כדי לראות תוצאות, הכי חשוב להתמיד: להישאר קרוב ליעד, עד 10% למעלה או למטה. יום-יומיים לא הורסים כלום, הרצף הוא מה שקובע.</p><button type="button" class="btn full" style="margin-top:12px" onclick="document.getElementById('fpTwoDays').remove()">הבנתי 💪</button>`};
+}
+window.fpTwoDaysPreview=()=>{const t=todayISO();showTwoDays([{date:addD(t,-1),name:'אתמול',cal:1980,goal:2450},{date:addD(t,-2),name:'שלשום',cal:2010,goal:2450}])};
+
+const NAMES=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+async function morningChecks(){
+  const today=todayISO();if(!today)return;
+  try{
+    // 1. two days out of range (asked once per pair of days)
+    const k2='fp2.twoAsked';
+    if(LS.get(k2)!==today){
+      const d1=addD(today,-1),d2=addD(today,-2),v1=(await call('getDayView',d1)).totals,v2=(await call('getDayView',d2)).totals;
+      const out=v=>v&&Number(v.calories)>0&&Number(v.calorieGoal)>0&&Math.abs(v.calories-v.calorieGoal)/v.calorieGoal>0.10&&!(v.shift&&v.shift.eventId);
+      const evDay=d=>(state.data.bank&&state.data.bank.events||[]).some(e=>e.date===d);
+      if(out(v1)&&out(v2)&&!evDay(d1)&&!evDay(d2)){
+        LS.set(k2,today);LS.set('fp2.cutAsked',today);
+        return whenFree(()=>showTwoDays([{date:d1,name:'אתמול',cal:v1.calories,goal:v1.calorieGoal},{date:d2,name:'יום '+NAMES[new Date(d2+'T12:00:00').getDay()],cal:v2.calories,goal:v2.calorieGoal}]));
+      }
+    }
+    // 2. yesterday over the goal
+    if(LS.get('fp2.cutAsked')!==today){
+      let cuts={};try{cuts=JSON.parse(String(state.data.settings.day_cuts||'{}'))||{}}catch(_){}
+      if(!Object.prototype.hasOwnProperty.call(cuts,today)){
+        const sh=state.date===today&&state.data.totals&&state.data.totals.shift?state.data.totals.shift:(await call('getDayView',today)).totals.shift;
+        if(sh&&sh.source==='yesterday'&&Number(sh.over)>=Math.max(50,Number(state.data.settings.calorie_goal||2200)*0.03)){LS.set('fp2.cutAsked',today);return whenFree(()=>showOver(today,sh))}
+      }
+    }
+    // 3. an event from the calendar that nobody chose a plan for
+    unplannedCheck();
+  }catch(e){console.warn('morningChecks',e&&e.message)}
+}
+
+/* ---------- an event that came from the calendar: how to prepare? ---------- */
+function calIds(){try{const m=JSON.parse((window.FP2&&window.FP2.getProp&&window.FP2.getProp('CAL_MAP'))||'{}');return new Set(Object.values(m).map(x=>x&&x[0]))}catch(_){return new Set()}}
+function askedList(){try{return JSON.parse(LS.get('fp2.evAsked')||'[]')}catch(_){return []}}
+function markAsked(id){const a=askedList();if(a.indexOf(id)<0){a.push(id);LS.set('fp2.evAsked',JSON.stringify(a.slice(-80)))}}
+function unplannedCheck(){
+  try{
+    const t=todayISO(),ids=calIds(),asked=askedList();
+    const e=(state.data.bank&&state.data.bank.events||[]).find(x=>x.date>t&&x.date<=addD(t,6)&&ids.has(x.id)&&asked.indexOf(x.id)<0&&x.plan&&x.plan.mode!=='pending'&&x.plan.method!=='none');
+    if(e)whenFree(()=>showUnplanned(e));
+  }catch(_){}
+}
+function showUnplanned(e){
+  markAsked(e.id);
+  const c=bankCtx(),t=todayISO(),others=bankEvents().filter(x=>x.id!==e.id),p=bankPlanFor(e.date,e.extra,'spread',others);
+  const days=p.days.length,avg=days?Math.round(p.banked/days/10)*10:0,when=e.date===addD(t,1)?'מחר':'ביום '+NAMES[new Date(e.date+'T12:00:00').getDay()];
+  const opt=(m,title,sub,rec)=>`<button type="button" class="remind-opt${rec?' rec':''}" onclick="fpUnplanned('${e.id}','${m}')"><b>${title}${rec?' (מומלץ)':''}</b><span>${sub}</span></button>`;
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpUnplanned"><div class="sheet"><h3 style="margin:0 0 6px">📅 נוסף אירוע מהיומן: ${esc(e.label)}</h3>
+    <p class="muted" style="margin:0 0 8px">${esc(when)} · איך להתכונן?</p>
+    ${!c.noDeficit&&days?opt('spread','לחסוך בימים שנשארו',`${days===1?'יום אחד':days+' ימים'}, כ-${kc(avg)} קל׳ פחות ביום (${c.savePct||''}% מהיעד).`,true):''}
+    ${opt('day','רק ביום עצמו','שאר הימים רגילים. ביום האירוע אוכלים קל וחלבוני עד האירוע.',c.noDeficit||!days)}
+    ${opt('none','לא לשנות כלום','היעדים נשארים כמו שהם. אם תעבור ביום האירוע, זה בסדר.')}
+    <button type="button" class="linkish muted" style="margin-top:10px" onclick="document.getElementById('fpUnplanned').remove();openEventSheet({edit:'${e.id}'})">✏️ לשנות פרטים</button></div></div>`);
+  window.fpUnplanned=async function(id,m){const s=$('fpUnplanned');if(s)s.remove();await chooseMethodUI(id,m)};
+}
+window.fpUnplannedPreview=()=>{const t=todayISO();showUnplanned({id:'demo',date:addD(t,3),label:'יום הולדת לדנה',extra:700,plan:{}})};
+
+/* ---------- how much to save per day for an event ---------- */
+window.fpSetSavePct=async function(v){
+  try{await call('saveSettings',{event_cut_pct:v});
+    const c=state.data.bank&&state.data.bank.ctx;if(c){c.savePct=v;c.maxCut=c.noDeficit?0:Math.max(0,Math.min(Math.round(c.goal*v/1000)*10,c.goal-c.minDay))}
+    if(state.data.settings)state.data.settings.event_cut_pct=v;
+    if(state.ev)renderEventSheet();
+  }catch(e){toast(e.message,true)}
+};
+
+const boot1=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.settings&&typeof call==='function'){clearInterval(boot1);setTimeout(()=>whenFree(morningChecks),7000)}},1000);
 
 /* ---------- "יתרת פינוק": the week without the day shifts, and where the number comes from ---------- */
 if(typeof openTreat==='function'){
   openTreat=async function(){
     try{closePlusMenu()}catch(_){}
     const t=state.todayDate||state.date,d0=new Date(t+'T12:00:00'),start=new Date(d0);start.setDate(d0.getDate()-d0.getDay());
-    const names=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'],rows=[];let eaten=0,goal=0,todayLeft=0;
+    const rows=[];let eaten=0,goal=0,todayLeft=0;
     for(let i=0;i<=d0.getDay();i++){const d=new Date(start);d.setDate(start.getDate()+i);const iso=d.toISOString().slice(0,10);
       let tot=null;try{tot=iso===state.date&&state.data.totals?state.data.totals:(await call('getDayView',iso)).totals}catch(_){}
       const e=Number(tot&&tot.calories)||0,gReal=Number(tot&&tot.calorieGoal)||settingsNum('calorie_goal',2200),sh=Number(tot&&tot.shift&&tot.shift.total)||0,g=gReal-sh;
-      eaten+=e;goal+=g;rows.push([names[i],e,g]);if(iso===t)todayLeft=Math.round(gReal-e)}
+      eaten+=e;goal+=g;rows.push([NAMES[i],e,g]);if(iso===t)todayLeft=Math.round(gReal-e)}
     const left=Math.round(goal-eaten),pct=goal?Math.min(100,eaten/goal*100):0,before=left-todayLeft;
-    $('treatBody').innerHTML=`<p class="muted">מיום ראשון ועד היום (${names[d0.getDay()]}): כמה אכלת, מול כמה היית אמור לאכול.</p>
+    $('treatBody').innerHTML=`<p class="muted">מיום ראשון ועד היום (${NAMES[d0.getDay()]}): כמה אכלת, מול כמה היית אמור לאכול.</p>
       <div class="treat-big ${left<0?'over':''}">${left>=0?`נשארו לך <b>${kc(left)}</b> קל׳`:`עברת ב-<b>${kc(-left)}</b> קל׳`}</div>
       <div class="meter" style="margin:10px 0"><i style="width:${pct}%;${left<0?'background:#E5484D':''}"></i></div>
       <p>אכלת <b>${kc(eaten)}</b> מתוך <b>${kc(goal)}</b> קל׳.</p>
