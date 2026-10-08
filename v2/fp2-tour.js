@@ -35,6 +35,7 @@
   #fpWelcome h1{font-size:30px;margin:0 0 8px}
   #fpWelcome p{color:var(--muted,#A3ADB8);font-size:16px;line-height:1.6;margin:0 0 20px}
   #fpWelcome input{width:100%;box-sizing:border-box;font:inherit;font-size:20px;text-align:center;padding:14px;border-radius:14px;border:1px solid var(--line,#2C3640);background:var(--card,#171C22);color:var(--ink,#F2F5F7);margin-bottom:12px}
+  #fpTour .ac{width:100%;margin:8px 0 0;font:inherit;font-weight:700;padding:11px;border-radius:12px;border:1.5px solid var(--brand,#D7F36B);background:transparent;color:var(--brand,#D7F36B)}
   #fpWelcome button{width:100%;font:inherit;font-size:18px;font-weight:700;padding:14px;border:0;border-radius:14px;background:var(--brand,#D7F36B);color:#14190a;cursor:pointer}
   #fpWelcome .e{color:var(--danger,#F09595);min-height:22px;font-size:14px;margin-bottom:6px}
   `;
@@ -62,35 +63,35 @@
 
   /* ---------- the steps ---------- */
   const S=[
-    {title:'ברוך הבא ל־FitPro 👋',text:'זה סיור קצר באפליקציה האמיתית. אני אסמן כל פעם כפתור או אזור, ואפשר ללחוץ ולנסות. אפשר לדלג בכל רגע, ולחזור לסיור מההגדרות.',view:'today'},
-    {title:'הימים שלך',text:'הפס הזה הוא השבוע. לוחצים על יום כדי לעבור אליו, לראות מה אכלת ולהוסיף או לתקן אוכל גם בדיעבד.',view:'today',t:'#dateStrip'},
-    {title:'כמה נשאר לך היום',text:'הטבעת מראה כמה קלוריות נשארו לפי היעד שהגדרת, ומתחתיה חלבון, פחמימות ושומן. מה שאוכלים מתמלא כאן בעצמו.',view:'today',t:'#calRing'},
+    {title:'ברוך הבא ל־FitPro 👋',text:'סיור קצר. אני מסמן כפתור, ואתה יכול ללחוץ ולנסות. רוצה לדלג? אפשר בכל רגע.',view:'today'},
+    {title:'הימים שלך',text:'זה השבוע. לוחצים על יום כדי לראות מה אכלת, או להוסיף משהו ששכחת.',view:'today',t:'#dateStrip'},
+    {title:'כמה נשאר לך היום',text:'הטבעת מראה כמה קלוריות נשארו להיום. מתחת: חלבון, פחמימות ושומן. הכל מתמלא לבד.',view:'today',t:'#calRing'},
     {title:'מוסיפים אוכל',text:'זה הכפתור שתשתמש בו הכי הרבה.',hint:'לחץ עליו עכשיו, באמת',view:'today',t:'.quick-row .btn',click:true},
-    {title:'כותבים כמו שמדברים',text:'כותבים מה אכלת בשפה חופשית, למשל: ״2 ביצים, קוטג׳ 5%, פרוסת לחם״. כשיש כמה פריטים מופרדים בפסיקים יופיע כפתור ✨ שמפרק ומוסיף את כולם בבת אחת.',hint:'נסה לכתוב משהו',view:'add',t:['#foodQuery',"button[onclick='searchFood()']"]},
-    {title:'כלי AI למקרים קשים',text:'מנה שאין במאגר, כמו מסעדה או אוכל ביתי? ה־AI מעריך לפי תיאור, או שמצלמים את הצלחת והוא מזהה ומעריך. זה כלי בתשלום קטן, ולכן משתמשים בו כשהמאגר לא מספיק.',view:'add',t:["button[onclick='estimateWithOpenAI()']","button[onclick*='mealPhotoFile']"]},
-    {title:'מוצר ארוז? ברקוד',text:'סורקים את הברקוד עם המצלמה, או מצלמים אותו, או מקלידים את המספר, והערכים התזונתיים מגיעים לבד.',view:'add',t:()=>byText('#add summary',/ברקוד/),open:true},
-    {title:'הזנה ידנית',text:'יש לך ערכים מהאריזה או מהדיאטנית? כאן מזינים בעצמך שם, כמות, קלוריות וחלבון, ואפשר גם לתקן ערכים של מזון שנמצא.',view:'add',t:()=>byText('#add summary',/הזנה ידנית/)},
-    {title:'ספריית הארוחות',text:'ארוחות שאתה אוכל שוב ושוב נשמרות כאן: פעם אחת בונים, ואחר כך לחיצה אחת מוסיפה את כל הארוחה ליום.',hint:'״＋ צור ארוחה חדשה״ בונה ארוחה משלך',view:'meals',t:["button[onclick='openCustomMealBuilder()']",'#mealTabs']},
-    {title:'יומן התזונה',text:'כל הימים שעברו במקום אחד: ממוצעי קלוריות וחלבון, וסינון לפי שבוע, חודש או תאריכים, כדי לראות מגמות ולא רק יום בודד.',view:'history',t:['#nutritionPeriod','#nutritionJournalSummary']},
+    {title:'כותבים כמו שמדברים',text:'כותבים כמו בוואטסאפ: ״2 ביצים, קוטג׳ 5%, פרוסת לחם״. כמה דברים ביחד? לוחצים ✨ והכל נכנס בבת אחת.',hint:'נסה לכתוב משהו ולחץ חיפוש. התוצאות יופיעו כאן',view:'add',live:true,t:['#foodQuery',"button[onclick='searchFood()']",'#sentenceBtn','#foodStateChips','#foodResults','#dishPreview']},
+    {title:'כלי AI למקרים קשים',text:'אכלת במסעדה או משהו שאין במאגר? מתארים או מצלמים את הצלחת, וה־AI מעריך.',view:'add',t:["button[onclick='estimateWithOpenAI()']","button[onclick*='mealPhotoFile']"]},
+    {title:'מוצר ארוז? ברקוד',text:'סורקים את הברקוד, והערכים מגיעים לבד.',view:'add',t:()=>byText('#add summary',/ברקוד/),open:true},
+    {title:'הזנה ידנית',text:'יש לך מספרים מהאריזה? מכניסים פה בעצמך. אפשר גם לתקן מזון שמצאת.',view:'add',t:()=>byText('#add summary',/הזנה ידנית/)},
+    {title:'ספריית הארוחות',text:'ארוחות שחוזרות על עצמן: בונים פעם אחת, ומאז זו לחיצה אחת.',hint:'״＋ צור ארוחה חדשה״ בונה ארוחה משלך',view:'meals',t:["button[onclick='openCustomMealBuilder()']",'#mealTabs']},
+    {title:'יומן התזונה',text:'כל הימים שעברו, עם ממוצעים לשבוע ולחודש. ככה רואים מגמה ולא רק יום אחד.',view:'history',t:['#nutritionPeriod','#nutritionJournalSummary']},
     {title:'קיצורי דרך',text:'לדברים קבועים כמו שייק חלבון יש קיצורים. לוחצים על ״＋ נוספים״ ורואים אותם.',hint:'לחץ עליו עכשיו',view:'today',t:()=>byText('.quick-row .btn',/נוספים/),click:true},
-    {title:'לחיצה אחת והוא ביומן',text:'כאן מופיעים הקיצורים שלך. לחיצה על קיצור מוסיפה אותו ליום מיד, בלי חיפוש ובלי הקלדה.',view:'today',extras:true,t:'#extrasPanel'},
-    {title:'יוצרים קיצור משלך',text:'בהגדרות מוסיפים קיצור: שם (למשל ״שייק חלבון״), קלוריות, חלבון, פחמימות ושומן. מכאן הוא מופיע ברשימת ״＋ נוספים״ לתמיד.',view:'settings',open:true,t:['#quickName','#quickCalories','#quickProtein']},
-    {title:'כפתור הפלוס',text:'הכפתור הצף ״＋״ זמין מכל מסך. הוא פותח את כל הפעולות המהירות.',view:'today',t:'#plusFab',click:true,optional:true},
-    {title:'מה יש בתפריט הפלוס',text:'צילום ארוחה, עדכון משקל, רישום אימון, אירוע או יום חופשי, יומן אירועים, צ׳ק־אין שבועי ועוד. אפשר לבחור ולסדר מה מופיע בהגדרות ← ״כפתור הפלוס״.',view:'today',plus:true,t:'#plusList'},
+    {title:'לחיצה אחת והוא ביומן',text:'הקיצורים שלך. לחיצה אחת וזה ביומן.',view:'today',extras:true,t:'#extrasPanel'},
+    {title:'יוצרים קיצור משלך',text:'בהגדרות מוסיפים קיצור, למשל ״שייק חלבון״ עם הערכים שלו, והוא נשאר כאן תמיד.',view:'settings',open:true,t:['#quickName','#quickCalories','#quickProtein']},
+    {title:'כפתור הפלוס',text:'ה״＋״ נמצא בכל מסך ופותח את כל הפעולות המהירות.',view:'today',t:'#plusFab',click:true,optional:true},
+    {title:'מה יש בתפריט הפלוס',text:'צילום ארוחה, משקל, אימון, אירוע, צ׳ק־אין ועוד. מה מופיע פה? אתה מחליט, בהגדרות ← ״כפתור הפלוס״.',view:'today',plus:true,t:'#plusList'},
     {title:'יומן ואירועים',text:'הכפתור הזה בראש המסך פותח את היומן.',hint:'לחץ עליו עכשיו',view:'today',t:'#hdrCal',click:true},
-    {title:'אירוע שהתזונה מתאימה סביבו',text:'לוחצים על יום, בוחרים סוג אירוע (חתונה, חופשה, ארוחה גדולה…) ונותנים לו שם. האפליקציה מפזרת את הקלוריות בימים שלפני ואחרי. ״שמור והוסף ליומן שלי״ שומר גם ביומן של הטלפון. אפשר גם לחבר יומן מהטלפון, בהגדרות, ואירועים ייכנסו לבד.',view:'today',cal:true,t:()=>{const s=$('calendarSheet');return s&&(s.querySelector('.sheet')||s.firstElementChild)}},
-    {title:'אימונים',text:'בוחרים סוג אימון (דחיפה, משיכה, רגליים…), מקום וציוד, ולוחצים ״התחל אימון״. בזמן האימון רושמים משקל וחזרות לכל סט, יש טיימר מנוחה, והכול נשמר.',view:'workoutHome',t:'#startWorkoutCard',small:true},
-    {title:'האימונים שלי ויומן אימונים',text:'״האימונים שלי״ הם תוכניות מוכנות שאפשר לבנות ולערוך בעצמך. ״יומן אימונים״ מראה מה עשית ואיך התקדמת במשקלים.',view:'workoutHome',t:["button[onclick=\"showView('workoutLibrary')\"]","button[onclick=\"showView('workoutDiary')\"]"]},
-    {title:'צ׳ק־אין שבועי',text:'פעם בשבוע: שוקלים, מודדים היקפים, מצלמים תמונות ורושמים סיכום קצר. זה לוקח כ־3 דקות, והוא מה שמראה אם אתה באמת מתקדם, גם כשהמשקל עומד במקום.',hint:'אפשר ללחוץ ולנסות, וגם לסגור',view:'process',t:"#process button[onclick='openCheckin()']"},
-    {title:'תמונות התקדמות',text:'שלוש תמונות: חזית, צד וגב. הסוד להשוואה אמיתית: אותה תאורה, אותו מרחק, אותה שעה ואותו לבוש. כפתור המצלמה מצלם או בוחר מהגלריה.',view:'process',t:['#photoCard']},
-    {title:'משקל והיקפים',text:'כאן רושמים משקל והיקפים: מותן, זרוע, חזה וירך, ואפילו תחושת נפיחות. היקפים חשובים כי שריר עולה בזמן ששומן יורד, והמשקל לבד לא תמיד מספר את זה.',view:'process',t:['#processWeight','#processWaist','#processArm','#processChest','#processThigh']},
-    {title:'מגמות והשוואות',text:'כל המדידות הופכות כאן להשוואות: מה השתנה בשבוע, בחודש ובסך הכול.',view:'process',t:'#processTrends'},
-    {title:'התראות',text:'כאן מפעילים התראות לטלפון, כמו תזכורת לאירוע. באייפון קודם מוסיפים את FitPro למסך הבית ופותחים משם.',view:'settings',t:'#notificationSettings'},
-    {title:'חיבור יומן הטלפון',text:'מדביקים קישור ליומן אחד (למשל מ־iCloud או Google) ואירועים מהיומן נכנסים לבד לאפליקציה, בלי להקליד אותם פעמיים.',view:'settings',t:()=>det(/חיבור יומן/)},
-    {title:'יעדים ופרטים',text:'אפשר בכל רגע לעדכן יעד קלוריות וחלבון, או להריץ שוב את השאלון עם משקל ונתונים חדשים.',view:'settings',t:()=>det(/יעדים/)},
-    {title:'שמירה וגיבוי',text:'הכול נשמר בענן ומסתנכרן בין המכשירים שלך. ״גיבוי וייצוא״ מוריד הכול לקובץ Excel.',view:'settings',t:()=>det(/גיבוי/)},
-    {title:'חוזרים לסיור מתי שרוצים',text:'הכפתור הזה מריץ את ההדרכה מחדש.',view:'settings',t:'#tourRerun'},
-    {title:'זהו, אתה מוכן! 🎉',text:'התחל ברישום הארוחה הראשונה שלך. כל מה שהראיתי זמין תמיד, וההדרכה מחכה לך בהגדרות.',view:'today',last:true}
+    {title:'אירוע שהתזונה מתאימה סביבו',text:'יש חתונה או ארוחה גדולה? מסמנים את היום, והאפליקציה מפנה לך קלוריות בימים שמסביב. אפשר גם לחבר את יומן הטלפון בהגדרות.',view:'today',cal:true,t:()=>{const s=$('calendarSheet');return s&&(s.querySelector('.sheet')||s.firstElementChild)}},
+    {title:'אימונים',text:'בוחרים אימון ולוחצים ״התחל אימון״. רושמים משקל וחזרות, יש טיימר מנוחה, והכל נשמר.',view:'workoutHome',t:'#startWorkoutCard',small:true},
+    {title:'האימונים שלי ויומן אימונים',text:'״האימונים שלי״ זה התוכניות שלך. ״יומן אימונים״ מראה כמה התקדמת.',view:'workoutHome',t:["button[onclick=\"showView('workoutLibrary')\"]","button[onclick=\"showView('workoutDiary')\"]"]},
+    {title:'צ׳ק־אין שבועי',text:'פעם בשבוע, 3 דקות: משקל, היקפים ותמונות. ככה רואים התקדמות גם כשהמשקל תקוע.',hint:'אפשר ללחוץ ולנסות, וגם לסגור',view:'process',t:"#process button[onclick='openCheckin()']"},
+    {title:'תמונות התקדמות',text:'ארבע תמונות: מלפנים, שני הצדדים ומאחור. הטריק: אותו אור, אותו מקום, אותם בגדים.',view:'process',t:['#photoCard']},
+    {title:'משקל והיקפים',text:'משקל והיקפים. ההיקפים חשובים: לפעמים השומן יורד והשריר עולה, והמשקל לא זז.',view:'process',t:['#processWeight','#processWaist','#processArm','#processChest','#processThigh']},
+    {title:'מגמות והשוואות',text:'מה השתנה השבוע, החודש ומההתחלה.',view:'process',t:'#processTrends'},
+    {title:'התראות',text:'התראות לטלפון, למשל תזכורת לאירוע. באייפון: קודם ״הוסף למסך הבית״ ופותחים משם. אפשר גם אחר כך.',view:'settings',live:true,open:true,t:'#notificationSettings',act:{label:'🔔 הפעל התראות עכשיו',fn:()=>{try{return enablePhonePush()}catch(e){toast('ההתראות זמינות בהגדרות',true)}}}},
+    {title:'חיבור יומן הטלפון',text:'מדביקים קישור ליומן (iCloud או Google), והאירועים נכנסים לבד. אפשר גם אחר כך.',view:'settings',live:true,open:true,t:()=>det(/חיבור יומן/),act:{label:'📅 חבר יומן עכשיו',fn:()=>{const d=det(/חיבור יומן/);if(d){d.open=true;const i=document.getElementById('calUrlInput');if(i){i.scrollIntoView({block:'center',behavior:'smooth'});setTimeout(()=>i.focus(),300)}}}}},
+    {title:'יעדים ופרטים',text:'משנים יעדים מתי שרוצים, או עושים את השאלון מחדש.',view:'settings',t:()=>det(/יעדים/)},
+    {title:'שמירה וגיבוי',text:'הכל נשמר בענן ועובר בין המכשירים. רוצה קובץ Excel? ״גיבוי וייצוא״.',view:'settings',t:()=>det(/גיבוי/)},
+    {title:'חוזרים לסיור מתי שרוצים',text:'פה מתחילים את הסיור מחדש.',view:'settings',t:'#tourRerun'},
+    {title:'זהו, אתה מוכן! 🎉',text:'יאללה, תרשום את הארוחה הראשונה. הסיור מחכה בהגדרות אם תצטרך.',view:'today',last:true}
   ];
 
   /* ---------- engine ---------- */
@@ -104,7 +105,7 @@
   }
   function paintCard(){
     const s=S[T.i],last=T.i===S.length-1;
-    T.card.innerHTML=`<div class="tcount">${T.i+1} מתוך ${S.length}</div><div class="tbar"><i style="width:${Math.round((T.i+1)/S.length*100)}%"></i></div><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p>${s.hint?`<div class="hint">👆 ${esc(s.hint)}</div>`:''}<div class="tn">${T.i>0?'<button class="pv" data-a="prev">הקודם</button>':''}<button class="nx" data-a="next">${last?'סיום':T.i===0?'בוא נתחיל':'הבא'}</button></div>${last?'':'<button class="tskip" data-a="skip">דלג על ההדרכה</button>'}`;
+    T.card.innerHTML=`<div class="tcount">${T.i+1} מתוך ${S.length}</div><div class="tbar"><i style="width:${Math.round((T.i+1)/S.length*100)}%"></i></div><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p>${s.hint?`<div class="hint">👆 ${esc(s.hint)}</div>`:''}${s.act?`<button class="ac" data-a="act">${esc(s.act.label)}</button>`:''}<div class="tn">${T.i>0?'<button class="pv" data-a="prev">הקודם</button>':''}<button class="nx" data-a="next">${last?'סיום':T.i===0?'בוא נתחיל':'הבא'}</button></div>${last?'':'<button class="tskip" data-a="skip">דלג על ההדרכה</button>'}`;
   }
   function place(){
     if(!T||!T.root)return;
@@ -162,7 +163,7 @@
   }
   function onCardClick(e){
     const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
-    if(a==='next')go(T.i+1);else if(a==='prev')go(T.i-1);else if(a==='skip')finish(false);
+    if(a==='next')go(T.i+1);else if(a==='prev')go(T.i-1);else if(a==='skip')finish(false);else if(a==='act'){const s=S[T.i];try{s.act&&s.act.fn()}catch(_){}}
   }
   function startTour(){
     if(T)return;
@@ -171,6 +172,7 @@
     document.addEventListener('click',onClickCapture,true);
     T.timer=setInterval(()=>{
       if(!T)return;const s=S[T.i];
+      if(s.live&&s.t){const l=allEls(s.t).filter(e=>{const b=e.getBoundingClientRect();return b.width>0&&b.height>0});if(l.length&&l.length!==(T.els||[]).length){T.els=l;T.key=''}}
       if(s.t&&(!T.els||!T.els.length)){const els=allEls(s.t).filter(e=>{const b=e.getBoundingClientRect();return b.width>0&&b.height>0});if(els.length){T.els=els;T.key=''}}
       place();
     },180);
@@ -183,14 +185,14 @@
     if(T.root)T.root.remove();T=null;resetUI();
     try{showView('today')}catch(_){}
     setProp('TOUR_DONE','1');
-    try{toast(completed?'ההדרכה הסתיימה. היא תמיד זמינה בהגדרות':'אפשר לחזור להדרכה בהגדרות')}catch(_){}
+    try{toast(completed?'סיימנו. הסיור תמיד מחכה בהגדרות':'אפשר לחזור להדרכה בהגדרות')}catch(_){}
   }
 
   /* ---------- welcome (name) → questionnaire ---------- */
   function welcome(){
     if($('fpWelcome'))return;
     const w=document.createElement('div');w.id='fpWelcome';
-    w.innerHTML=`<div class="w"><h1>ברוך הבא ל־FitPro 👋</h1><p>נתחיל בהיכרות קצרה: איך קוראים לך? אחר כך כמה שאלות להתאמת היעדים, ואז סיור קצר באפליקציה.</p><input id="fpName" maxlength="40" autocomplete="given-name" placeholder="השם שלך"><div class="e" id="fpNameErr"></div><button id="fpNameGo">המשך</button></div>`;
+    w.innerHTML=`<div class="w"><h1>ברוך הבא ל־FitPro 👋</h1><p>קודם כל, איך קוראים לך? אחר כך כמה שאלות וסיור קצר.</p><input id="fpName" maxlength="40" autocomplete="given-name" placeholder="השם שלך"><div class="e" id="fpNameErr"></div><button id="fpNameGo">המשך</button></div>`;
     document.body.appendChild(w);
     const go=async()=>{
       const name=$('fpName').value.trim();

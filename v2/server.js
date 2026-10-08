@@ -94,7 +94,7 @@ function apiFunctions_(){
     saveWorkout,deleteWorkout,restoreWorkout,moveExerciseToSession,saveExercise,updateExercise,deleteExercise,restoreExercise,saveWorkoutPlan,deleteWorkoutPlan,restoreWorkoutPlan,
     getExerciseProgress,startVideoUpload,uploadVideoChunk,checkVideoUpload,deleteWorkoutVideo,restoreWorkoutVideo,
     getProcessData,saveProcessCheckin,deleteProcessCheckin,restoreProcessCheckin,getApiInfo,setApiPassword,getTrash,restoreTrashItem,purgeTrashItem,emptyTrash,createInvite,getUsersInfo,whoAmI,deleteUser,saveProfile,deleteMeals,saveMyFoods,saveProgressPhoto,getProgressPhotos,getProgressPhoto,deleteProgressPhoto,getWeeklyReview,applyCalorieGoal,saveWeeklyCheckin,listWeeklyCheckins,getExportData,cleanupDuplicateWorkouts,
-    exportSheetInfo,exportSheet,exportProps,saveBankEvent,chooseBankMethod,mergeDuplicateEntries,saveHealthData,estimateFoodPhoto,deleteBankEvent,restoreBankEvent,setBankWeekAnswer,savePlusMenu};
+    exportSheetInfo,exportSheet,exportProps,saveBankEvent,chooseBankMethod,mergeDuplicateEntries,saveHealthData,estimateFoodPhoto,deleteBankEvent,restoreBankEvent,setBankWeekAnswer,savePlusMenu,moveEntries,renameMealGroup};
 }
 
 function hashPassword_(p){return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,'elai-salt-v1|'+String(p||''),Utilities.Charset.UTF_8));}
@@ -689,6 +689,24 @@ function mergeDuplicateEntries(payload){
   const sh=sheet_(APP.sheets.entries),values=sh.getDataRange().getValues(),m=mergeDuplicateRows_(sh,values,date,'');
   if(m.names.length)touchDay_(date);
   return {prev:m.prev,merged:m.names,day:getDayData_(date)};
+}
+// 2.6.10: move logged items (or whole meals) to another part of the day, and rename a logged meal.
+function moveEntries(payload){
+  const ids=new Set((payload&&payload.ids||[]).map(String)),cat=String(payload&&payload.category||'');
+  if(!ids.size)throw new Error('לא נבחרו פריטים');
+  if(['בוקר','צהריים','ערב','נוסף'].indexOf(cat)<0)throw new Error('בחר בוקר, צהריים, ערב או נוספים');
+  const sh=sheet_(APP.sheets.entries),values=sh.getDataRange().getValues();let date='';
+  for(let i=1;i<values.length;i++){const r=values[i];if(!ids.has(String(r[0]))||r[14]===true)continue;sh.getRange(i+1,4).setValue(cat);date=formatDateValue_(r[1]);}
+  if(!date)throw new Error('הפריטים לא נמצאו. רענן ונסה שוב');
+  touchDay_(date);return getDayData_(date);
+}
+function renameMealGroup(payload){
+  const gid=String(payload&&payload.groupId||''),name=String(payload&&payload.name||'').trim().slice(0,60);
+  if(!gid||!name)throw new Error('חסר שם לארוחה');
+  const sh=sheet_(APP.sheets.entries),values=sh.getDataRange().getValues();let date='';
+  for(let i=1;i<values.length;i++){const r=values[i];if(String(r[16]||'')!==gid||r[14]===true)continue;sh.getRange(i+1,6).setValue(name);if(r[4]!=='meal'&&r[4]!=='dish')sh.getRange(i+1,5).setValue('meal');date=formatDateValue_(r[1]);}
+  if(!date)throw new Error('הארוחה לא נמצאה. רענן ונסה שוב');
+  touchDay_(date);return getDayData_(date);
 }
 function ungroupEntries(prev){
   // Undo for grouping and merging: the first snapshot of a row wins, later ones only add the missing fields.

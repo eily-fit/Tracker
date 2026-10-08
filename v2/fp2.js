@@ -84,7 +84,7 @@ const AUTH_ERRORS={'auth/user-disabled':'החשבון הזה נחסם. פנה ל
 const authErr=e=>AUTH_ERRORS[e&&e.code]||('שגיאה: '+(e&&e.message||e));
 function showAuth(mode){
   const reg=mode==='register';
-  overlay(`<h1>FitPro</h1><p>${reg?'פתיחת משתמש חדש. השתמש באימייל אמיתי, כדי שתוכל לשחזר סיסמה.':'כניסה לחשבון שלך.'}</p>
+  overlay(`<h1>FitPro</h1><p>${reg?'משתמש חדש. תשתמש באימייל אמיתי, כדי שתוכל לשחזר סיסמה אם תשכח.':'כניסה לחשבון שלך.'}</p>
     <input id="fp2Email" type="email" autocomplete="username" placeholder="אימייל" inputmode="email">
     <input id="fp2Pass" type="password" autocomplete="${reg?'new-password':'current-password'}" placeholder="סיסמה (לפחות 6 תווים)">
     <button class="fp2-btn" id="fp2Go">${reg?'פתח משתמש':'כניסה'}</button>
@@ -98,7 +98,7 @@ function showAuth(mode){
 }
 function showImport(){
   const c=oldConf();
-  overlay(`<h1>ברוך הבא 👋</h1><p>זו הכניסה הראשונה לחשבון הזה. נתחיל בהיכרות קצרה, שאלון קצר להתאמת היעדים וסיור באפליקציה.</p>
+  overlay(`<h1>ברוך הבא 👋</h1><p>פעם ראשונה פה? כמה שאלות קצרות, סיור קצר, ומתחילים.</p>
     <button class="fp2-btn" id="fp2Fresh">בוא נתחיל</button>
     <details style="margin-top:18px;text-align:right"><summary style="color:#8a9690;font-size:14px;cursor:pointer">יש לי נתונים באפליקציה הישנה</summary>
     <div style="margin-top:10px">${c?'<p style="color:#5DCAA5">✓ השרת הישן מחובר בטלפון הזה</p>':`<input id="fp2Url" placeholder="כתובת השרת הישן (מסתיימת ב-/exec)"><input id="fp2Code" type="password" placeholder="הקוד האישי מהאפליקציה הישנה">`}
@@ -259,6 +259,21 @@ async function sharedPut(id,x){
   await setDoc(doc(db,'sharedFoods',String(id)),d);
   if(sharedList){sharedList=sharedList.filter(f=>f.sharedId!==String(id));sharedList.push(sharedNorm(String(id),d));sharedList._t=Date.now()}
 }
+/* ===== unit weights learned from users (2.6.6): unitCal/{food|unit} = {k,u,v:{uid:grams}} ===== */
+function calMedian(a){const s=a.slice().sort((x,y)=>x-y),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2}
+async function calLoad(){
+  if(!user)return null;
+  const snap=await getDocs(collection(db,'unitCal'));const out={};
+  snap.forEach(d=>{const x=d.data()||{},v=x.v||{},vals=Object.values(v).map(Number).filter(g=>g>0&&g<5000);if(!x.k||!x.u||!vals.length)return;
+    const med=calMedian(vals),kept=vals.filter(g=>g>=med*0.6&&g<=med*1.6);
+    out[x.k+'|'+x.u]={mine:Number(v[user.uid])||null,crowd:kept.length?Math.round(calMedian(kept)*10)/10:null,n:kept.length}});
+  return out;
+}
+async function calPut(k,u,g){
+  if(!user||!k||!u||!(g>0))return;
+  const id=(k+'|'+u).replace(/\//g,'_').slice(0,700);
+  await setDoc(doc(db,'unitCal',id),{k:String(k),u:String(u),v:{[user.uid]:Math.round(Number(g)*10)/10},ts:Date.now()},{merge:true});
+}
 async function offLookup(code){
   try{
     const r=await fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields=product_name,product_name_he,brands,nutriments,serving_quantity,serving_quantity_unit');
@@ -297,6 +312,7 @@ function shareHook(fn,args){
 }
 
 window.FP2={
+  calLoad,calPut,
   sharedAll:()=>sharedList||[],sharedLoad,sharedPut,sharedDel:async id=>{await deleteDoc(doc(db,'sharedFoods',String(id)));if(sharedList)sharedList=sharedList.filter(f=>f.sharedId!==String(id))},
   oldConfig:oldConf,
   userId:()=>user?.uid,

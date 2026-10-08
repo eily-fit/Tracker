@@ -1,4 +1,4 @@
-/* FitPro 2.6.6 — מאגר המזון המתוקן:
+/* FitPro 2.6.8 — מאגר המזון המתוקן:
    - מזונות בסיסיים בשמות יומיומיים (פרגית, לחם שחור...) ראשונים בחיפוש
    - כל הגרסאות של אותו מזון מקובצות, והשאר תחת "עוד אפשרויות"
    - פריטים מוסתרים (FFQ ופריטים חשודים) לא מופיעים בחיפוש
@@ -148,6 +148,65 @@ defaultPortion=function(x,parsed){
   return oPortion.apply(this,arguments);
 };
 
+
+/* ---------- unit weights: package > mine > users' average > ≈ database estimate ---------- */
+const CAL_KEY='fp2.unitCal',CROWD_MIN=3;
+let CAL={};try{CAL=JSON.parse(localStorage.getItem(CAL_KEY)||'{}')||{}}catch(_){CAL={}}
+const saveCal=()=>{try{localStorage.setItem(CAL_KEY,JSON.stringify(CAL))}catch(_){}};
+function calKey(x){if(!x)return '';const id=String(x.sourceId||'');return id||('n:'+normHe(x.fpSrc||x.name||''))}
+function calInfo(x,unit){
+  if(!x||!unit||unit==='גרם'||unit==='מ״ל')return null;
+  const raw=(x.units||[]).find(u=>u[0]===unit);
+  if(unit==='מנה מהאריזה'&&raw)return {g:raw[1],src:'package'};
+  const c=CAL[calKey(x)+'|'+unit];
+  if(c&&c.mine)return {g:c.mine,src:'mine'};
+  if(c&&c.crowd&&c.n>=CROWD_MIN)return {g:c.crowd,src:'crowd',n:c.n};
+  return raw?{g:raw[1],src:raw[2]?'guess':'db'}:null;
+}
+async function syncCal(){
+  try{if(!window.FP2||!FP2.calLoad)return;const r=await FP2.calLoad();if(!r)return;
+    const merged={};Object.keys(r).forEach(k=>merged[k]=r[k]);
+    Object.keys(CAL).forEach(k=>{if(CAL[k]&&CAL[k].mine&&!(merged[k]&&merged[k].mine))merged[k]=Object.assign({},merged[k]||{},{mine:CAL[k].mine,pending:true})});
+    CAL=merged;saveCal();
+    Object.keys(CAL).filter(k=>CAL[k].pending).forEach(k=>{const i=k.lastIndexOf('|');FP2.calPut(k.slice(0,i),k.slice(i+1),CAL[k].mine).then(()=>{delete CAL[k].pending;saveCal()}).catch(()=>{})});
+  }catch(e){console.warn('unitCal',e&&e.message)}
+}
+setTimeout(syncCal,4000);setInterval(syncCal,6*3600*1000);
+
+const oUnitGrams=foodUnitGrams;
+foodUnitGrams=function(x,unit){
+  const c=calInfo(x,unit);if(c&&(c.src==='mine'||c.src==='crowd'))return c.g;
+  return oUnitGrams.apply(this,arguments);
+};
+const oUnitLabel=unitLabel;
+unitLabel=function(x,u){
+  const c=calInfo(x,u);if(!c)return oUnitLabel.apply(this,arguments);
+  const tag=c.src==='mine'?' · שלך':c.src==='crowd'?' · ממוצע משתמשים':c.src==='package'?' · מהאריזה':'';
+  return `${u} (${c.src==='db'||c.src==='guess'?'≈':''}${fmt(c.g)} ג׳${tag})`;
+};
+function weightHint(){
+  const f=$('foodWeightField'),x=state.selectedFood;if(!f||!x)return;
+  let h=$('fpWeightHint');if(!h){f.insertAdjacentHTML('beforeend','<div id="fpWeightHint" class="muted" style="font-size:12px;margin-top:4px"></div>');h=$('fpWeightHint')}
+  const c=calInfo(x,$('foodUnit').value);
+  h.textContent=!c?'':c.src==='mine'?'✓ המשקל שלך — נשמר מפעם קודמת.':c.src==='crowd'?`✓ ממוצע של ${c.n} משתמשים ששקלו את המוצר הזה.`:c.src==='package'?'✓ לפי האריזה.':'≈ הערכה כללית מהמאגר. אם אתה יודע משקל אחר, תקן כאן — זה יישמר לפעם הבאה.';
+}
+const oUpd=updateFoodChoice;
+updateFoodChoice=function(){const r=oUpd.apply(this,arguments);try{weightHint()}catch(e){}return r};
+const oSave=saveFood;
+saveFood=async function(){
+  try{
+    const x=state.selectedFood,u=$('foodUnit').value,g=Number(state.foodGramsPerUnit);
+    if(x&&u&&u!=='גרם'&&u!=='מ״ל'&&u!=='מנה מהאריזה'&&g>0){
+      const c=calInfo(x,u),k=calKey(x);
+      if(k&&(!c||Math.abs(g-c.g)>=1)){
+        CAL[k+'|'+u]=Object.assign({},CAL[k+'|'+u]||{},{mine:g,pending:true});saveCal();
+        if(window.FP2&&FP2.calPut)FP2.calPut(k,u,g).then(()=>{delete CAL[k+'|'+u].pending;saveCal()}).catch(()=>{});
+      }
+    }
+  }catch(e){console.error(e)}
+  return oSave.apply(this,arguments);
+};
+
 /* ---------- oil default for food cooked at home ---------- */
 const NOFAT=/ללא תוספת (שומן|שמן)|ללא שמן|בלי שמן/;
 const oOpen=openFoodChoice;
@@ -193,4 +252,51 @@ function injectSettings(force){
 }
 const oSettings=window.renderSettings;
 if(typeof oSettings==='function')window.renderSettings=function(){const r=oSettings.apply(this,arguments);try{injectSettings(true)}catch(e){}return r};
+
+/* ---------- layer 5: the weight trend checks the food log (every 7 days, last 14 days) ---------- */
+const CALIB_KEY='fp2.calibShown';
+const daysBetween=(a,b)=>Math.round((new Date(b+'T12:00:00Z')-new Date(a+'T12:00:00Z'))/86400000);
+async function calibCheck(force){
+  try{
+    if(typeof call!=='function'||!state.data||!state.data.settings||$('fpOilSheet'))return;
+    const today=state.todayDate||state.data.date;if(!today)return;
+    let last='';try{last=localStorage.getItem(CALIB_KEY)||''}catch(_){}
+    if(!force&&last&&daysBetween(last,today)<7)return;
+    const lc=String(state.data.settings.last_checkin||'').replace(/^ci:/,'');
+    if(!force&&lc&&daysBetween(lc,today)<3)return;            // a check-in just showed the same numbers
+    const r=await call('getWeeklyReview',today),s=r&&r.suggestion;
+    if(!s||!s.ready||s.onTrack||(s.weighIns||0)<6){if(force)toast(s&&!s.ready?s.message:'הכל בקצב. אין מה לשנות.');return}
+    try{localStorage.setItem(CALIB_KEY,today)}catch(_){}
+    showCalib(s);
+  }catch(e){console.warn('calib',e&&e.message)}
+}
+function showCalib(s){
+  if($('fpCalibSheet'))return;
+  let prof={};try{prof=JSON.parse(state.data.settings.profile_json||'{}')}catch(_){}
+  const est=prof.calculation&&Number(prof.calculation.tdee);
+  const lines=[`לפי היומן אכלת בממוצע <b>${s.intake}</b> קל׳ ביום.`];
+  if(est){const exp=(s.intake-est)*7/7700;lines.push(`לפי זה היית אמור: <b>${kgWeek(exp)}</b>.`)}
+  lines.push(`בפועל: <b>${kgWeek(s.actualWeek)}</b>.`);
+  let why='';
+  if(est){const gap=Math.round((est-s.tdee)/10)*10;
+    if(gap>=50)why=`כלומר בערך <b>${gap} קל׳ ביום</b> לא נכנסים לחשבון: שמן, רטבים, יחידות גדולות ממה שחשבנו. זה קורה כמעט לכולם, ולכן מתקנים את היעד ולא את הרישום.`;
+    else if(gap<=-50)why=`כלומר הגוף שלך שורף בערך <b>${-gap} קל׳ ביום</b> יותר ממה שחישבנו.`}
+  const up=s.delta>0;
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpCalibSheet"><div class="sheet"><h3 style="margin:0 0 8px">בדקתי את השבועיים האחרונים</h3>
+    <div style="display:grid;gap:4px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>
+    ${why?`<p class="muted" style="margin:10px 0 0">${why}</p>`:''}
+    <p style="margin:12px 0 0"><b>ההמלצה: ${up?'להעלות':'להוריד'} את היעד היומי ל-${s.suggested} קל׳</b> <span class="muted">(${Math.abs(s.delta)} ${up?'יותר':'פחות'}. משנים עד 150 בכל פעם)</span></p>
+    <button type="button" class="btn full" style="margin-top:12px" onclick="fpCalibApply(${s.suggested})">עדכן ל-${s.suggested}</button>
+    <button type="button" class="btn light full" style="margin-top:8px" onclick="fpCalibClose()">לא עכשיו</button>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">החישוב לפי ${s.loggedDays} ימי רישום ו-${s.weighIns} שקילות. נבדוק שוב בעוד שבוע.</p></div></div>`);
+}
+window.fpCalibClose=function(){const el=$('fpCalibSheet');if(el)el.remove()};
+window.fpCalibApply=async function(cal){
+  try{const r=await call('applyCalorieGoal',cal);if(r)state.data.settings=r;try{recalcTotalsLocal()}catch(_){}try{renderDay()}catch(_){}toast('היעד עודכן ל-'+cal+' קל׳')}
+  catch(e){toast(e.message||'לא הצלחתי לעדכן',true)}
+  fpCalibClose();
+};
+window.fpCalibCheck=()=>calibCheck(true);
+window.fpCalibPreview=showCalib;
+const calibBoot=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.settings){clearInterval(calibBoot);setTimeout(()=>calibCheck(false),5000)}},1000);
 })();
