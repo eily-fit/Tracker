@@ -1,4 +1,4 @@
-/* FitPro 2.6.8 — מאגר המזון המתוקן:
+/* FitPro 2.6.11 — מאגר המזון המתוקן:
    - מזונות בסיסיים בשמות יומיומיים (פרגית, לחם שחור...) ראשונים בחיפוש
    - כל הגרסאות של אותו מזון מקובצות, והשאר תחת "עוד אפשרויות"
    - פריטים מוסתרים (FFQ ופריטים חשודים) לא מופיעים בחיפוש
@@ -86,7 +86,7 @@ localFoodSearch=function(q,limit=40){
   try{
     if(!tz.ready||!X.basics.length||state.fpInMore)return r;
     const p=r.parsed||{};
-    const bs=basicHits(p.tokens).slice(0,4).map(basicFood);
+    const bs=basicHits(p.tokens).slice(0,8).map(basicFood);
     const usedFam=new Set(),usedCode=new Set(),out=[];
     const fam=c=>X.famOf.get(c);
     bs.forEach(x=>{usedCode.add(x.code);const fi=fam(x.code);if(fi!=null)usedFam.add(fi);out.push(x)});
@@ -138,6 +138,22 @@ window.fpBackFromMore=function(){
   if(p.ctx==='local'){state.localResults=p.list;state.showAllFoods=false;renderLocalFoodResults()}
   else{state.customSearchResults=p.list;state.customShowAll=false;renderCustomLocalResults()}
 };
+
+/* ---------- generic word (לחם, גבינה, אורז): first only the basic foods ---------- */
+function basicsFirst(listKey,showKey,boxId,render,ctxFn){
+  return function(){
+    const all=state[listKey]||[],n=all.findIndex(x=>!x.fpBasic),nb=n<0?all.length:n;
+    if(state[showKey]||nb<2||all.length<=nb)return render.apply(this,arguments);
+    state[listKey]=all.slice(0,nb);state[showKey]=true;
+    try{render.apply(this,arguments)}finally{state[listKey]=all;state[showKey]=false}
+    const box=$(boxId);
+    if(box){box.querySelectorAll('button.btn.light.full').forEach(b=>{if(/הצג עוד/.test(b.textContent))b.remove()});
+      box.insertAdjacentHTML('beforeend',`<button class="btn light full" onclick="${ctxFn}">עוד ${all.length-nb} סוגים</button>`)}
+  };
+}
+renderLocalFoodResults=basicsFirst('localResults','showAllFoods','foodResults',renderLocalFoodResults,"state.showAllFoods=true;renderLocalFoodResults()");
+renderCustomLocalResults=basicsFirst('customSearchResults','customShowAll','customFoodResults',renderCustomLocalResults,"state.customShowAll=true;renderCustomLocalResults()");
+
 /* ---------- default portion of a basic food ---------- */
 const oPortion=defaultPortion;
 defaultPortion=function(x,parsed){
@@ -182,13 +198,13 @@ const oUnitLabel=unitLabel;
 unitLabel=function(x,u){
   const c=calInfo(x,u);if(!c)return oUnitLabel.apply(this,arguments);
   const tag=c.src==='mine'?' · שלך':c.src==='crowd'?' · ממוצע משתמשים':c.src==='package'?' · מהאריזה':'';
-  return `${u} (${c.src==='db'||c.src==='guess'?'≈':''}${fmt(c.g)} ג׳${tag})`;
+  return `${u} (${fmt(c.g)} ג׳${tag})`;
 };
 function weightHint(){
   const f=$('foodWeightField'),x=state.selectedFood;if(!f||!x)return;
   let h=$('fpWeightHint');if(!h){f.insertAdjacentHTML('beforeend','<div id="fpWeightHint" class="muted" style="font-size:12px;margin-top:4px"></div>');h=$('fpWeightHint')}
   const c=calInfo(x,$('foodUnit').value);
-  h.textContent=!c?'':c.src==='mine'?'✓ המשקל שלך — נשמר מפעם קודמת.':c.src==='crowd'?`✓ ממוצע של ${c.n} משתמשים ששקלו את המוצר הזה.`:c.src==='package'?'✓ לפי האריזה.':'≈ הערכה כללית מהמאגר. אם אתה יודע משקל אחר, תקן כאן — זה יישמר לפעם הבאה.';
+  h.textContent=!c?'':c.src==='mine'?'✓ המשקל שלך — נשמר מפעם קודמת.':c.src==='crowd'?`✓ ממוצע של ${c.n} משתמשים ששקלו את המוצר הזה.`:c.src==='package'?'✓ לפי האריזה.':'';
 }
 const oUpd=updateFoodChoice;
 updateFoodChoice=function(){const r=oUpd.apply(this,arguments);try{weightHint()}catch(e){}return r};
