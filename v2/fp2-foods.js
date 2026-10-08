@@ -1,4 +1,4 @@
-/* FitPro 2.6.11 — מאגר המזון המתוקן:
+/* FitPro 2.6.13 — מאגר המזון המתוקן:
    - מזונות בסיסיים בשמות יומיומיים (פרגית, לחם שחור...) ראשונים בחיפוש
    - כל הגרסאות של אותו מזון מקובצות, והשאר תחת "עוד אפשרויות"
    - פריטים מוסתרים (FFQ ופריטים חשודים) לא מופיעים בחיפוש
@@ -16,7 +16,19 @@ const PROFILES={
   g:{label:'בנדיבות',hint:'שמן בכל בישול, בכמות יפה',oil:'lots',spoon:13.5}
 };
 const X={hidden:new Set(),basics:[],famOf:new Map(),families:[],oils:new Set()};
-const getProfile=()=>{try{const p=localStorage.getItem(PROFILE_KEY);return PROFILES[p]?p:''}catch(_){return ''}};
+const getProfile=()=>{
+  try{const v=String(state&&state.data&&state.data.settings&&state.data.settings.oil_profile||'');if(PROFILES[v])return v}catch(_){}
+  try{const p=localStorage.getItem(PROFILE_KEY);return PROFILES[p]?p:''}catch(_){return ''}};
+/* something else is on screen (welcome, questionnaire, tour, another sheet): don't pop up over it */
+function uiBusy(){
+  try{
+    if($('fpWelcome')||$('fpTour')||document.documentElement.classList.contains('onboarding-mode')||document.documentElement.classList.contains('entry-mode'))return true;
+    if([...document.querySelectorAll('.overlay')].some(o=>!o.classList.contains('hide')&&getComputedStyle(o).display!=='none'))return true;
+    if(window.FP2&&FP2.getProp&&FP2.getProp('NEW_ACCOUNT')==='1'&&FP2.getProp('TOUR_DONE')!=='1')return true;
+  }catch(_){}
+  return false;
+}
+function whenFree(fn,tries){tries=tries||0;if(tries>400)return;if(uiBusy())return setTimeout(()=>whenFree(fn,tries+1),3000);fn()}
 
 /* ---------- ingest: keep the extra keys, drop hidden foods, apply the oil spoon ---------- */
 function applySpoon(){
@@ -57,7 +69,9 @@ const boot=setInterval(()=>{
   setTimeout(async()=>{
     try{if(tz.ready&&!X.basics.length){const c=localStorage.getItem(TZ_STORE_KEY);if(c)tzIngest(c)}}catch(_){}
     await refreshData();
-    if(!getProfile())askProfile();
+    try{const local=localStorage.getItem(PROFILE_KEY),acc=state.data.settings&&state.data.settings.oil_profile;if(PROFILES[local]&&!PROFILES[acc])saveProfileToAccount(local)}catch(_){}
+    if(tz.ready)applySpoon();
+    if(!getProfile())whenFree(()=>{if(!getProfile())askProfile()});
   },1500);
 },700);
 
@@ -241,13 +255,18 @@ openFoodChoice=function(x){
 function profileButtons(cur,handler){
   return Object.keys(PROFILES).map(k=>`<button type="button" class="btn ${cur===k?'':'light '}full" style="margin-top:8px;text-align:right;display:block" onclick="${handler}('${k}')"><b>${PROFILES[k].label}</b><div class="muted" style="font-size:12px">${PROFILES[k].hint}</div></button>`).join('');
 }
-function setProfile(k){
+function saveProfileToAccount(k){
+  try{if(state.data&&state.data.settings)state.data.settings.oil_profile=k}catch(_){}
+  try{if(typeof call==='function')call('saveSettings',{oil_profile:k}).catch(e=>console.warn('oil_profile',e&&e.message))}catch(_){}
+}
+function setProfile(k,silent){
   if(!PROFILES[k])return;
   try{localStorage.setItem(PROFILE_KEY,k)}catch(_){}
+  saveProfileToAccount(k);
   if(tz.ready)applySpoon();
   const s=$('fpOilSheet');if(s)s.remove();
   try{injectSettings(true)}catch(_){}
-  toast('נשמר: '+PROFILES[k].label);
+  if(!silent)toast('נשמר: '+PROFILES[k].label);
 }
 window.fpSetOilProfile=setProfile;
 function askProfile(){
@@ -255,6 +274,36 @@ function askProfile(){
   document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpOilSheet"><div class="sheet"><h3 style="margin:0 0 6px">איך אתה מבשל בבית?</h3><p class="muted" style="margin:0">לפי זה נקבעת ברירת המחדל של ״שמן נוסף״ במזונות מבושלים, וגודל ״כף שמן״ (10 או 13.5 גרם). אפשר לשנות תמיד בהגדרות, ובכל מזון אפשר לבחור אחרת.</p>${profileButtons('', 'fpSetOilProfile')}</div></div>`);
 }
 window.fpAskOilProfile=askProfile;
+
+
+/* ---------- the same question inside the onboarding questionnaire (step "הארוחות הקבועות שלך") ---------- */
+if(typeof renderOnb==='function'){
+  const ONB_OIL_STEP=3;
+  const oRenderOnb=renderOnb;
+  renderOnb=function(){
+    const r=oRenderOnb.apply(this,arguments);
+    try{
+      const o=state.onb;if(!o)return r;
+      if(o.d.oil===undefined)o.d.oil=getProfile()||'';
+      if(o.step===ONB_OIL_STEP){
+        const fs=$('onbBody')&&$('onbBody').querySelector('fieldset');
+        const panel=fs&&fs.querySelector('.onb-panel');
+        const html=`<div class="field" id="fpOnbOil" style="margin-top:14px"><label>ואיך אתה מבשל בבית?</label>${chipRow('oil',Object.keys(PROFILES).map(k=>[k,PROFILES[k].label]))}</div>`;
+        if(panel)panel.insertAdjacentHTML('beforeend',html);else if(fs)fs.insertAdjacentHTML('beforeend',html);
+      }
+    }catch(e){console.error(e)}
+    return r;
+  };
+  const oValid=onbValid;
+  onbValid=function(step){const e=oValid.apply(this,arguments);if(e)return e;try{if(step===ONB_OIL_STEP&&!PROFILES[state.onb.d.oil])return 'בחר איך אתה מבשל בבית'}catch(_){}return ''};
+  const oFinish=finishOnboarding;
+  finishOnboarding=async function(){
+    const k=state.onb&&state.onb.d&&state.onb.d.oil;
+    const r=await oFinish.apply(this,arguments);
+    try{const sheet=$('onbSheet');if(PROFILES[k]&&sheet&&sheet.classList.contains('hide'))setProfile(k,true)}catch(e){console.error(e)}
+    return r;
+  };
+}
 
 /* ---------- settings: the same choice inside the Tzameret section ---------- */
 function injectSettings(force){
@@ -314,5 +363,5 @@ window.fpCalibApply=async function(cal){
 };
 window.fpCalibCheck=()=>calibCheck(true);
 window.fpCalibPreview=showCalib;
-const calibBoot=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.settings){clearInterval(calibBoot);setTimeout(()=>calibCheck(false),5000)}},1000);
+const calibBoot=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.settings){clearInterval(calibBoot);setTimeout(()=>whenFree(()=>calibCheck(false)),5000)}},1000);
 })();
