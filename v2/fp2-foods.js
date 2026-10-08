@@ -171,6 +171,11 @@ renderCustomLocalResults=basicsFirst('customSearchResults','customShowAll','cust
 /* ---------- default portion of a basic food ---------- */
 const oPortion=defaultPortion;
 defaultPortion=function(x,parsed){
+  try{const L=x&&LASTU[calKey(x)];
+    if(L&&!(parsed&&(parsed.amount!=null||parsed.unitHint||parsed.grams))){
+      if(L.u==='גרם'&&L.a>0)return {amount:L.a,unit:'גרם'};
+      if((x.units||[]).some(u=>u[0]===L.u))return {amount:1,unit:L.u};
+    }}catch(_){}
   if(x&&x.fpBasic&&!(parsed&&(parsed.amount!=null||parsed.unitHint||parsed.grams))){
     if(x.fpUnit==='גרם'&&x.fpGrams)return {amount:x.fpGrams,unit:'גרם'};
     if((x.units||[]).some(u=>u[0]===x.fpUnit))return {amount:1,unit:x.fpUnit};
@@ -222,8 +227,12 @@ function weightHint(){
 }
 const oUpd=updateFoodChoice;
 updateFoodChoice=function(){const r=oUpd.apply(this,arguments);try{weightHint()}catch(e){}return r};
+const LASTU_KEY='fp2.lastUnit';
+let LASTU={};try{LASTU=JSON.parse(localStorage.getItem(LASTU_KEY)||'{}')||{}}catch(_){LASTU={}}
 const oSave=saveFood;
 saveFood=async function(){
+  try{const x=state.selectedFood,u=$('foodUnit').value,a=Number($('foodAmount').value)||0,k=calKey(x);
+    if(k&&u){LASTU[k]={u,a};const ks=Object.keys(LASTU);if(ks.length>400)delete LASTU[ks[0]];try{localStorage.setItem(LASTU_KEY,JSON.stringify(LASTU))}catch(_){}}}catch(_){}
   try{
     const x=state.selectedFood,u=$('foodUnit').value,g=Number(state.foodGramsPerUnit);
     if(x&&u&&u!=='גרם'&&u!=='מ״ל'&&u!=='מנה מהאריזה'&&g>0){

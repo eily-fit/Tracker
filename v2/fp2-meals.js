@@ -1,4 +1,4 @@
-/* FitPro 2.6.10 — ארוחה ביומן מוצגת כארוחה אחת:
+/* FitPro 2.7.0 — ארוחה ביומן מוצגת כארוחה אחת:
    שם + סה״כ קלוריות וחלבון/פחמ׳/שומן, לחיצה פותחת את הפריטים.
    בתוך הארוחה: לשנות כמות, להוריד פריט, להחזיר פריט שהורד, להוסיף פריט חדש לארוחה.
    פריטים שנוספו לבד נשארים לבד, כמו קודם. */
@@ -109,6 +109,9 @@ async function joinToMeal(before,target){
 }
 const oSave=saveFood;
 saveFood=async function(){
+  const R=state.fpReplace;
+  if(R){state.fpReplace=null;
+    if(R.date===state.date&&Date.now()-R.t<15*60000){const before=new Set((state.data.entries||[]).map(x=>String(x.id)));const r=await oSave.apply(this,arguments);finishReplace(before,R);return r}}
   const target=state.fpAddToGroup;state.fpAddToGroup=null;
   if(!target||target.date!==state.date||Date.now()-target.t>15*60000)return oSave.apply(this,arguments);
   const before=new Set((state.data.entries||[]).map(x=>String(x.id)));
@@ -117,7 +120,7 @@ saveFood=async function(){
   return r;
 };
 /* leaving the add screen without saving cancels "add to meal" */
-if(typeof showView==='function'){const oShow=showView;showView=function(v){if(v==='today')state.fpAddToGroup=null;return oShow.apply(this,arguments)}}
+if(typeof showView==='function'){const oShow=showView;showView=function(v){if(v==='today'){state.fpAddToGroup=null;state.fpReplace=null}return oShow.apply(this,arguments)}}
 
 /* ---------- each part of the day: count meals as one item, total at the bottom ---------- */
 const SEC_NAME={'בוקר':'בוקר','צהריים':'צהריים','ערב':'ערב','נוספים':'ביניים ונוספים'};
@@ -168,7 +171,7 @@ function selectedSingleMeal(){
 function ensureBulkButtons(){
   const bar=$('bulkBar');if(!bar||$('fpMoveBtn'))return;
   const del=bar.querySelector('.btn.danger');
-  const html='<button class="btn light" id="fpMoveBtn" style="display:none" onclick="fpOpenMove()">העבר ל…</button><button class="btn light" id="fpRenameBtn" style="display:none" onclick="fpRenameMeal()">שנה שם</button>';
+  const html='<button class="btn light" id="fpMoveBtn" style="display:none" onclick="fpOpenMove()">העבר ל…</button><button class="btn light" id="fpRenameBtn" style="display:none" onclick="fpRenameMeal()">שנה שם</button><button class="btn light" id="fpReplaceBtn" style="display:none" onclick="fpReplaceItem()">החלף מוצר</button>';
   if(del)del.insertAdjacentHTML('beforebegin',html);else bar.insertAdjacentHTML('beforeend',html);
 }
 const oBulk=updateBulkBar;
@@ -177,6 +180,7 @@ updateBulkBar=function(){
   try{ensureBulkButtons();const ent=state.select&&state.select.mode==='ent',n=selectedIds().length;
     $('fpMoveBtn').style.display=ent&&n?'inline-block':'none';
     $('fpRenameBtn').style.display=ent&&selectedSingleMeal()?'inline-block':'none';
+    $('fpReplaceBtn').style.display=ent&&n===1?'inline-block':'none';
     if(ent&&n){const es=(state.data.entries||[]).filter(x=>selectedIds().includes(x.id)),meals=new Set(es.filter(x=>x.groupId&&['meal','dish'].includes(x.sourceType)).map(x=>x.groupId)).size,loose=es.filter(x=>!(x.groupId&&['meal','dish'].includes(x.sourceType))).length;
       $('bulkCount').textContent='נבחרו: '+[meals?(meals===1?'ארוחה אחת':meals+' ארוחות'):'',loose?(loose===1?'פריט אחד':loose+' פריטים'):''].filter(Boolean).join(' ו');}}catch(e){}
   return r;
@@ -185,7 +189,10 @@ window.fpOpenMove=function(){
   const ids=selectedIds();if(!ids.length)return;
   if(ids.some(id=>/^tmp-/.test(String(id))))return toast('רגע, עוד שומר…',true);
   const old=$('fpMoveSheet');if(old)old.remove();
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpMoveSheet" onclick="if(event.target===this)this.remove()"><div class="sheet"><h3 style="margin:0 0 10px">להעביר ל…</h3>${[['בוקר','בוקר'],['צהריים','צהריים'],['ערב','ערב'],['נוסף','ביניים ונוספים']].map(([v,l])=>`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpMoveTo('${v}')">${l}</button>`).join('')}<button type="button" class="btn secondary full" style="margin-top:12px" onclick="document.getElementById('fpMoveSheet').remove()">ביטול</button></div></div>`);
+  const sel=new Set(ids.map(String)),groups={};
+  (state.data.entries||[]).forEach(x=>{if(x.groupId&&['meal','dish'].includes(x.sourceType)&&!x.pending)(groups[x.groupId]||(groups[x.groupId]=[])).push(x)});
+  const meals=Object.entries(groups).filter(([g,xs])=>!xs.every(x=>sel.has(String(x.id)))).map(([g,xs])=>({gid:g,name:xs[0].mealOption||xs[0].name||'ארוחה',cat:xs[0].category,kcal:Math.round(xs.reduce((n,x)=>n+(Number(x.calories)||0),0))}));
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpMoveSheet" onclick="if(event.target===this)this.remove()"><div class="sheet"><h3 style="margin:0 0 10px">להעביר ל…</h3>${meals.length?`<div class="muted" style="margin-top:4px">לתוך ארוחה:</div>${meals.map(m=>`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpMoveIntoMeal('${esc(m.gid)}')">🍽 ${esc(m.name)} <small class="muted">· ${esc(m.cat)} · ${fmt(m.kcal)} קל׳</small></button>`).join('')}<div class="muted" style="margin-top:12px">או לחלק אחר ביום:</div>`:''}${[['בוקר','בוקר'],['צהריים','צהריים'],['ערב','ערב'],['נוסף','ביניים ונוספים']].map(([v,l])=>`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpMoveTo('${v}')">${l}</button>`).join('')}<button type="button" class="btn secondary full" style="margin-top:12px" onclick="document.getElementById('fpMoveSheet').remove()">ביטול</button></div></div>`);
 };
 window.fpMoveTo=async function(cat){
   const ids=selectedIds();const s=$('fpMoveSheet');if(s)s.remove();
@@ -193,6 +200,93 @@ window.fpMoveTo=async function(cat){
   try{const day=await call('moveEntries',{ids,category:cat});applyDay(day);renderDay();toast('הועבר ל'+(cat==='נוסף'?'ביניים ונוספים':cat))}
   catch(e){toast(e.message,true)}finally{loading(false)}
 };
+
+window.fpMoveIntoMeal=async function(gid){
+  const ids=selectedIds().map(String);const s=$('fpMoveSheet');if(s)s.remove();
+  await waitForSync();
+  const members=(state.data.entries||[]).filter(x=>String(x.groupId)===gid);
+  if(!members.length)return toast('הארוחה לא נמצאה. רענן ונסה שוב',true);
+  const name=members[0].mealOption||members[0].name||'ארוחה',cat=members[0].category;
+  exitSelectMode();loading();
+  try{const r=await call('groupEntries',{ids:[...new Set(members.map(x=>String(x.id)).concat(ids))],name,category:cat});applyDay(r.day);renderDay();
+    if(OPEN[gid]){delete OPEN[gid];OPEN[r.groupId]=1;store(OPEN_KEY,OPEN)}toast('נוסף ל״'+name+'״')}
+  catch(e){toast(e.message,true)}finally{loading(false)}
+};
+
+/* ---------- replace a logged food with another one, same place and amount ---------- */
+window.fpReplaceItem=function(){
+  const ids=selectedIds();if(ids.length!==1)return;
+  const x=(state.data.entries||[]).find(e=>String(e.id)===String(ids[0]));if(!x||x.pending)return toast('רגע, עוד שומר…',true);
+  state.fpReplace={t:Date.now(),date:state.date,old:x};
+  exitSelectMode();
+  state.addCategory=['בוקר','צהריים','ערב'].includes(x.category)?x.category:state.addCategory;
+  showView('add');
+  toast('חפש ובחר במה להחליף את ״'+x.name+'״');
+};
+const oPortion=defaultPortion;
+defaultPortion=function(f,parsed){
+  const R=state.fpReplace;
+  if(R&&f&&!(parsed&&(parsed.amount!=null||parsed.unitHint))){
+    const u=R.old.unit;
+    if(u==='גרם'||u==='מ״ל')return {amount:Number(R.old.amount)||100,unit:'גרם'};
+    if((f.units||[]).some(v=>v[0]===u))return {amount:Number(R.old.amount)||1,unit:u};
+  }
+  return oPortion.apply(this,arguments);
+};
+async function finishReplace(before,R){
+  await waitForSync();
+  if(state.date!==R.date)return;
+  const all=state.data.entries||[],fresh=all.filter(x=>!before.has(String(x.id))&&!x.pending).map(x=>String(x.id));
+  if(!fresh.length)return toast('המוצר החדש נוסף, אבל הישן לא הוחלף. אפשר למחוק אותו ידנית',true);
+  try{
+    const old=R.old,gid=old.groupId&&['meal','dish'].includes(old.sourceType)?String(old.groupId):'';
+    if(gid){const members=all.filter(x=>String(x.groupId)===gid&&String(x.id)!==String(old.id)).map(x=>String(x.id));
+      const r=await call('groupEntries',{ids:members.concat(fresh),name:old.mealOption||'ארוחה',category:old.category});applyDay(r.day);
+      if(OPEN[gid]){delete OPEN[gid];OPEN[r.groupId]=1;store(OPEN_KEY,OPEN)}}
+    else{const d=await call('moveEntries',{ids:fresh,category:old.category||'נוסף'});applyDay(d)}
+    const d2=await call('deleteEntry',old.id);applyDay(d2);renderDay();
+    toast('הוחלף: ״'+old.name+'״');
+  }catch(e){toast(e.message,true);try{renderDay()}catch(_){}}
+}
+
+/* ---------- － / ＋ next to every amount ---------- */
+const stepOf=u=>(u==='גרם'||u==='מ״ל')?10:1;
+window.fpStep=function(id,dir){
+  const x=(state.data.entries||[]).find(e=>String(e.id)===String(id));if(!x)return;
+  if(x.pending)return toast('רגע, עוד שומר…');
+  const st=stepOf(x.unit),cur=Number(x.amount)||0;let v=Math.round((cur+dir*st)*10)/10;
+  if(v<=0)v=st===1?(cur>0.5?0.5:cur):Math.max(1,cur);
+  if(v===cur)return;
+  changeAmount(id,v);
+};
+if(typeof entryHtml==='function'){
+  const oEntry=entryHtml;
+  entryHtml=function(x){
+    let h=oEntry.apply(this,arguments);
+    try{h=h.replace(/(<input class="qty"[^>]*>)/,`<button type="button" class="fp-step" aria-label="פחות" onclick="event.stopPropagation();fpStep('${esc(x.id)}',-1)">－</button>$1<button type="button" class="fp-step" aria-label="יותר" onclick="event.stopPropagation();fpStep('${esc(x.id)}',1)">＋</button>`)}catch(_){}
+    return h;
+  };
+}
+function stepFoodSheet(dir){
+  const a=$('quickFoodAmount'),u=$('foodUnit');if(!a)return;
+  const st=stepOf(u&&u.value),cur=Number(a.value)||0;let v=Math.round((cur+dir*st)*10)/10;if(v<=0)v=st===1?0.5:st;
+  a.value=v;a.dispatchEvent(new Event('input',{bubbles:true}));
+}
+window.fpStepFood=stepFoodSheet;
+const oUpd=updateFoodChoice;
+updateFoodChoice=function(){
+  const r=oUpd.apply(this,arguments);
+  try{const a=$('quickFoodAmount');if(a&&!a.dataset.fpStep){a.dataset.fpStep='1';
+    const wrap=document.createElement('div');wrap.className='fp-step-wrap';a.parentNode.insertBefore(wrap,a);
+    wrap.insertAdjacentHTML('beforeend','<button type="button" class="fp-step" aria-label="פחות" onclick="fpStepFood(-1)">－</button>');wrap.appendChild(a);
+    wrap.insertAdjacentHTML('beforeend','<button type="button" class="fp-step" aria-label="יותר" onclick="fpStepFood(1)">＋</button>');}
+    const R=state.fpReplace,box=$('foodChoice');
+    if(R&&box&&!box.querySelector('.fp-replace-note'))box.insertAdjacentHTML('afterbegin',`<div class="fp-replace-note muted" style="margin-bottom:6px">מחליף את: <b>${esc(R.old.name)}</b></div>`);
+  }catch(e){console.error(e)}
+  return r;
+};
+document.head.insertAdjacentHTML('beforeend','<style>.fp-step{min-width:34px;height:34px;border-radius:10px;border:1px solid var(--line,#2a323b);background:none;color:inherit;font-size:18px;line-height:1;cursor:pointer}.fp-step-wrap{display:flex;gap:6px;align-items:center}.fp-step-wrap input{flex:1;min-width:0}.entry-actions .qty{width:56px}</style>');
+
 window.fpRenameMeal=async function(){
   const m=selectedSingleMeal();if(!m)return;
   const name=prompt('שם חדש לארוחה',m.name||'');if(name===null||!name.trim())return;

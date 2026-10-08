@@ -1477,6 +1477,9 @@ function saveSettings(payload) {
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'hidden_workout_plans')){const ids=JSON.parse(String(payload.hidden_workout_plans||'[]'));if(!Array.isArray(ids)||ids.length>300||ids.some(x=>typeof x!=='string'||x.length>200))throw new Error('רשימת תוכניות לא תקינה');setSetting_('hidden_workout_plans',JSON.stringify(ids));}
   ['has_watch','shake_hidden','notifications_in_app'].forEach(k=>{if(payload&&Object.prototype.hasOwnProperty.call(payload,k))setSetting_(k,payload[k]==='on'?'on':'off');});
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'meal_hours')){const h=String(payload.meal_hours||'').split(',').map(Number);if(h.length!==3||h.some(x=>!Number.isInteger(x)||x<0||x>23)||!(h[0]<h[1]&&h[1]<h[2]))throw new Error('שעות לא תקינות');setSetting_('meal_hours','h:'+h.join(','));}
+  if(payload&&payload.day_cut){const c=payload.day_cut,d=String(c.date||''),amt=Math.round(Number(c.amount)/10)*10,cap=Math.round((Number(getSettings_().calorie_goal)||2200)*0.2/10)*10;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!(amt>=0&&amt<=cap))throw new Error('אפשר להוריד עד '+cap+' קל׳');
+    const m=dayCuts_(),keep=addDays_(d,-14);Object.keys(m).forEach(k=>{if(k<keep)delete m[k]});m[d]=amt;setSetting_('day_cuts',JSON.stringify(m));}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'oil_profile')){const v=String(payload.oil_profile||'');if(['s','r','g'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('oil_profile',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'chicken_skin')){setSetting_('chicken_skin',payload.chicken_skin==='with'?'with':'without');}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'display_name')){const name=String(payload.display_name||'').trim();if(!name||name.length>40)throw new Error('כתוב שם עד 40 תווים');setSetting_('display_name',name);}
@@ -2087,6 +2090,31 @@ function calculateTotals_(date) {
   return calculateTotalsFromEntries_(entries,settings,date);
 }
 
+
+// 2.7.0: day-to-day shift of the goal.
+// No event this week: what was not eaten yesterday moves to today (up to 300).
+// Yesterday over the goal: the user chose how much to take off today (saved in day_cuts, up to 20% of the goal).
+// Never below the daily minimum of bankContext_.
+function dayCuts_(settings){try{const m=JSON.parse(String((settings||getSettings_()).day_cuts||'{}'));return m&&typeof m==='object'?m:{}}catch(_){return {}}}
+function dayShift_(date,settings,goalBefore){
+  const s=settings||getSettings_(),today=getWorkingDateFromSettings_(s),out={total:0,plus:0,cut:0};
+  if(date>today)return out;
+  const base=Number(s.calorie_goal)||2200,ctx=bankContext_(s);
+  const y=addDays_(date,-1),events=listBankEvents_(s);
+  const eventSoon=events.some(e=>e.date>=y&&e.date<=addDays_(date,6));
+  if(!eventSoon){
+    const ye=getEntriesForDate_(y),eaten=ye.reduce((n,x)=>n+(Number(x.calories)||0),0);
+    const goalY=base+bankAdjust_(y,events,s).delta;
+    const under=goalY-eaten;
+    if(eaten>=goalY*0.5&&under>=50)out.plus=Math.min(300,Math.round(under/10)*10);
+  }
+  const cut=Number(dayCuts_(s)[date])||0;
+  if(cut>0)out.cut=Math.min(cut,Math.round(base*0.2/10)*10);
+  let total=out.plus-out.cut;
+  const floor=ctx.noDeficit?Math.max(goalBefore,ctx.minDay):ctx.minDay;
+  if(goalBefore+total<floor)total=Math.min(0,floor-goalBefore);
+  out.total=total;return out;
+}
 function calculateTotalsFromEntries_(entries,settings,date){
   const total = key => round1_(entries.reduce((s,x)=>s+(Number(x[key])||0),0));
   const calories = total('calories');
@@ -2094,13 +2122,14 @@ function calculateTotalsFromEntries_(entries,settings,date){
   const baseGoal = Number(settings.calorie_goal || 2200);
   // v0.31: the calorie bank moves the goal of specific days; protein never changes.
   const bank = date ? bankAdjust_(date,null,settings) : {delta:0,items:[]};
-  const calorieGoal = Math.round(baseGoal + bank.delta);
+  const shift = date ? dayShift_(date,settings,baseGoal+bank.delta) : {total:0,plus:0,cut:0};
+  const calorieGoal = Math.round(baseGoal + bank.delta + shift.total);
   const proteinGoal = Number(settings.protein_goal || 130);
   const freeGoal = Number(settings.free_calories_goal || 250);
   const freeUsed = round1_(entries.filter(x=>x.sourceType==='free'||x.category==='חופשי').reduce((s,x)=>s+(Number(x.calories)||0),0));
   return {calories, protein, carbs:total('carbs'), fat:total('fat'),
     remaining:round1_(calorieGoal-calories), proteinRemaining:round1_(proteinGoal-protein),
-    freeUsed, freeRemaining:round1_(freeGoal-freeUsed), calorieGoal, proteinGoal, freeGoal, baseGoal, bank};
+    freeUsed, freeRemaining:round1_(freeGoal-freeUsed), calorieGoal, proteinGoal, freeGoal, baseGoal, bank, shift};
 }
 
 function getHistory_(days) {
@@ -2686,7 +2715,7 @@ function bankContext_(settings){
   const weight=Number(profile.weight)||75,male=profile.sex==='m';
   const fatMin=Math.round(weight*0.6),minDay=Math.max(male?1500:1200,Math.round(protein*4+fatMin*9+320));
   const noDeficit=Number(profile.age)<18||profile.medical===true;
-  const maxCut=noDeficit?0:Math.max(0,Math.min(Math.round(goal*0.15/10)*10,goal-minDay));
+  const maxCut=noDeficit?0:Math.max(0,Math.min(Math.round(goal*0.10/10)*10,goal-minDay));
   return {goal,protein,fatMin,minDay,maxCut,noDeficit};
 }
 // v0.32: an event far ahead is saved without a plan ("pending"). Its reminder opens on the Sunday of its week,
