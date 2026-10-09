@@ -1537,6 +1537,9 @@ function saveSettings(payload) {
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'calendar_kind')){const v=String(payload.calendar_kind||'');if(['apple','google','other'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('calendar_kind',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'event_cut_pct')){const v=Math.round(Number(payload.event_cut_pct)),r=goalRules_().save;if(!(v>=Math.round(r[0]*100)&&v<=Math.round(r[1]*100)))throw new Error('אפשר בין '+Math.round(r[0]*100)+'% ל-'+Math.round(r[1]*100)+'%');setSetting_('event_cut_pct',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'oil_profile')){const v=String(payload.oil_profile||'');if(['s','r','g'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('oil_profile',v);}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'day_rollover_hour')){const v=Number(payload.day_rollover_hour);if(!Number.isInteger(v)||v<0||v>6)throw new Error('אפשר בין חצות ל-6 בבוקר');setSetting_('day_rollover_hour',v);delete payload.day_rollover_hour;}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'holidays')){const v=String(payload.holidays||'').split(',').filter(x=>['jewish','muslim','christian','civil','none'].indexOf(x)>=0);setSetting_('holidays',v.join(',')||'none');}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'shabbat_json')){const v=String(payload.shabbat_json||'');if(v.length>4000)throw new Error('ארוך מדי');try{JSON.parse(v||'{}')}catch(_){throw new Error('נתונים לא תקינים')}setSetting_('shabbat_json',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'chicken_skin')){setSetting_('chicken_skin',payload.chicken_skin==='with'?'with':'without');}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'display_name')){const name=String(payload.display_name||'').trim();if(!name||name.length>40)throw new Error('כתוב שם עד 40 תווים');setSetting_('display_name',name);}
   const allowed = ['calorie_goal','protein_goal','free_calories_goal','shake_calories','shake_protein','shake_carbs','shake_fat','day_rollover_hour'];
@@ -2166,6 +2169,13 @@ function dayGap_(d,events,s,base,cap,extra){
 }
 // the event that day d "belongs to": d is in the 6 days before it, and the event was already added on that day
 function eventOfDay_(d,events){return events.find(e=>d<e.date&&d>=addDays_(e.date,-6)&&(!e.created||e.created<=d))||null;}
+function dayStreak_(y,events,s,base){
+  const min=Math.max(80,Math.round(base*0.05)),gaps=[];
+  for(let i=0;i<3;i++){const d=addDays_(y,-i);if(events.some(e=>e.date===d)||eventOfDay_(d,events))return null;const g=dayGap_(d,events,s,base,1e9);if(Math.abs(g)<min)return null;gaps.push(g);}
+  if(!(gaps.every(g=>g>0)||gaps.every(g=>g<0)))return null;
+  const avg=Math.round(gaps.reduce((n,g)=>n+Math.abs(g),0)/3/10)*10;
+  return {dir:gaps[0]>0?'under':'over',avg,start:addDays_(y,-2),end:y};
+}
 function dayShift_(date,settings,goalBefore){
   const s=settings||getSettings_(),today=getWorkingDateFromSettings_(s),out={total:0,plus:0,cut:0,toEvent:0,eventId:'',source:''};
   const base=Number(s.calorie_goal)||2200,ctx=bankContext_(s),rules=goalRules_(s),cap=Math.round(base*rules.shift/10)*10;
@@ -2183,6 +2193,9 @@ function dayShift_(date,settings,goalBefore){
   }else if(!eventOfDay_(y,events)){
     const yEvent=events.some(e=>e.date===y),extra=yEvent?Number(dayShift_(y,s,base+bankAdjust_(y,events,s).delta).toEvent)||0:0;
     const gap=dayGap_(y,events,s,base,cap,extra),cuts=dayCuts_(s);
+    // 2.12.0: 3 days in a row on the same side of the goal → it is a habit, not a single day: nothing moves, the app asks what happened
+    const streak=yEvent?null:dayStreak_(y,events,s,base);
+    if(streak){out.streak=streak;out.source='streak';out.total=0;out.cap=cap;return out;}
     if(gap>0)out.plus=gap;
     else if(gap<0){out.cut=-gap;out.over=-gap;if(Object.prototype.hasOwnProperty.call(cuts,date))out.cut=Math.max(0,Math.min(-gap,Number(cuts[date])||0));}
     out.source=yEvent?'after-event':'yesterday';
@@ -2652,7 +2665,7 @@ function getWorkingDateFromSettings_(settings) {
   // 2.10.0: admin "time machine" for testing day-to-day rules
   const dbg=String((settings||{}).debug_today||'');if(/^\d{4}-\d{2}-\d{2}$/.test(dbg))return dbg;
   const now=new Date(); const hour=Number(Utilities.formatDate(now,APP.timezone,'H'));
-  const rollover=Number((settings||{}).day_rollover_hour||1);
+  const rv=(settings||{}).day_rollover_hour,rollover=(rv===''||rv==null||isNaN(Number(rv)))?1:Math.max(0,Math.min(6,Number(rv)));
   const shifted=hour<rollover?new Date(now.getTime()-86400000):now;
   return Utilities.formatDate(shifted,APP.timezone,'yyyy-MM-dd');
 }
@@ -2846,14 +2859,15 @@ function saveBankEvent(payload){
   const settings=getSettings_(),today=getWorkingDateFromSettings_(settings);
   if(date<addDays_(today,-14)||date>addDays_(today,183))throw new Error('אפשר לרשום אירוע עד שבועיים אחורה או חצי שנה קדימה');
   const type=BANK_TYPES[p.type]?p.type:'other',size=BANK_SIZES[p.size]?p.size:'medium';
+  const ctx0=bankContext_(settings),own=Number(p.extra)>0?Math.max(100,Math.min(ctx0.eventCap||1500,Math.round(Number(p.extra)/10)*10)):0,extraVal=own||BANK_SIZES[size];
   const method=['spread','day','half','none'].includes(p.method)?p.method:'half';
   const others=listBankEvents_(settings).filter(e=>e.id!==id);
   if(others.some(e=>e.date===date))throw new Error('כבר יש אירוע בתאריך הזה');
-  const plan=date>today&&bankRemindDate_(date)>today?{mode:'pending',method:'later',adj:{}}:computeBankPlan_(bankContext_(settings),today,date,BANK_SIZES[size],method,others);
+  const plan=date>today&&bankRemindDate_(date)>today?{mode:'pending',method:'later',adj:{}}:computeBankPlan_(ctx0,today,date,extraVal,method,others);
   const stored=plan.mode==='pending'?'later':plan.method,note=String(p.note||'').trim().slice(0,120);
   let savedId=id;
-  if(id){const f=findBankEventRow_(id);f.sh.getRange(f.row,2,1,9).setValues([[date,type,size,BANK_SIZES[size],stored,JSON.stringify(plan),'active',new Date(),note]]);}
-  else{savedId=Utilities.getUuid();sheet_('App_Events').appendRow([savedId,date,type,size,BANK_SIZES[size],stored,JSON.stringify(plan),'active',new Date(),note,today,Date.now()]);}
+  if(id){const f=findBankEventRow_(id);f.sh.getRange(f.row,2,1,9).setValues([[date,type,size,extraVal,stored,JSON.stringify(plan),'active',new Date(),note]]);}
+  else{savedId=Utilities.getUuid();sheet_('App_Events').appendRow([savedId,date,type,size,extraVal,stored,JSON.stringify(plan),'active',new Date(),note,today,Date.now()]);}
   const weekStart=addDays_(today,-new Date(today+'T12:00:00Z').getUTCDay());
   if(date>=weekStart&&date<=addDays_(weekStart,6))setSetting_('bank_week_asked','w:'+weekStart);
   const out=bankResponse_(p.viewDate);out.savedId=savedId;out.plan=plan;return out;

@@ -105,7 +105,9 @@ function renderAdmin(){
         ${x.scope==='me'?`<div style="display:flex;gap:6px;margin-top:6px"><input id="fpAdmFlag_${x.id}" placeholder="שם השדרוג להפעלה אצלו" style="flex:1"><button type="button" class="btn light mini" onclick="fpAdmFlag('${x.id}','${esc(x.uid)}')">הפעל אצלו</button></div>`:''}
         <button type="button" class="linkish muted" style="font-size:12.5px;margin-top:4px" onclick="fpAdmDel('${x.id}')">🗑 מחק</button></div>`:'')}).join('')}</div>`);
 }
-window.fpAdmSet=async function(id,status){const f=fb(),note=(($('fpAdmNote_'+id)||{}).value||'').trim();try{await f.reqUpdate(id,{status,note});const x=A.list.find(r=>r.id===id);if(x){x.status=status;x.note=note}markSeen(id);renderAdmin();badge();toast('עודכן')}catch(e){toast(e.message,true)}};
+window.fpAdmSet=async function(id,status){const f=fb(),note=(($('fpAdmNote_'+id)||{}).value||'').trim();try{await f.reqUpdate(id,{status,note});const x=A.list.find(r=>r.id===id);if(x){x.status=status;x.note=note}
+  /* 2.12.0: the person who asked gets a push: "הבקשה שלך ׳X׳ אושרה" */
+  if(x&&x.uid&&(status==='progress'||status==='done')){try{f.push&&f.push('notifyRequestStatus',{to:x.uid,status,text:String(x.text||'').slice(0,60),note:note.slice(0,80)}).catch(()=>{})}catch(_){}}markSeen(id);renderAdmin();badge();toast('עודכן')}catch(e){toast(e.message,true)}};
 window.fpAdmFlag=async function(id,uid){const key=(($('fpAdmFlag_'+id)||{}).value||'').trim();if(!key)return toast('כתוב שם לשדרוג',true);try{await fb().flagSet(uid,key,true);toast(`השדרוג "${key}" הופעל אצלו`)}catch(e){toast(e.message,true)}};
 window.fpAdmDel=async function(id){if(!confirm('למחוק את הבקשה?'))return;try{await fb().reqDelete(id);A.list=A.list.filter(r=>r.id!==id);renderAdmin();badge()}catch(e){toast(e.message,true)}};
 
@@ -148,7 +150,7 @@ window.fpTimeMachine=async function(date){
     let msg='';
     if(date&&!on)await call('debugStart',{});
     if(date)await call('saveSettings',{debug_today:date});
-    else{const r=await call('debugEnd',{});msg=r?` · נמחקו ${r.entries||0} פריטים${r.events?`, ${r.events} אירועים`:''}`:''}
+    else{const r=await call('debugEnd',{});try{['fp2.streakEnd','fp2.evSum','fp2.holAsked','fp2.shabLook','fp2.shabFill','fp2.shabSaved','fp2.cutAsked','fp2.twoAsked'].forEach(k=>localStorage.removeItem(k))}catch(_){}msg=r?` · נמחקו ${r.entries||0} פריטים${r.events?`, ${r.events} אירועים`:''}`:''}
     ['fp2.cutAsked','fp2.twoAsked','fp2.evStart'].forEach(k=>{try{localStorage.removeItem(k)}catch(_){}});
     state.data=await call('getBootstrapData');state.date=state.data.date;state.todayDate=state.data.date;renderAll();tmBanner();
     toast(date?'מצב בדיקה: היום = '+displayDate(date):'חזרת להיום האמיתי'+msg);
