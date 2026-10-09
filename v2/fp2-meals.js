@@ -59,6 +59,7 @@ function enhanceMeals(){
     box.appendChild(list);
   });
 }
+window.fpMealsCollapseAll=function(){OPEN={};store(OPEN_KEY,OPEN)};
 window.fpToggleMeal=function(btn,gid){const box=btn.closest('.fp-meal');if(!box)return;
   if(state.select&&state.select.mode==='ent'){selectMeal(gid,!box.classList.contains('sel'));return}const on=!box.classList.contains('open');box.classList.toggle('open',on);if(on)OPEN[gid]=1;else delete OPEN[gid];store(OPEN_KEY,OPEN)};
 
@@ -91,7 +92,6 @@ window.fpAddToMeal=function(gid){
   state.fpAddToGroup={t:Date.now(),gid,name:items[0].mealOption||items[0].name||'ארוחה',category:items[0].category,date:state.date};
   state.addCategory=['בוקר','צהריים','ערב'].includes(items[0].category)?items[0].category:state.addCategory;
   showView('add');
-  toast('בחר מה להוסיף ל״'+state.fpAddToGroup.name+'״');
 };
 async function joinToMeal(before,target){
   await waitForSync();
@@ -103,8 +103,10 @@ async function joinToMeal(before,target){
   try{
     const r=await call('groupEntries',{ids:members.concat(fresh),name:target.name,category:target.category});
     applyDay(r.day);renderDay();
-    if(OPEN[target.gid]){delete OPEN[target.gid];OPEN[r.groupId]=1;store(OPEN_KEY,OPEN)}
+    if(OPEN[target.gid]){delete OPEN[target.gid];store(OPEN_KEY,OPEN)}
+    target.gid=String(r.groupId);
     toast('נוסף ל״'+target.name+'״');
+    return r.groupId;
   }catch(e){toast(e.message,true)}
 }
 const oSave=saveFood;
@@ -113,14 +115,39 @@ saveFood=async function(){
   if(R){state.fpReplace=null;
     if(R.date===state.date&&Date.now()-R.t<15*60000){const before=new Set((state.data.entries||[]).map(x=>String(x.id)));const r=await oSave.apply(this,arguments);finishReplace(before,R);return r}}
   const target=state.fpAddToGroup;state.fpAddToGroup=null;
-  if(!target||target.date!==state.date||Date.now()-target.t>15*60000)return oSave.apply(this,arguments);
+  if(!target||target.date!==state.date||Date.now()-target.t>30*60000)return oSave.apply(this,arguments);
   const before=new Set((state.data.entries||[]).map(x=>String(x.id)));
   const r=await oSave.apply(this,arguments);
-  joinToMeal(before,target);
+  /* 2.10.0: stay in "add to this meal" until the user taps "סיום" */
+  target.t=Date.now();state.fpAddToGroup=target;showView('add');addMode();
+  await joinToMeal(before,target);
+  if(state.fpAddToGroup===target)addMode();
   return r;
 };
+if(typeof addMeal==='function'){
+  const oAddMeal=addMeal;
+  addMeal=async function(){
+    const target=state.fpAddToGroup;
+    if(!target||target.date!==state.date)return oAddMeal.apply(this,arguments);
+    const before=new Set((state.data.entries||[]).map(x=>String(x.id)));
+    const r=await oAddMeal.apply(this,arguments);
+    target.t=Date.now();state.fpAddToGroup=target;
+    await joinToMeal(before,target);addMode();
+    return r;
+  };
+}
+/* the "adding to a meal" banner on the food and meals screens */
+function addMode(){
+  const T=state.fpAddToGroup;
+  ['add','meals'].forEach(v=>{const sec=$(v);if(!sec)return;let b=sec.querySelector('.fp-addmode');
+    if(!T){if(b)b.remove();return}
+    if(!b){sec.insertAdjacentHTML('afterbegin','<div class="card fp-addmode" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;margin-bottom:10px;border:1.5px solid var(--brand,#D7F36B)"></div>');b=sec.querySelector('.fp-addmode')}
+    b.innerHTML=`<span style="font-size:14px">🍽 מוסיף ל<b>״${esc(T.name)}״</b><br><small class="muted">כל מה שתבחר ייכנס לארוחה</small></span><button type="button" class="btn mini" style="flex:none" onclick="fpAddModeDone()">✓ סיום</button>`;});
+}
+window.fpAddModeDone=function(){state.fpAddToGroup=null;addMode();showView('today')};
+window.fpAddModeRefresh=addMode;
 /* leaving the add screen without saving cancels "add to meal" */
-if(typeof showView==='function'){const oShow=showView;showView=function(v){if(v==='today'){state.fpAddToGroup=null;state.fpReplace=null}return oShow.apply(this,arguments)}}
+if(typeof showView==='function'){const oShow=showView;showView=function(v){if(v==='today'){state.fpAddToGroup=null;state.fpReplace=null}const r=oShow.apply(this,arguments);try{addMode()}catch(_){}return r}}
 
 /* ---------- each part of the day: count meals as one item, total at the bottom ---------- */
 const SEC_NAME={'בוקר':'בוקר','צהריים':'צהריים','ערב':'ערב','נוספים':'ביניים ונוספים'};
@@ -280,6 +307,8 @@ updateFoodChoice=function(){
     const wrap=document.createElement('div');wrap.className='fp-step-wrap';a.parentNode.insertBefore(wrap,a);
     wrap.insertAdjacentHTML('beforeend','<button type="button" class="fp-step" aria-label="פחות" onclick="fpStepFood(-1)">－</button>');wrap.appendChild(a);
     wrap.insertAdjacentHTML('beforeend','<button type="button" class="fp-step" aria-label="יותר" onclick="fpStepFood(1)">＋</button>');}
+    const T=state.fpAddToGroup,addBtn=$('foodChoice')&&[...$('foodChoice').querySelectorAll('button')].find(b=>/saveFood\(\)/.test(b.getAttribute('onclick')||''));
+    if(addBtn)addBtn.textContent=state.fpReplace?'החלף':T?'הוסף ל״'+T.name+'״':'הוסף ליום';
     const R=state.fpReplace,box=$('foodChoice');
     if(R&&box&&!box.querySelector('.fp-replace-note'))box.insertAdjacentHTML('afterbegin',`<div class="fp-replace-note muted" style="margin-bottom:6px">מחליף את: <b>${esc(R.old.name)}</b></div>`);
   }catch(e){console.error(e)}

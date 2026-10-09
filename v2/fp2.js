@@ -336,6 +336,7 @@ function shareHook(fn,args){
 window.FP2={
   calLoad,calPut,
   reqAdd,reqList,reqUpdate,reqDelete,flagsLoad,flagsGet,flagSet,flag:k=>!!(myFlags&&myFlags[k]),
+  icsUrl:(title,date)=>{const u=pushUrl();return u?u+'?ics=1&d='+encodeURIComponent(String(date||'').replace(/-/g,''))+'&t='+encodeURIComponent(String(title||'אירוע').slice(0,80)):''},
   sharedAll:()=>sharedList||[],sharedLoad,sharedPut,sharedDel:async id=>{await deleteDoc(doc(db,'sharedFoods',String(id)));if(sharedList)sharedList=sharedList.filter(f=>f.sharedId!==String(id))},
   oldConfig:oldConf,
   userId:()=>user?.uid,

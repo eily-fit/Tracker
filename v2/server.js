@@ -94,7 +94,7 @@ function apiFunctions_(){
     saveWorkout,deleteWorkout,restoreWorkout,moveExerciseToSession,saveExercise,updateExercise,deleteExercise,restoreExercise,saveWorkoutPlan,deleteWorkoutPlan,restoreWorkoutPlan,
     getExerciseProgress,startVideoUpload,uploadVideoChunk,checkVideoUpload,deleteWorkoutVideo,restoreWorkoutVideo,
     getProcessData,saveProcessCheckin,deleteProcessCheckin,restoreProcessCheckin,getApiInfo,setApiPassword,getTrash,restoreTrashItem,purgeTrashItem,emptyTrash,createInvite,getUsersInfo,whoAmI,deleteUser,saveProfile,deleteMeals,saveMyFoods,saveProgressPhoto,getProgressPhotos,getProgressPhoto,deleteProgressPhoto,getWeeklyReview,applyCalorieGoal,saveWeeklyCheckin,listWeeklyCheckins,getExportData,cleanupDuplicateWorkouts,
-    exportSheetInfo,exportSheet,exportProps,saveBankEvent,chooseBankMethod,mergeDuplicateEntries,saveHealthData,estimateFoodPhoto,deleteBankEvent,restoreBankEvent,setBankWeekAnswer,savePlusMenu,moveEntries,renameMealGroup};
+    exportSheetInfo,exportSheet,exportProps,saveBankEvent,chooseBankMethod,mergeDuplicateEntries,saveHealthData,estimateFoodPhoto,deleteBankEvent,restoreBankEvent,setBankWeekAnswer,savePlusMenu,moveEntries,renameMealGroup,duplicateEntries};
 }
 
 function hashPassword_(p){return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,'elai-salt-v1|'+String(p||''),Utilities.Charset.UTF_8));}
@@ -469,6 +469,8 @@ function saveMeal(payload) {
   return getDayData_(date);
 }
 
+function oilOfNote_(n){const m=/שמן:([\d.]+)ג/.exec(String(n||''));return m?Number(m[1])||0:0;}
+function setOilNote_(n,g){const base=String(n||'').replace(/\s*·?\s*שמן:[\d.]+ג/,'').trim();return g>0?(base?base+' · ':'')+'שמן:'+round1_(g)+'ג':base;}
 function extraOilRow_(payload,date,groupId,category,title){
   const g=Number(payload&&payload.oilGrams);if(!Number.isFinite(g)||g<=0)return null;
   return [Utilities.getUuid(),date,new Date(),category||'נוסף','food',title||'','שמן נוסף',round1_(g),'גרם',round1_(g*9),0,0,round1_(g),'תוספת שמן',false,'תוספת שנבחרה במפורש; ערכי המזון המקורי נשמרו',groupId];
@@ -494,8 +496,10 @@ function saveFood(payload) {
     round1_((Number(payload.carbs) || 0) * ratio), round1_((Number(payload.fat) || 0) * ratio),
     payload.source || 'הזנה ידנית', false, payload.notes || '', Utilities.getUuid()
   ];
-  const extraOil=extraOilRow_(payload,date,row[16],row[3],'');
-  appendRows_(APP.sheets.entries, extraOil?[row,extraOil]:[row]);
+  // 2.10.0: added oil is part of the food itself (calories + fat), remembered in the notes as "שמן:Xג" so it can be changed later.
+  const oil=Number(payload&&payload.oilGrams);
+  if(Number.isFinite(oil)&&oil>0){row[9]=round1_(row[9]+oil*9);row[12]=round1_(row[12]+oil);row[15]=setOilNote_(row[15],oil);}
+  appendRows_(APP.sheets.entries,[row]);
   if (!/צמרת/.test(String(payload.source||''))) cacheFood_(payload);
   touchDay_(date);
   return getDayData_(date);
@@ -622,6 +626,7 @@ function updateEntry(payload) {
   row[10] = round1_((Number(row[10]) || 0) * ratio);
   row[11] = round1_((Number(row[11]) || 0) * ratio);
   row[12] = round1_((Number(row[12]) || 0) * ratio);
+  const oilG=oilOfNote_(row[15]);if(oilG)row[15]=setOilNote_(row[15],oilG*ratio);
   row[14] = amount === 0;
   sh.getRange(idx + 1, 1, 1, APP.entryHeaders.length).setValues([row.slice(0, APP.entryHeaders.length)]);
   touchDay_(formatDateValue_(row[1]));
@@ -639,6 +644,7 @@ function editEntry(payload){
   const row=values[idx].slice(0,APP.entryHeaders.length);
   row[7]=amount;row[8]=String(payload.unit||row[8]||'');
   ['calories','protein','carbs','fat'].forEach((k,j)=>{const v=Number(payload[k]);row[9+j]=round1_(Number.isFinite(v)&&v>=0?v:0);});
+  if(payload.oilGrams!==undefined)row[15]=setOilNote_(row[15],Math.max(0,Number(payload.oilGrams)||0));
   row[14]=false;
   sh.getRange(idx+1,1,1,row.length).setValues([row]);
   const date=formatDateValue_(row[1]);touchDay_(date);return getDayData_(date);
@@ -699,6 +705,25 @@ function moveEntries(payload){
   for(let i=1;i<values.length;i++){const r=values[i];if(!ids.has(String(r[0]))||r[14]===true)continue;sh.getRange(i+1,4).setValue(cat);date=formatDateValue_(r[1]);}
   if(!date)throw new Error('הפריטים לא נמצאו. רענן ונסה שוב');
   touchDay_(date);return getDayData_(date);
+}
+// 2.10.0: duplicate logged items. An item in a meal is copied into the same meal; a whole meal becomes a new meal.
+function duplicateEntries(payload){
+  const ids=new Set((payload&&payload.ids||[]).map(String)),times=Math.max(1,Math.min(10,Math.round(Number(payload&&payload.times)||1)));
+  if(!ids.size)throw new Error('לא נבחרו פריטים');
+  const values=sheet_(APP.sheets.entries).getDataRange().getValues(),rows=values.slice(1).filter(r=>ids.has(String(r[0]))&&r[14]!==true);
+  if(!rows.length)throw new Error('הפריטים לא נמצאו. רענן ונסה שוב');
+  const byGroup={};values.slice(1).forEach(r=>{if(r[0]&&r[14]!==true&&r[16])(byGroup[String(r[16])]=byGroup[String(r[16])]||[]).push(String(r[0]))});
+  const out=[],now=new Date();
+  for(let t=0;t<times;t++){
+    const newGroup={};
+    rows.forEach(r=>{
+      const g=String(r[16]||''),whole=g&&byGroup[g]&&byGroup[g].every(id=>ids.has(id))&&['meal','dish'].indexOf(String(r[4]))>=0;
+      const ng=whole?(newGroup[g]=newGroup[g]||Utilities.getUuid()):(['meal','dish'].indexOf(String(r[4]))>=0&&g?g:Utilities.getUuid());
+      const c=r.slice(0,APP.entryHeaders.length);c[0]=Utilities.getUuid();c[2]=now;c[14]=false;c[16]=ng;out.push(c);
+    });
+  }
+  appendRows_(APP.sheets.entries,out);
+  const date=formatDateValue_(rows[0][1]);touchDay_(date);return getDayData_(date);
 }
 function renameMealGroup(payload){
   const gid=String(payload&&payload.groupId||''),name=String(payload&&payload.name||'').trim().slice(0,60);
@@ -1480,6 +1505,7 @@ function saveSettings(payload) {
   if(payload&&payload.day_cut){const c=payload.day_cut,d=String(c.date||''),amt=Math.round(Number(c.amount)/10)*10,cap=Math.round((Number(getSettings_().calorie_goal)||2200)*goalRules_().shift/10)*10;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!(amt>=0&&amt<=cap))throw new Error('אפשר להוריד עד '+cap+' קל׳');
     const m=dayCuts_(),keep=addDays_(d,-14);Object.keys(m).forEach(k=>{if(k<keep)delete m[k]});m[d]=amt;setSetting_('day_cuts',JSON.stringify(m));}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'debug_today')){const v=String(payload.debug_today||'');if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v))throw new Error('תאריך לא תקין');setSetting_('debug_today',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'event_cut_pct')){const v=Math.round(Number(payload.event_cut_pct)),r=goalRules_().save;if(!(v>=Math.round(r[0]*100)&&v<=Math.round(r[1]*100)))throw new Error('אפשר בין '+Math.round(r[0]*100)+'% ל-'+Math.round(r[1]*100)+'%');setSetting_('event_cut_pct',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'oil_profile')){const v=String(payload.oil_profile||'');if(['s','r','g'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('oil_profile',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'chicken_skin')){setSetting_('chicken_skin',payload.chicken_skin==='with'?'with':'without');}
@@ -2593,6 +2619,8 @@ function getWorkingDate_() {
 }
 
 function getWorkingDateFromSettings_(settings) {
+  // 2.10.0: admin "time machine" for testing day-to-day rules
+  const dbg=String((settings||{}).debug_today||'');if(/^\d{4}-\d{2}-\d{2}$/.test(dbg))return dbg;
   const now=new Date(); const hour=Number(Utilities.formatDate(now,APP.timezone,'H'));
   const rollover=Number((settings||{}).day_rollover_hour||1);
   const shifted=hour<rollover?new Date(now.getTime()-86400000):now;
@@ -2833,6 +2861,7 @@ function bankPlan(p){
   var addD=function(d,n){var x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10);};
   var goal=Number(p.goal)||2200,protein=Number(p.protein)||130,maxCut=Math.max(0,Number(p.maxCut)||0),extra=Math.max(0,Number(p.extra)||0);
   var used=p.used||{},skip=p.skip||[],out={mode:'future',method:p.method||'half',days:[],banked:0,onDay:0,overflow:0,adj:{},preBudget:0,eventMeal:0,proteinBefore:Math.round(protein*0.7),dayGoal:goal,forced:''};
+  if(p.method==='none'){out.mode=p.date<p.today?'past':p.date===p.today?'today':'future';out.preBudget=goal;return out;}
   if(p.date<p.today){out.mode='past';out.method='none';return out;}
   if(p.date===p.today){out.mode='today';if(out.method!=='day')out.forced='today';out.method='day';}
   else if(p.noDeficit&&out.method!=='day'){out.forced='safety';out.method='day';}

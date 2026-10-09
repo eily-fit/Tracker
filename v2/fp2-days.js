@@ -49,9 +49,7 @@ function quotaCheck(){
     const over=Number(t.calories)>Number(t.calorieGoal)+5,key=d+':'+Math.round(t.calorieGoal);
     if(overSeen[key]===undefined){overSeen[key]=over;return}       // first look at this day: no alert for what was already there
     if(over&&!overSeen[key]){
-      const ev=(state.data.bank&&state.data.bank.events||[]).some(e=>e.date===d&&e.plan&&e.plan.mode!=='past'),sh=t.shift||{};
-      const what=ev?'של יום האירוע':sh.plus?'של היום (כולל התוספת מאתמול)':'היומית';
-      quotaAlert(`עברת את המכסה ${what} ב-${kc(t.calories-t.calorieGoal)} קל׳`);
+      quotaAlert(`עברת את הערך הקלורי של היום ב-${kc(t.calories-t.calorieGoal)} קל׳`);
     }
     overSeen[key]=over;
   }catch(_){}
@@ -59,7 +57,7 @@ function quotaCheck(){
 function quotaAlert(text){
   const old=$('fpQuota');if(old)old.remove();
   document.body.insertAdjacentHTML('beforeend',`<div id="fpQuota" role="status" style="position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:60;background:#3a1d1f;color:#fff;border:1px solid #E5484D;border-radius:14px;padding:12px 14px 12px 34px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:14px;line-height:1.45">
-    <b>⚠️ ${esc(text)}</b><div style="opacity:.85;margin-top:2px">אפשר להמשיך לרשום. מחר היעד יתאזן לבד, עד הגבול של התהליך שלך.</div>
+    <b>⚠️ ${esc(text)}</b>
     <button type="button" onclick="this.parentNode.remove()" style="position:absolute;top:6px;left:8px;background:none;border:0;color:#fff;font-size:18px" aria-label="סגור">✕</button></div>`);
   setTimeout(()=>{const e=$('fpQuota');if(e)e.remove()},9000);
 }
@@ -137,23 +135,37 @@ function askedList(){try{return JSON.parse(LS.get('fp2.evAsked')||'[]')}catch(_)
 function markAsked(id){const a=askedList();if(a.indexOf(id)<0){a.push(id);LS.set('fp2.evAsked',JSON.stringify(a.slice(-80)))}}
 function unplannedCheck(){
   try{
+    if($('fpUnplanned'))return;
     const t=todayISO(),ids=calIds(),asked=askedList();
-    const e=(state.data.bank&&state.data.bank.events||[]).find(x=>x.date>t&&x.date<=addD(t,6)&&ids.has(x.id)&&asked.indexOf(x.id)<0&&x.plan&&x.plan.mode!=='pending'&&x.plan.method!=='none');
+    // 2.10.0: every event that came from the phone calendar in the next two weeks is asked about once, right after it arrives
+    const e=(state.data.bank&&state.data.bank.events||[]).find(x=>x.date>=t&&x.date<=addD(t,14)&&ids.has(x.id)&&asked.indexOf(x.id)<0);
     if(e)whenFree(()=>showUnplanned(e));
   }catch(_){}
 }
+window.fpUnplannedCheck=unplannedCheck;
+let UP={pct:null};
 function showUnplanned(e){
-  markAsked(e.id);
-  const c=bankCtx(),t=todayISO(),others=bankEvents().filter(x=>x.id!==e.id),p=bankPlanFor(e.date,e.extra,'spread',others);
-  const days=p.days.length,avg=days?Math.round(p.banked/days/10)*10:0,when=e.date===addD(t,1)?'מחר':'ביום '+NAMES[new Date(e.date+'T12:00:00').getDay()];
+  const old=$('fpUnplanned');if(old)old.remove();
+  if(e.id!=='demo')markAsked(e.id);
+  const c=bankCtx(),t=todayISO(),when=e.date===t?'היום':e.date===addD(t,1)?'מחר':'ביום '+NAMES[new Date(e.date+'T12:00:00').getDay()]+' '+displayDate(e.date);
+  const range=c.saveRange||[10,15],lo=range[0],hi=range[1],opts=[...new Set([lo,Math.round((lo+hi)/2),hi])];
+  if(UP.pct==null||opts.indexOf(UP.pct)<0)UP.pct=c.savePct&&opts.indexOf(c.savePct)>=0?c.savePct:hi;
+  const others=bankEvents().filter(x=>x.id!==e.id),cut=Math.round((c.goal||2200)*UP.pct/1000)*10;
+  const p=bankPlanFor(e.date,e.extra||700,'spread',others),days=p.days.length;
+  const daysTxt=days?(days===1?'יום אחד':days+' ימים'):'';
   const opt=(m,title,sub,rec)=>`<button type="button" class="remind-opt${rec?' rec':''}" onclick="fpUnplanned('${e.id}','${m}')"><b>${title}${rec?' (מומלץ)':''}</b><span>${sub}</span></button>`;
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpUnplanned"><div class="sheet"><h3 style="margin:0 0 6px">📅 נוסף אירוע מהיומן: ${esc(e.label)}</h3>
-    <p class="muted" style="margin:0 0 8px">${esc(when)} · איך להתכונן?</p>
-    ${!c.noDeficit&&days?opt('spread','לחסוך בימים שנשארו',`${days===1?'יום אחד':days+' ימים'}, כ-${kc(avg)} קל׳ פחות ביום (${c.savePct||''}% מהיעד).`,true):''}
-    ${opt('day','רק ביום עצמו','שאר הימים רגילים. ביום האירוע אוכלים קל וחלבוני עד האירוע.',c.noDeficit||!days)}
-    ${opt('none','לא לשנות כלום','היעדים נשארים כמו שהם. אם תעבור ביום האירוע, זה בסדר.')}
-    <button type="button" class="linkish muted" style="margin-top:10px" onclick="document.getElementById('fpUnplanned').remove();openEventSheet({edit:'${e.id}'})">✏️ לשנות פרטים</button></div></div>`);
-  window.fpUnplanned=async function(id,m){const s=$('fpUnplanned');if(s)s.remove();await chooseMethodUI(id,m)};
+  const canSave=!c.noDeficit&&days>0;
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpUnplanned"><div class="sheet"><h3 style="margin:0 0 6px">📅 אירוע חדש מהיומן: ${esc(e.label)}</h3>
+    <p class="muted" style="margin:0 0 10px">${esc(when)} · איך להתכונן? עד שתבחר, היעדים לא משתנים.</p>
+    ${canSave?`<div class="field" style="margin:0 0 4px"><label>אם חוסכים, עד כמה ביום?</label><div class="meal-tabs" style="flex-wrap:wrap">${opts.map(v=>`<button type="button" class="chip${UP.pct===v?' active':''}" onclick="fpUnplannedPct('${e.id}',${v})">${v}% · <bdi>${kc(Math.round((c.goal||2200)*v/1000)*10)}</bdi> קל׳</button>`).join('')}</div></div>`:''}
+    ${canSave?opt('spread','לחסוך כל יום עד האירוע',`${daysTxt}, עד ${kc(cut)} קל׳ פחות ביום. מה שנחסך מחכה לך ביום האירוע.`,true):''}
+    ${opt('day','רק ביום עצמו','שאר הימים רגילים. ביום האירוע אוכלים קל וחלבוני עד האירוע.',!canSave)}
+    ${opt('none','ללא שינוי','היעדים לא משתנים. אם תעבור ביום האירוע, זה מתאזן למחרת.')}
+    <button type="button" class="linkish muted" style="margin-top:10px" onclick="document.getElementById('fpUnplanned').remove();${e.id==='demo'?'':`openEventSheet({edit:'${e.id}'})`}">✏️ לשנות פרטים</button></div></div>`);
+  window.fpUnplannedPct=function(id,v){UP.pct=v;showUnplanned(id==='demo'?e:(bankEvents().find(x=>x.id===id)||e))};
+  window.fpUnplanned=async function(id,m){const s=$('fpUnplanned');if(s)s.remove();if(id==='demo')return;
+    if(m==='spread'&&UP.pct&&UP.pct!==c.savePct){try{await fpSetSavePct(UP.pct)}catch(_){}}
+    await chooseMethodUI(id,m);setTimeout(unplannedCheck,800)};
 }
 window.fpUnplannedPreview=()=>{const t=todayISO();showUnplanned({id:'demo',date:addD(t,3),label:'יום הולדת לדנה',extra:700,plan:{}})};
 
@@ -162,25 +174,25 @@ const EVK='fp2.evStart';
 function evStart(d){try{const m=JSON.parse(LS.get(EVK)||'{}');return m[d]||null}catch(_){return null}}
 function setEvStart(d,v){let m={};try{m=JSON.parse(LS.get(EVK)||'{}')||{}}catch(_){}Object.keys(m).forEach(k=>{if(k<addD(d,-7))delete m[k]});if(v)m[d]=v;else delete m[d];LS.set(EVK,JSON.stringify(m))}
 function eventBar(ev,d){
-  const p=ev.plan||{},t=state.data.totals||{},sh=t.shift||{},isView=d===state.date,today=d===todayISO();
+  const p=ev.plan||{},t=state.data.totals||{},sh=t.shift||{},isView=d===state.date,today=d===todayISO(),none=p.method==='none';
   const saved=Math.max(0,Math.round((Number(p.eventMeal)||0)+(isView?Number(sh.toEvent)||0:0)));
   const st=today&&isView?evStart(d):null;
-  let line,sub='',pct=0,over=false,btn='';
-  if(st){const ids=new Set(st.ids||[]),ate=Math.round((state.data.entries||[]).filter(x=>!ids.has(String(x.id))).reduce((n,x)=>n+(Number(x.calories)||0),0));
-    pct=saved?Math.min(100,ate/saved*100):100;over=ate>saved;
-    line=`🎉 באירוע: אכלת <b>${kc(ate)}</b> מתוך <b>${kc(saved)}</b> קל׳`;
-    sub=over?`עברת ב-${kc(ate-saved)}. זה בסדר, מחר זה יתאזן עד הגבול של התהליך שלך.`:`נשארו לך באירוע ${kc(saved-ate)} קל׳`;
-    btn=`<button type="button" class="linkish muted" style="font-size:13px" onclick="fpEventStop('${d}')">ביטול</button>`;}
-  else{const goal=Number(t.calorieGoal)||0,eaten=Number(t.calories)||0;
-    line=`🎉 ${today?'היום':esc(dayName(d))}: ${esc(ev.label)} · לאירוע ${today?'נשמרו':'יישמרו'} <b>${kc(saved)}</b> קל׳`;
-    if(isView&&goal){pct=Math.min(100,eaten/goal*100);over=eaten>goal;sub=`אכלת היום ${kc(eaten)} מתוך ${kc(goal)}`}
-    if(today&&isView)btn=`<button type="button" class="btn mini" style="padding:6px 12px;min-height:0;font-size:13px" onclick="fpEventStart('${d}')">התחלתי את האירוע</button>`;}
+  if(st){
+    // 2.10.0: once the event started, the ring is the only counter: whatever is left today is for the event
+    return `<div class="card fp-evbar" style="padding:10px 12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font-size:15px"><b>🎉 ${esc(ev.label)} התחיל!</b></span>
+      <button type="button" class="btn light mini" style="flex:none;padding:6px 10px;min-height:0;font-size:13px" onclick="fpEventStop('${d}')">עדיין לא התחיל</button></div>`;
+  }
+  const goal=Number(t.calorieGoal)||0,eaten=Number(t.calories)||0;let pct=0,over=false,sub='',btn='';
+  const line=`🎉 ${today?'היום':esc(dayName(d))}: ${esc(ev.label)}${none?'':` · לאירוע ${today?'נשמרו':'יישמרו'} <b>${kc(saved)}</b> קל׳`}`;
+  if(isView&&goal){pct=Math.min(100,eaten/goal*100);over=eaten>goal;sub=`אכלת היום ${kc(eaten)} מתוך ${kc(goal)}`}
+  if(today&&isView)btn=`<button type="button" class="btn mini" style="padding:6px 12px;min-height:0;font-size:13px" onclick="fpEventStart('${d}')">התחלתי את האירוע</button>`;
   return `<div class="card fp-evbar" style="padding:10px 12px;margin:8px 0">
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between"><span style="font-size:14px;line-height:1.4">${line}</span><button type="button" class="icon-btn" aria-label="עריכת האירוע" style="flex:none" onclick="openEventSheet({edit:'${ev.id}'})">✏️</button></div>
     ${isView?`<div class="meter" style="margin:6px 0 4px"><i style="width:${pct}%;${over?'background:#E5484D':''}"></i></div>`:''}
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="muted" style="font-size:12.5px">${sub}</span>${btn}</div></div>`;
 }
-window.fpEventStart=function(d){setEvStart(d,{ts:Date.now(),ids:(state.data.entries||[]).map(x=>String(x.id))});renderBankCard();toast('מעכשיו כל מה שתוסיף נספר לאירוע 🎉')};
+window.fpEventStart=function(d){setEvStart(d,{ts:Date.now(),ids:(state.data.entries||[]).map(x=>String(x.id))});renderBankCard();toast('תהנה! 🎉 מה שנשאר בעיגול הוא לאירוע')};
 window.fpEventStop=function(d){setEvStart(d,null);renderBankCard()};
 if(typeof renderBankCard==='function'){
   const o=renderBankCard;
@@ -203,6 +215,7 @@ window.fpSetSavePct=async function(v){
   }catch(e){toast(e.message,true)}
 };
 
+window.fpMorningChecks=()=>whenFree(morningChecks);
 const boot1=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.settings&&typeof call==='function'){clearInterval(boot1);setTimeout(()=>whenFree(morningChecks),7000)}},1000);
 
 /* ---------- "יתרת פינוק": the week without the day shifts, and where the number comes from ---------- */

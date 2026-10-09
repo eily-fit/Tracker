@@ -38,6 +38,8 @@ function applySpoon(){
 const oIngest=tzIngest;
 tzIngest=function(raw){
   const d=typeof raw==='string'?JSON.parse(raw):raw;
+  /* 2.10.0: an older copy (from the old Google server) has no basics. Never let it replace the new one. */
+  if(X.basics&&X.basics.length&&!(d&&d.basics&&d.basics.length))return;
   oIngest.call(this,d);
   X.hidden=new Set(d.hidden||[]);X.oils=new Set(d.oils||[]);
   if(X.hidden.size)tz.foods=tz.foods.filter(f=>!X.hidden.has(f.code));
@@ -54,13 +56,30 @@ tzIngest=function(raw){
 
 /* ---------- newer tzameret.json on GitHub replaces an older saved copy ---------- */
 let checked=false;
+let refreshing=null;
 async function refreshData(){
-  if(checked)return;checked=true;
-  try{
+  if(checked&&X.basics.length)return;
+  if(refreshing)return refreshing;
+  checked=true;
+  refreshing=(async()=>{try{
     const r=await fetch('tzameret.json',{cache:'no-cache'});if(!r.ok)return;
     const t=await r.text(),v=(JSON.parse(t)||{}).v;
-    if(v&&v!==tz.version){tzIngest(t);try{localStorage.setItem(TZ_STORE_KEY,t)}catch(_){}try{renderTzStatus()}catch(_){}}
-  }catch(e){console.error(e)}
+    if(v&&(v!==tz.version||!X.basics.length)){X.basics=[];tzIngest(t);try{localStorage.setItem(TZ_STORE_KEY,t)}catch(_){}try{renderTzStatus()}catch(_){}}
+  }catch(e){console.error(e)}finally{refreshing=null}})();
+  return refreshing;
+}
+/* 2.10.0: the old Google server may hold an older copy of צמרת. It answered slower than GitHub and replaced the
+   new data (no basic names, eggs S/M/L, bread 30.6 g). Now GitHub is always loaded first, and the server copy is
+   used only when the GitHub file can't be read. */
+if(typeof loadTzameret==='function'){
+  const oLoad=loadTzameret;
+  loadTzameret=function(force){
+    return (async()=>{
+      try{await refreshData()}catch(_){}
+      if(X.basics.length)return tz.ready;
+      return oLoad.call(this,force);
+    })();
+  };
 }
 /* a saved copy from before this version has no extras: read it again through the new ingest */
 const boot=setInterval(()=>{

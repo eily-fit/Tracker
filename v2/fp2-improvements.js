@@ -387,7 +387,7 @@ async function syncCalendar(manual,fresh){
       if(m&&!ex)continue; // the user removed it in the app: leave it removed
       if(ex){if(m[1]!==ev.title){try{await call('saveBankEvent',{id:m[0],date:ex.date,type:ex.type,size:ex.size,method:ex.method==='later'?'half':ex.method,note:ev.title.slice(0,120)});m[1]=ev.title;updated++}catch(_){}}continue}
       if(taken.has(ev.date)||added>=60)continue; // one event per date
-      try{const r=await call('saveBankEvent',{date:ev.date,type:'other',size:'medium',method:'half',note:ev.title.slice(0,120)});if(r&&r.savedId){map[ev.id]=[r.savedId,ev.title];taken.add(ev.date);added++}}catch(_){}
+      try{const r=await call('saveBankEvent',{date:ev.date,type:'other',size:'medium',method:'none',note:ev.title.slice(0,120)});if(r&&r.savedId){map[ev.id]=[r.savedId,ev.title];taken.add(ev.date);added++}}catch(_){}
     }
     for(const k of Object.keys(map)){
       if(seen[k])continue;const ex=byId[map[k][0]];
@@ -396,6 +396,7 @@ async function syncCalendar(manual,fresh){
     }
     window.FP2.setProp('CAL_MAP',JSON.stringify(map));window.FP2.setProp('CAL_LAST',String(Date.now()));
     if(added||removed||updated){state.data=await call('getBootstrapData',state.date);renderAll()}
+    try{if(window.fpUnplannedCheck)window.fpUnplannedCheck()}catch(_){}
     if(manual)toast(added||removed||updated?`היומן סונכרן: ${added} נוספו${removed?`, ${removed} הוסרו`:''}${updated?`, ${updated} עודכנו`:''}`:'היומן מעודכן');
   }catch(e){if(manual)toast(e.message==='push-not-configured'?'שירות הענן עוד לא מוגדר':e.message,true)}
   finally{calBusy=false;const st=$('calStatus');if(st)st.textContent=calStatusText()}
@@ -413,6 +414,8 @@ function addEventToPhoneCalendar(){
   const d=s=>s.replace(/-/g,''),end=isoAdd(ev.date,1);
   const esc2=s=>s.replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,');
   const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FitPro//HE','BEGIN:VEVENT','UID:fitpro-'+d(ev.date)+'-'+Date.now()+'@fitpro','DTSTAMP:'+new Date().toISOString().replace(/[-:]|\.\d+/g,''),'DTSTART;VALUE=DATE:'+d(ev.date),'DTEND;VALUE=DATE:'+d(end),'SUMMARY:'+esc2(title),'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  /* 2.10.0: on the iPhone a link to the server opens "Add to Calendar" directly; the file is only a fallback */
+  try{const u=window.FP2&&window.FP2.icsUrl&&window.FP2.icsUrl(title,ev.date);if(u){const w=window.open(u,'_blank');if(w){toast('לחץ "הוסף ליומן" במסך שנפתח');return}}}catch(_){}
   const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'}),file=new File([blob],'fitpro-event.ics',{type:'text/calendar'});
   (async()=>{
     try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title});toast('בחר "יומן" כדי להוסיף את האירוע');return}}catch(e){if(e&&e.name==='AbortError')return}
