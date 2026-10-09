@@ -183,7 +183,7 @@ async function notificationAPI(name,data){
   return j.result;
 }
 async function messagingSDK(){if(!pushSDK)pushSDK=await import('https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging.js');return pushSDK}
-function queueNotificationSync(){clearTimeout(notifyTimer);notifyTimer=setTimeout(async()=>{if(!core||!user||!pushUrl())return;try{const fresh=await core.call('getBootstrapData',[]);const events=(fresh.bank?.events||[]).map(e=>({id:e.id,date:e.date,label:e.label}));const data={events,inApp:fresh.settings?.notifications_in_app!=='off'};const sig=JSON.stringify(data);if(sig===notifyLast)return;await notificationAPI('syncNotificationEvents',data);notifyLast=sig}catch(e){console.warn('Notification server is not available yet',e.message)}},1500)}
+function queueNotificationSync(){clearTimeout(notifyTimer);notifyTimer=setTimeout(async()=>{if(!core||!user||!pushUrl())return;try{const fresh=await core.call('getBootstrapData',[]);let calIds=new Set();try{const m=JSON.parse((core.store.props&&core.store.props.CAL_MAP)||'{}');calIds=new Set(Object.values(m).map(x=>x&&x[0]))}catch(_){}const events=(fresh.bank?.events||[]).map(e=>({id:e.id,date:e.date,label:e.label,cal:calIds.has(e.id)}));const data={events,inApp:fresh.settings?.notifications_in_app!=='off'};const sig=JSON.stringify(data);if(sig===notifyLast)return;await notificationAPI('syncNotificationEvents',data);notifyLast=sig}catch(e){console.warn('Notification server is not available yet',e.message)}},1500)}
 async function enablePush(){
   if(!user)throw new Error('התחבר קודם לחשבון');
   const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;
@@ -336,6 +336,7 @@ function shareHook(fn,args){
 window.FP2={
   calLoad,calPut,
   reqAdd,reqList,reqUpdate,reqDelete,flagsLoad,flagsGet,flagSet,flag:k=>!!(myFlags&&myFlags[k]),
+  calendarFeed:()=>notificationAPI('getCalendarFeed',{}),
   icsUrl:(title,date)=>{const u=pushUrl();return u?u+'?ics=1&d='+encodeURIComponent(String(date||'').replace(/-/g,''))+'&t='+encodeURIComponent(String(title||'אירוע').slice(0,80)):''},
   sharedAll:()=>sharedList||[],sharedLoad,sharedPut,sharedDel:async id=>{await deleteDoc(doc(db,'sharedFoods',String(id)));if(sharedList)sharedList=sharedList.filter(f=>f.sharedId!==String(id))},
   oldConfig:oldConf,

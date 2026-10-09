@@ -94,7 +94,7 @@ function apiFunctions_(){
     saveWorkout,deleteWorkout,restoreWorkout,moveExerciseToSession,saveExercise,updateExercise,deleteExercise,restoreExercise,saveWorkoutPlan,deleteWorkoutPlan,restoreWorkoutPlan,
     getExerciseProgress,startVideoUpload,uploadVideoChunk,checkVideoUpload,deleteWorkoutVideo,restoreWorkoutVideo,
     getProcessData,saveProcessCheckin,deleteProcessCheckin,restoreProcessCheckin,getApiInfo,setApiPassword,getTrash,restoreTrashItem,purgeTrashItem,emptyTrash,createInvite,getUsersInfo,whoAmI,deleteUser,saveProfile,deleteMeals,saveMyFoods,saveProgressPhoto,getProgressPhotos,getProgressPhoto,deleteProgressPhoto,getWeeklyReview,applyCalorieGoal,saveWeeklyCheckin,listWeeklyCheckins,getExportData,cleanupDuplicateWorkouts,
-    exportSheetInfo,exportSheet,exportProps,saveBankEvent,chooseBankMethod,mergeDuplicateEntries,saveHealthData,estimateFoodPhoto,deleteBankEvent,restoreBankEvent,setBankWeekAnswer,savePlusMenu,moveEntries,renameMealGroup,duplicateEntries};
+    exportSheetInfo,exportSheet,exportProps,saveBankEvent,chooseBankMethod,mergeDuplicateEntries,saveHealthData,estimateFoodPhoto,deleteBankEvent,restoreBankEvent,setBankWeekAnswer,savePlusMenu,moveEntries,renameMealGroup,duplicateEntries,debugStart,debugEnd};
 }
 
 function hashPassword_(p){return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,'elai-salt-v1|'+String(p||''),Utilities.Charset.UTF_8));}
@@ -724,6 +724,33 @@ function duplicateEntries(payload){
   }
   appendRows_(APP.sheets.entries,out);
   const date=formatDateValue_(rows[0][1]);touchDay_(date);return getDayData_(date);
+}
+// 2.11.0: the admin "time machine" is a clean test: everything added while it is on is removed when it is turned off,
+// and the settings go back to what they were.
+const DEBUG_SKIP=['debug_today','debug_since','debug_snapshot','debug_dates','has_usda_key','has_openai_key'];
+function debugStart(payload){
+  const s=getSettings_(),since=Date.now(),snap={};
+  Object.keys(s).forEach(k=>{if(DEBUG_SKIP.indexOf(k)<0)snap[k]=s[k]});
+  setSetting_('debug_since',String(since));setSetting_('debug_snapshot',JSON.stringify(snap));setSetting_('debug_dates','[]');
+  return {since};
+}
+function debugEnd(){
+  const s=getSettings_(),since=Number(s.debug_since)||0,out={entries:0,events:0,days:0,measures:0,checkins:0};
+  let dates=[];try{dates=JSON.parse(String(s.debug_dates||'[]'))||[]}catch(_){}
+  if(since){
+    const ts=v=>{const t=v instanceof Date?v.getTime():new Date(v).getTime();return isFinite(t)?t:0};
+    const del=(name,test,mark)=>{let sh;try{sh=sheet_(name)}catch(_){return 0}const v=sh.getDataRange().getValues();let n=0;for(let i=v.length-1;i>=1;i--){if(test(v[i])){if(mark)mark(sh,i,v[i]);else sh.deleteRow(i+1);n++}}return n};
+    out.entries=del(APP.sheets.entries,r=>r[0]&&ts(r[2])>=since);
+    out.events=del('App_Events',r=>r[0]&&Number(r[11])>=since,(sh,i)=>sh.getRange(i+1,8).setValue('deleted'));
+    out.measures=del('App_BodyMeasurements',r=>r[0]&&ts(r[7])>=since);
+    out.days=del('App_DailySummary',r=>r[0]&&ts(r[8])>=since&&dates.indexOf(formatDateValue_(r[0]))>=0,(sh,i)=>sh.getRange(i+1,6,1,2).setValues([['','']]));
+    try{out.checkins=del('App_WeeklyCheckins',r=>r[0]&&ts(r[3])>=since)}catch(_){}
+    let snap={};try{snap=JSON.parse(String(s.debug_snapshot||'{}'))||{}}catch(_){}
+    Object.keys(s).forEach(k=>{if(DEBUG_SKIP.indexOf(k)>=0)return;const was=Object.prototype.hasOwnProperty.call(snap,k)?snap[k]:'';if(String(was)!==String(s[k]))setSetting_(k,was)});
+    dates.forEach(d=>{try{touchDay_(d)}catch(_){}});
+  }
+  ['debug_today','debug_since','debug_snapshot','debug_dates'].forEach(k=>setSetting_(k,''));
+  return out;
 }
 function renameMealGroup(payload){
   const gid=String(payload&&payload.groupId||''),name=String(payload&&payload.name||'').trim().slice(0,60);
@@ -1505,7 +1532,9 @@ function saveSettings(payload) {
   if(payload&&payload.day_cut){const c=payload.day_cut,d=String(c.date||''),amt=Math.round(Number(c.amount)/10)*10,cap=Math.round((Number(getSettings_().calorie_goal)||2200)*goalRules_().shift/10)*10;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!(amt>=0&&amt<=cap))throw new Error('אפשר להוריד עד '+cap+' קל׳');
     const m=dayCuts_(),keep=addDays_(d,-14);Object.keys(m).forEach(k=>{if(k<keep)delete m[k]});m[d]=amt;setSetting_('day_cuts',JSON.stringify(m));}
-  if(payload&&Object.prototype.hasOwnProperty.call(payload,'debug_today')){const v=String(payload.debug_today||'');if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v))throw new Error('תאריך לא תקין');setSetting_('debug_today',v);}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'debug_today')){const v=String(payload.debug_today||'');if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v))throw new Error('תאריך לא תקין');setSetting_('debug_today',v);
+    if(v){const cur=getSettings_();if(cur.debug_since){let ds=[];try{ds=JSON.parse(String(cur.debug_dates||'[]'))||[]}catch(_){}if(ds.indexOf(v)<0){ds.push(v);setSetting_('debug_dates',JSON.stringify(ds.slice(-60)))}}}}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'calendar_kind')){const v=String(payload.calendar_kind||'');if(['apple','google','other'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('calendar_kind',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'event_cut_pct')){const v=Math.round(Number(payload.event_cut_pct)),r=goalRules_().save;if(!(v>=Math.round(r[0]*100)&&v<=Math.round(r[1]*100)))throw new Error('אפשר בין '+Math.round(r[0]*100)+'% ל-'+Math.round(r[1]*100)+'%');setSetting_('event_cut_pct',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'oil_profile')){const v=String(payload.oil_profile||'');if(['s','r','g'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('oil_profile',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'chicken_skin')){setSetting_('chicken_skin',payload.chicken_skin==='with'?'with':'without');}
@@ -2146,7 +2175,8 @@ function dayShift_(date,settings,goalBefore){
   if(own){
     // event day: the gaps of the days before it (since it was added) come here, within the event limit
     out.eventId=own.id;let sum=0;
-    for(let d=addDays_(date,-6);d<date;d=addDays_(d,1)){if(d<today&&(!own.created||own.created<=d)&&!events.some(e=>e.date===d))sum+=dayGap_(d,events,s,base,cap);}
+    // 2.11.0: an event added at the last moment still gets what was saved in the 3 days before it was added
+    for(let d=addDays_(date,-6);d<date;d=addDays_(d,1)){if(d<today&&(!own.created||addDays_(own.created,-3)<=d)&&!events.some(e=>e.date===d))sum+=dayGap_(d,events,s,base,cap);}
     const evCap=Math.round(base*rules.event/10)*10,already=Number(own.plan&&own.plan.adj&&own.plan.adj[date])||0;
     if(sum>0)sum=Math.max(0,Math.min(sum,evCap-already));
     out.toEvent=sum;if(sum>0)out.plus=sum;else if(sum<0)out.cut=-sum;out.source='event';
@@ -2823,7 +2853,7 @@ function saveBankEvent(payload){
   const stored=plan.mode==='pending'?'later':plan.method,note=String(p.note||'').trim().slice(0,120);
   let savedId=id;
   if(id){const f=findBankEventRow_(id);f.sh.getRange(f.row,2,1,9).setValues([[date,type,size,BANK_SIZES[size],stored,JSON.stringify(plan),'active',new Date(),note]]);}
-  else{savedId=Utilities.getUuid();sheet_('App_Events').appendRow([savedId,date,type,size,BANK_SIZES[size],stored,JSON.stringify(plan),'active',new Date(),note,today]);}
+  else{savedId=Utilities.getUuid();sheet_('App_Events').appendRow([savedId,date,type,size,BANK_SIZES[size],stored,JSON.stringify(plan),'active',new Date(),note,today,Date.now()]);}
   const weekStart=addDays_(today,-new Date(today+'T12:00:00Z').getUTCDay());
   if(date>=weekStart&&date<=addDays_(weekStart,6))setSetting_('bank_week_asked','w:'+weekStart);
   const out=bankResponse_(p.viewDate);out.savedId=savedId;out.plan=plan;return out;

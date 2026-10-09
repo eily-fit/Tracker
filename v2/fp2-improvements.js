@@ -403,8 +403,9 @@ async function syncCalendar(manual,fresh){
 }
 (function(){
   const r=renderSettings;renderSettings=function(){const result=r.apply(this,arguments);try{renderCalendarSettings()}catch(e){console.error(e)}return result};
-  const all=renderAll;renderAll=function(){const result=all.apply(this,arguments);if(!calStarted&&window.FP2?.getProp?.('CAL_URL')){calStarted=true;setTimeout(()=>syncCalendar(false),2500)}return result};
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&window.FP2?.getProp?.('CAL_URL')){const last=Number(window.FP2.getProp('CAL_LAST'))||0;if(Date.now()-last>20*1000)syncCalendar(false)}});
+  const all=renderAll;renderAll=function(){const result=all.apply(this,arguments);if(!calStarted&&window.FP2?.getProp?.('CAL_URL')){calStarted=true;setTimeout(()=>syncCalendar(false),1500);setTimeout(()=>syncCalendar(false),20000)}return result};
+  /* 2.11.0: every time the app comes back to the screen, check the calendar again (and once more a bit later) */
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&window.FP2?.getProp?.('CAL_URL')){const last=Number(window.FP2.getProp('CAL_LAST'))||0;if(Date.now()-last>5*1000){syncCalendar(false);setTimeout(()=>syncCalendar(false),20000)}}});
 })();
 
 /* ===== כפתור יומן בכותרת + "הוסף ליומן שלי" באירוע ===== */

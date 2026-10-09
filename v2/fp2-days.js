@@ -31,7 +31,8 @@ function shiftNote(){
   try{
     const t=state.data&&state.data.totals,sh=t&&t.shift;let el=$('fpShiftNote');
     let text='';
-    if(sh&&sh.source==='event'&&sh.toEvent)text=sh.toEvent>0?`ליום האירוע נוספו ${kc(sh.toEvent)} שנשארו מהימים שלפני`:`מיום האירוע ירדו ${kc(-sh.toEvent)} כי עברת בימים שלפני`;
+    if(sh&&sh.source==='event')text='';  // on the event day the event bar says it all
+    else if(sh&&sh.total&&sh.source==='after-event')text='היעד היום: '+(sh.total<0?`−${kc(-sh.total)} כי באירוע אתמול עברת ב-${kc(sh.over||-sh.total)}`:`+${kc(sh.total)} שנשארו מהאירוע אתמול`);
     else if(sh&&sh.total){const parts=[];if(sh.plus)parts.push(`+${kc(sh.plus)} שלא אכלת אתמול`);if(sh.cut)parts.push(`−${kc(sh.cut)} כי אתמול עברת את היעד`);if(!parts.length)parts.push((sh.total>0?'+':'')+kc(sh.total));text='היעד היום: '+parts.join(' · ')}
     else if(sh&&sh.source==='event-week'&&state.date===todayISO())text='השבוע יש אירוע: מה שנשאר מאתמול נשמר ליום האירוע';
     if(!text){if(el)el.remove();return}
@@ -46,10 +47,10 @@ const overSeen={};
 function quotaCheck(){
   try{
     const t=state.data&&state.data.totals,d=state.date;if(!t||!d||d!==todayISO())return;
-    const over=Number(t.calories)>Number(t.calorieGoal)+5,key=d+':'+Math.round(t.calorieGoal);
+    const g=Number(t.calorieGoal)-heldBack(),over=Number(t.calories)>g+5,key=d+':'+Math.round(g);
     if(overSeen[key]===undefined){overSeen[key]=over;return}       // first look at this day: no alert for what was already there
     if(over&&!overSeen[key]){
-      quotaAlert(`עברת את הערך הקלורי של היום ב-${kc(t.calories-t.calorieGoal)} קל׳`);
+      quotaAlert(`עברת את הערך הקלורי של היום ב-${kc(t.calories-g)} קל׳`);
     }
     overSeen[key]=over;
   }catch(_){}
@@ -63,7 +64,11 @@ function quotaAlert(text){
 }
 window.fpQuotaPreview=quotaAlert;
 
-if(typeof renderTotals==='function'){const o=renderTotals;renderTotals=function(){const r=o.apply(this,arguments);shiftNote();quotaCheck();return r}}
+if(typeof renderTotals==='function'){const o=renderTotals;renderTotals=function(){
+  // on an event day, before "התחלתי את האירוע", the ring shows a regular day
+  let held=0,real=null;try{held=heldBack();if(held>0&&state.data&&state.data.totals){real=state.data.totals;state.data.totals=Object.assign({},real,{calorieGoal:real.calorieGoal-held,remaining:Math.round((real.remaining-held)*10)/10})}}catch(_){}
+  let r;try{r=o.apply(this,arguments)}finally{if(real)state.data.totals=real}
+  shiftNote();quotaCheck();return r}}
 
 /* ---------- morning: yesterday over the goal (already applied, can be changed) ---------- */
 function showOver(today,sh){
@@ -155,7 +160,7 @@ function showUnplanned(e){
   const daysTxt=days?(days===1?'יום אחד':days+' ימים'):'';
   const opt=(m,title,sub,rec)=>`<button type="button" class="remind-opt${rec?' rec':''}" onclick="fpUnplanned('${e.id}','${m}')"><b>${title}${rec?' (מומלץ)':''}</b><span>${sub}</span></button>`;
   const canSave=!c.noDeficit&&days>0;
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpUnplanned"><div class="sheet"><h3 style="margin:0 0 6px">📅 אירוע חדש מהיומן: ${esc(e.label)}</h3>
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpUnplanned"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">📅 אירוע חדש מהיומן: ${esc(e.label)}</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpUnplanned').remove();setTimeout(()=>window.fpUnplannedCheck&&fpUnplannedCheck(),600)">✕</button></div>
     <p class="muted" style="margin:0 0 10px">${esc(when)} · איך להתכונן? עד שתבחר, היעדים לא משתנים.</p>
     ${canSave?`<div class="field" style="margin:0 0 4px"><label>אם חוסכים, עד כמה ביום?</label><div class="meal-tabs" style="flex-wrap:wrap">${opts.map(v=>`<button type="button" class="chip${UP.pct===v?' active':''}" onclick="fpUnplannedPct('${e.id}',${v})">${v}% · <bdi>${kc(Math.round((c.goal||2200)*v/1000)*10)}</bdi> קל׳</button>`).join('')}</div></div>`:''}
     ${canSave?opt('spread','לחסוך כל יום עד האירוע',`${daysTxt}, עד ${kc(cut)} קל׳ פחות ביום. מה שנחסך מחכה לך ביום האירוע.`,true):''}
@@ -173,6 +178,14 @@ window.fpUnplannedPreview=()=>{const t=todayISO();showUnplanned({id:'demo',date:
 const EVK='fp2.evStart';
 function evStart(d){try{const m=JSON.parse(LS.get(EVK)||'{}');return m[d]||null}catch(_){return null}}
 function setEvStart(d,v){let m={};try{m=JSON.parse(LS.get(EVK)||'{}')||{}}catch(_){}Object.keys(m).forEach(k=>{if(k<addD(d,-7))delete m[k]});if(v)m[d]=v;else delete m[d];LS.set(EVK,JSON.stringify(m))}
+/* 2.11.0: the extra calories of an event day stay outside the ring until "התחלתי את האירוע" */
+function eventExtra(d){
+  try{const t=state.data.totals||{},ev=bankEvents().find(e=>e.date===d);if(!ev||!ev.plan||ev.plan.mode==='past'||ev.plan.mode==='pending')return 0;
+    const b=Math.max(0,Number(t.bank&&t.bank.delta)||0),sh=t.shift&&t.shift.source==='event'?Number(t.shift.toEvent)||0:0;
+    return Math.max(0,Math.round(b+sh));}catch(_){return 0}
+}
+function heldBack(){const d=state.date;if(d!==todayISO())return 0;if(evStart(d))return 0;return eventExtra(d)}
+window.fpEventHeld=heldBack;
 function eventBar(ev,d){
   const p=ev.plan||{},t=state.data.totals||{},sh=t.shift||{},isView=d===state.date,today=d===todayISO(),none=p.method==='none';
   const saved=Math.max(0,Math.round((Number(p.eventMeal)||0)+(isView?Number(sh.toEvent)||0:0)));
@@ -183,8 +196,8 @@ function eventBar(ev,d){
       <span style="font-size:15px"><b>🎉 ${esc(ev.label)} התחיל!</b></span>
       <button type="button" class="btn light mini" style="flex:none;padding:6px 10px;min-height:0;font-size:13px" onclick="fpEventStop('${d}')">עדיין לא התחיל</button></div>`;
   }
-  const goal=Number(t.calorieGoal)||0,eaten=Number(t.calories)||0;let pct=0,over=false,sub='',btn='';
-  const line=`🎉 ${today?'היום':esc(dayName(d))}: ${esc(ev.label)}${none?'':` · לאירוע ${today?'נשמרו':'יישמרו'} <b>${kc(saved)}</b> קל׳`}`;
+  const X=isView?eventExtra(d):Math.max(0,Number(p.adj&&p.adj[d])||0),goal=(Number(t.calorieGoal)||0)-(isView&&today?X:0),eaten=Number(t.calories)||0;let pct=0,over=false,sub='',btn='';
+  const line=`🎉 ${today?'היום':esc(dayName(d))}: ${esc(ev.label)} · `+(X>0?`שמורים לך לאירוע <b>+${kc(X)}</b> קל׳`:'מה שנשאר בעיגול הוא לאירוע');
   if(isView&&goal){pct=Math.min(100,eaten/goal*100);over=eaten>goal;sub=`אכלת היום ${kc(eaten)} מתוך ${kc(goal)}`}
   if(today&&isView)btn=`<button type="button" class="btn mini" style="padding:6px 12px;min-height:0;font-size:13px" onclick="fpEventStart('${d}')">התחלתי את האירוע</button>`;
   return `<div class="card fp-evbar" style="padding:10px 12px;margin:8px 0">
@@ -192,8 +205,8 @@ function eventBar(ev,d){
     ${isView?`<div class="meter" style="margin:6px 0 4px"><i style="width:${pct}%;${over?'background:#E5484D':''}"></i></div>`:''}
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="muted" style="font-size:12.5px">${sub}</span>${btn}</div></div>`;
 }
-window.fpEventStart=function(d){setEvStart(d,{ts:Date.now(),ids:(state.data.entries||[]).map(x=>String(x.id))});renderBankCard();toast('תהנה! 🎉 מה שנשאר בעיגול הוא לאירוע')};
-window.fpEventStop=function(d){setEvStart(d,null);renderBankCard()};
+window.fpEventStart=function(d){const X=eventExtra(d);setEvStart(d,{ts:Date.now(),ids:(state.data.entries||[]).map(x=>String(x.id))});try{renderTotals()}catch(_){}renderBankCard();toast(X>0?`תהנה! 🎉 נוספו לעיגול ${kc(X)} קל׳ לאירוע`:'תהנה! 🎉 מה שנשאר בעיגול הוא לאירוע')};
+window.fpEventStop=function(d){setEvStart(d,null);try{renderTotals()}catch(_){}renderBankCard()};
 if(typeof renderBankCard==='function'){
   const o=renderBankCard;
   renderBankCard=function(){

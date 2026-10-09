@@ -1,4 +1,4 @@
-const CACHE='fitpro2-2.10.0';
+const CACHE='fitpro2-2.11.1';
 const ASSETS=['./','index.html','server.js','fp2-core.js','fp2.js','fp2-nutrition.js','fp2-improvements.js','fp2-foods.js','fp2-meals.js','fp2-days.js','fp2-goal.js','fp2-photos.js','fp2-requests.js','fp2-fixes.js','fp2-progress.js','fp2-tour.js','fp2-anim.js','fp2-exlib.js','manifest.webmanifest','../icon-180.png','../icon-192.png','../icon-512.png'];
 const FB='https://www.gstatic.com/firebasejs/';
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>Promise.all(ASSETS.map(async u=>{try{const r=await fetch(new Request(u,{cache:'reload'}));if(r.ok)await c.put(u,r)}catch(_){}}))).then(()=>self.skipWaiting())));
@@ -22,10 +22,14 @@ self.addEventListener('fetch',e=>{
  }));
 });
 
+async function bumpBadge(){try{const c=await caches.open('fitpro-badge');const r=await c.match('n');const n=(r?Number(await r.text())||0:0)+1;await c.put('n',new Response(String(n)));if(self.navigator.setAppBadge)await self.navigator.setAppBadge(n)}catch(_){}}
+self.addEventListener('message',e=>{if(e.data&&e.data.type==='FITPRO_BADGE'){const n=Number(e.data.n)||0;e.waitUntil((async()=>{try{const c=await caches.open('fitpro-badge');await c.put('n',new Response(String(n)));if(n&&self.navigator.setAppBadge)await self.navigator.setAppBadge(n);else if(self.navigator.clearAppBadge)await self.navigator.clearAppBadge()}catch(_){}})())}});
 /* Data-only FCM payloads: exactly one notification, using the existing worker. */
 self.addEventListener('push',event=>{
   let payload;try{payload=event.data.json()}catch(_){return}
   const data=payload.data;if(!data||data.kind!=='fitpro-weekly')return;
+  /* 2.11.0: a new request → a number on the app icon (home screen), like other apps */
+  if(data.tag==='fitpro-request')event.waitUntil(bumpBadge());
   event.waitUntil(self.registration.showNotification(data.title||'FitPro',{
     body:data.body||'יש אירוע השבוע. פתח את האפליקציה לתכנון.',tag:data.tag||'fitpro-weekly',
     data:{url:new URL('./',self.registration.scope).href,week:data.week},icon:'../icon-192.png'

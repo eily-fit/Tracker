@@ -110,8 +110,13 @@ window.fpAdmFlag=async function(id,uid){const key=(($('fpAdmFlag_'+id)||{}).valu
 window.fpAdmDel=async function(id){if(!confirm('למחוק את הבקשה?'))return;try{await fb().reqDelete(id);A.list=A.list.filter(r=>r.id!==id);renderAdmin();badge()}catch(e){toast(e.message,true)}};
 
 /* the red number: on "עוד" in the bottom bar and on the admin entry in Settings */
+let lastBadge=-1;
 function badge(){
   if(!A.list)return;const n=A.list.filter(isNew).length;
+  if(n!==lastBadge){lastBadge=n;setTimeout(()=>{
+    try{if(navigator.setAppBadge){if(n)navigator.setAppBadge(n).catch(()=>{});else if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{})}}catch(_){}
+    /* the service worker adds 1 for every request push; keep its count in step with what the app shows */
+    try{if(window.caches)caches.open('fitpro-badge').then(c=>c.put('n',new Response(String(n)))).catch(()=>{})}catch(_){}},0)}
   const b=$('fpAdmBadge');if(b)b.innerHTML=n?` <span class="fp-badge">${n}</span>`:'';
   const nav=document.querySelector('nav button[data-tab="more"]');
   if(nav){let x=nav.querySelector('.fp-badge');if(!n){if(x)x.remove()}else{if(!x){nav.insertAdjacentHTML('beforeend','<span class="fp-badge"></span>');x=nav.querySelector('.fp-badge')}x.textContent=n>99?'99+':String(n)}}
@@ -130,17 +135,23 @@ if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=fun
 function injectTimeMachine(){
   const e=$('fpAdmEntry');if(!e||$('fpTM'))return;
   e.insertAdjacentHTML('afterend',`<details class="settings-section" id="fpTM"><summary>🕰 מכונת זמן (בדיקות, רק לך)</summary><div class="settings-body">
-    <p class="muted">האפליקציה תתנהג כאילו היום הוא התאריך שתבחר: הודעות בוקר, אירועים, צ׳ק-אין ומה שעובר מיום ליום. <b>שים לב:</b> מה שתרשום בזמן הזה נשמר באמת, על התאריך הזה. אחרי הבדיקה אפשר למחוק את הימים מיומן התזונה.</p>
+    <p class="muted">האפליקציה תתנהג כאילו היום הוא התאריך שתבחר: הודעות בוקר, אירועים, צ׳ק-אין ומה שעובר מיום ליום. כשמכבים, <b>כל מה שנוסף בזמן הבדיקה נמחק</b> וההגדרות חוזרות למה שהיו. לכן לא רושמים אוכל אמיתי באמצע בדיקה.</p>
     <div class="row"><div class="field"><input id="fpTMDate" type="date"></div><button type="button" class="btn" onclick="fpTimeMachine(document.getElementById('fpTMDate').value)">הפעל</button></div>
     <div class="quick-grid"><button type="button" class="btn light" onclick="fpTimeShift(1)">יום קדימה ›</button><button type="button" class="btn secondary" onclick="fpTimeMachine('')">כבה, חזור להיום</button></div></div></details>`);
   try{$('fpTMDate').value=(state.data.settings&&state.data.settings.debug_today)||state.todayDate||''}catch(_){}
 }
 window.fpTimeMachine=async function(date){
+  const on=!!(state.data.settings&&state.data.settings.debug_since);
+  if(!date&&on&&!confirm('לכבות את מצב הבדיקה? כל מה שנוסף בזמן הבדיקה יימחק, וההגדרות יחזרו למה שהיו.'))return;
   loading();
-  try{await call('saveSettings',{debug_today:date||''});
-    ['fp2.cutAsked','fp2.twoAsked'].forEach(k=>{try{localStorage.removeItem(k)}catch(_){}});
+  try{
+    let msg='';
+    if(date&&!on)await call('debugStart',{});
+    if(date)await call('saveSettings',{debug_today:date});
+    else{const r=await call('debugEnd',{});msg=r?` · נמחקו ${r.entries||0} פריטים${r.events?`, ${r.events} אירועים`:''}`:''}
+    ['fp2.cutAsked','fp2.twoAsked','fp2.evStart'].forEach(k=>{try{localStorage.removeItem(k)}catch(_){}});
     state.data=await call('getBootstrapData');state.date=state.data.date;state.todayDate=state.data.date;renderAll();tmBanner();
-    toast(date?'מכונת זמן: היום = '+displayDate(date):'חזרת להיום האמיתי');
+    toast(date?'מצב בדיקה: היום = '+displayDate(date):'חזרת להיום האמיתי'+msg);
     setTimeout(()=>{try{window.fpMorningChecks&&window.fpMorningChecks()}catch(_){}},600);
   }catch(e){toast(e.message,true)}finally{loading(false)}
 };
@@ -150,7 +161,7 @@ function tmBanner(){
   let b=$('fpTMBanner');
   if(!on){if(b)b.remove();return}
   if(!b){document.body.insertAdjacentHTML('afterbegin','<div id="fpTMBanner" style="position:sticky;top:0;z-index:70;background:#E5484D;color:#fff;font-size:13px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px"></div>');b=$('fpTMBanner')}
-  b.innerHTML=`<span>🕰 מצב בדיקה: היום = ${esc(displayDate(state.data.settings.debug_today))}</span><span><button type="button" style="background:#fff;color:#000;border:0;border-radius:8px;padding:3px 8px;margin-left:6px" onclick="fpTimeShift(1)">יום קדימה</button><button type="button" style="background:#fff;color:#000;border:0;border-radius:8px;padding:3px 8px" onclick="fpTimeMachine('')">כבה</button></span>`;
+  b.innerHTML=`<span>🕰 מצב בדיקה: היום = ${esc(displayDate(state.data.settings.debug_today))} · יימחק בכיבוי</span><span><button type="button" style="background:#fff;color:#000;border:0;border-radius:8px;padding:3px 8px;margin-left:6px" onclick="fpTimeShift(1)">יום קדימה</button><button type="button" style="background:#fff;color:#000;border:0;border-radius:8px;padding:3px 8px" onclick="fpTimeMachine('')">כבה</button></span>`;
 }
 if(typeof renderAll==='function'){const oRA=renderAll;renderAll=function(){const r=oRA.apply(this,arguments);try{tmBanner()}catch(_){}return r}}
 const tmBoot=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.settings){clearInterval(tmBoot);tmBanner()}},1000);
