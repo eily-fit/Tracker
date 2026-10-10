@@ -175,6 +175,8 @@
     if(a==='next')go(T.i+1);else if(a==='prev')go(T.i-1);else if(a==='skip')finish(false);else if(a==='act'){const s=S[T.i];try{s.act&&s.act.fn()}catch(_){}}
   }
   function startTour(){
+    /* 2.13.0: the short intro (basics + what is special here) replaces the step-by-step tour */
+    if(window.fpIntro){window.fpIntro();return}
     if(T)return;
     T={i:0,els:[],key:''};ensureRoot();
     T.card.addEventListener('click',onCardClick);
@@ -235,7 +237,7 @@
   function ensureButton(){
     const v=$('settings');if(!v||$('tourRerun'))return;
     const b=document.createElement('button');b.id='tourRerun';b.className='btn secondary full';b.style.margin='6px 0 12px';
-    b.textContent='🎓 הדרכה מחדש — סיור באפליקציה';
+    b.textContent='🎓 מה יש באפליקציה (דקה)';
     b.onclick=()=>{try{showView('today')}catch(_){}startTour()};
     const h=v.querySelector('h2');(h||v.firstChild).insertAdjacentElement(h?'afterend':'beforebegin',b);
   }

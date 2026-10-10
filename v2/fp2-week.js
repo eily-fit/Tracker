@@ -21,21 +21,39 @@ function easter(y,orth){
   const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
   return `${y}-${String(mo).padStart(2,'0')}-${String(da).padStart(2,'0')}`;
 }
-/* [date of the big meal, name, emoji, calendar, size, approximate?] — Jewish dates from hebcal.com, Muslim dates are astronomical estimates */
-const FIXED=[
-  ['2026-12-04','חנוכה','🕎','jewish','medium'],
-  ['2027-03-23','פורים','🎭','jewish','medium'],['2027-04-21','ליל הסדר','🍷','jewish','large'],['2027-04-28','מימונה','🥞','jewish','medium'],
-  ['2027-05-12','יום העצמאות','🇮🇱','jewish','medium'],['2027-06-10','שבועות','🧀','jewish','medium'],['2027-10-01','ראש השנה','🍎','jewish','large'],
-  ['2027-10-15','סוכות','🌿','jewish','medium'],['2027-12-24','חנוכה','🕎','jewish','medium'],
-  ['2028-03-12','פורים','🎭','jewish','medium'],['2028-04-10','ליל הסדר','🍷','jewish','large'],['2028-04-17','מימונה','🥞','jewish','medium'],
-  ['2028-05-02','יום העצמאות','🇮🇱','jewish','medium'],['2028-05-30','שבועות','🧀','jewish','medium'],['2028-09-20','ראש השנה','🍎','jewish','large'],
-  ['2028-10-04','סוכות','🌿','jewish','medium'],['2028-12-12','חנוכה','🕎','jewish','medium'],
-  ['2027-03-10','עיד אל-פיטר','🌙','muslim','large',1],['2027-05-16','עיד אל-אדחא','🐑','muslim','large',1],
-  ['2028-02-27','עיד אל-פיטר','🌙','muslim','large',1],['2028-05-05','עיד אל-אדחא','🐑','muslim','large',1]
-];
+/* 2.13.0: holidays never run out.
+   - Jewish and Israeli: from hebcal.com (the internet), saved on the phone; without internet the phone's own Hebrew calendar.
+   - Muslim: the phone's built-in Umm al-Qura calendar (the official Saudi calendar). The real day can still move by one, by moon sighting.
+   - Christian: computed (Easter by the church's own rule). Civil: fixed dates. */
+const PARTS=(cal,d)=>{try{const o={};new Intl.DateTimeFormat('en-u-ca-'+cal,{day:'numeric',month:cal==='hebrew'?'long':'numeric',timeZone:'UTC'}).formatToParts(d).forEach(x=>o[x.type]=x.value);return o}catch(_){return {}}};
+const JEW=[['Tishri',1,-1,'ראש השנה','🍎','large'],['Tishri',15,-1,'סוכות','🌿','medium'],['Kislev',25,-1,'חנוכה','🕎','medium'],['ADAR',14,0,'פורים','🎭','medium'],['Nisan',15,-1,'ליל הסדר','🍷','large'],['Nisan',22,-1,'מימונה','🥞','medium'],['Iyar',5,0,'יום העצמאות','🇮🇱','medium'],['Sivan',6,-1,'שבועות','🧀','medium']];
+const LOCAL={};
+function localYear(y){
+  if(LOCAL[y])return LOCAL[y];const out=[];
+  for(let t=Date.UTC(y,0,1);t<Date.UTC(y+1,0,1);t+=864e5){const d=new Date(t),iso=d.toISOString().slice(0,10),h=PARTS('hebrew',d),m=PARTS('islamic-umalqura',d);
+    JEW.forEach(([mon,day,off,name,emoji,size])=>{const ok=mon==='ADAR'?(h.month==='Adar'||h.month==='Adar II'):h.month===mon;if(ok&&Number(h.day)===day){let date=addD(iso,off);
+      if(name==='יום העצמאות'){const w=dow(date);if(w===5)date=addD(date,-1);else if(w===6)date=addD(date,-2);else if(w===1)date=addD(date,1)}
+      out.push({date,name,emoji,cal:'jewish',size})}});
+    if(m.month==='10'&&m.day==='1')out.push({date:iso,name:'עיד אל-פיטר',emoji:'🌙',cal:'muslim',size:'large',approx:true});
+    if(m.month==='12'&&m.day==='10')out.push({date:iso,name:'עיד אל-אדחא',emoji:'🐑',cal:'muslim',size:'large',approx:true});
+  }
+  return LOCAL[y]=out;
+}
+/* hebcal.com: [title in the feed, name, emoji, size] */
+const HEB=[["Erev Rosh Hashana",'ראש השנה','🍎','large'],["Erev Sukkot",'סוכות','🌿','medium'],["Chanukah: 1 Candle",'חנוכה','🕎','medium'],["Purim",'פורים','🎭','medium'],["Erev Pesach",'ליל הסדר','🍷','large'],["Pesach VII",'מימונה','🥞','medium'],["Yom HaAtzma",'יום העצמאות','🇮🇱','medium'],["Erev Shavuot",'שבועות','🧀','medium']];
+function hebcalYear(y){try{const c=JSON.parse(LS.get('fp2.hebcal.'+y)||'null');return c&&Array.isArray(c.list)?c:null}catch(_){return null}}
+async function fetchHebcal(y){
+  const c=hebcalYear(y);if(c&&Date.now()-c.t<30*864e5)return;
+  try{const r=await fetch(`https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=off&mod=on&nx=off&year=${y}&month=x&ss=off&mf=off&c=off&i=on&geo=none`);if(!r.ok)return;const j=await r.json();
+    const list=[];(j.items||[]).forEach(it=>{const h=HEB.find(x=>String(it.title||'').indexOf(x[0])===0);if(h&&/^\d{4}-\d{2}-\d{2}/.test(it.date||''))list.push({date:it.date.slice(0,10),name:h[1],emoji:h[2],cal:'jewish',size:h[3],src:'hebcal'})});
+    if(list.length>=5)LS.set('fp2.hebcal.'+y,JSON.stringify({t:Date.now(),list}));}catch(_){}
+}
+window.fpHolidaysRefresh=async()=>{const y=new Date().getFullYear();await fetchHebcal(y);await fetchHebcal(y+1)};
 function holidayList(){
-  const out=FIXED.map(h=>({date:h[0],name:h[1],emoji:h[2],cal:h[3],size:h[4],approx:!!h[5]}));
-  for(let y=2026;y<=2029;y++){
+  const now=todayISO()||new Date().toISOString().slice(0,10),y0=Number(now.slice(0,4)),out=[];
+  for(let y=y0-1;y<=y0+2;y++){
+    const web=hebcalYear(y),loc=localYear(y);
+    out.push(...(web?web.list:loc.filter(h=>h.cal==='jewish')),...loc.filter(h=>h.cal==='muslim'));
     out.push({date:`${y}-12-24`,name:'ערב חג המולד',emoji:'🎄',cal:'christian',size:'large'});
     out.push({date:easter(y),name:'פסחא',emoji:'🐣',cal:'christian',size:'large'});
     const o=easter(y,true);if(o!==easter(y))out.push({date:o,name:'פסחא (אורתודוקסי)',emoji:'🐣',cal:'christian',size:'large'});
@@ -63,7 +81,7 @@ function showHoliday(h){
   const canSave=!c.noDeficit&&n>=1;
   const opt=(m,title,sub,rec)=>`<button type="button" class="remind-opt${rec?' rec':''}" onclick="fpHolidayGo('${m}')"><b>${title}${rec?' (מומלץ)':''}</b>${sub?`<span>${sub}</span>`:''}</button>`;
   document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpHoliday"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">${h.emoji} ${esc(h.name)} ${when}</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpHoliday').remove()">✕</button></div>
-    <p class="muted" style="margin:0 0 10px">יום ${NAMES[dow(h.date)]} ${displayDate(h.date)}${h.approx?' (בערך, לפי הירח)':''}. ארוחת חג זה בדרך כלל הרבה. לשמור לך קלוריות?</p>
+    <p class="muted" style="margin:0 0 10px">יום ${NAMES[dow(h.date)]} ${displayDate(h.date)}${h.approx?' (לפי הלוח הרשמי. יכול לזוז ביום לפי הירח)':''}. ארוחת חג זה בדרך כלל הרבה. לשמור לך קלוריות?</p>
     ${canSave?`<div class="field" style="margin:0 0 4px"><label>עד כמה לחסוך ביום?</label><div class="meal-tabs" style="flex-wrap:wrap">${opts.map(v=>`<button type="button" class="chip${HP.pct===v?' active':''}" onclick="fpHolidayPct(${v})">${v}% · <bdi>${kc(Math.round((c.goal||2200)*v/1000)*10)}</bdi> קל׳</button>`).join('')}</div></div>`:''}
     ${canSave?opt('spread','לחסוך כל יום עד החג','מה שנחסך מחכה לך בחג.',true):''}
     ${opt('day','רק ביום עצמו','שאר הימים רגילים.',!canSave)}
@@ -191,5 +209,5 @@ async function daily(){
   try{if(holCheck())return;await shabbatCheck()}catch(e){console.warn('week checks',e&&e.message)}
 }
 window.fpWeekChecks=()=>whenFree(daily);
-const boot=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.settings&&typeof call==='function'){clearInterval(boot);setTimeout(()=>whenFree(daily),12000)}},1000);
+const boot=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.settings&&typeof call==='function'){clearInterval(boot);try{window.fpHolidaysRefresh()}catch(_){}setTimeout(()=>whenFree(daily),12000)}},1000);
 })();
