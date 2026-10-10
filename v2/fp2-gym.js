@@ -13,7 +13,10 @@ const cfg=()=>{let c={};try{c=JSON.parse(LS.get('fp2.restSound')||'{}')||{}}catc
 const setCfg=c=>LS.set('fp2.restSound',JSON.stringify(c));
 
 function ctx(){try{if(!state.audioCtx){const AC=window.AudioContext||window.webkitAudioContext;if(AC)state.audioCtx=new AC()}const c=state.audioCtx;if(c&&c.state==='suspended'&&c.resume)c.resume();return c}catch(_){return null}}
-function duck(on){try{if(navigator.audioSession)navigator.audioSession.type=on?'transient':'auto'}catch(_){}}
+/* 2.14.1: while nothing plays the app's sound is "ambient" (mixes with your music, never lowers it);
+   only for the end-of-rest sound it becomes "transient" (the music goes down for a moment) */
+function duck(on){try{if(navigator.audioSession)navigator.audioSession.type=on?'transient':'ambient'}catch(_){}}
+duck(false);
 function out(c){const comp=c.createDynamicsCompressor();comp.threshold.value=-10;comp.ratio.value=4;comp.connect(c.destination);return comp}
 function tone(c,dst,t,f,len,type,vol,f2){const o=c.createOscillator(),g=c.createGain();o.type=type||'square';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+len);
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.02);g.gain.setValueAtTime(vol,t+len*0.7);g.gain.exponentialRampToValueAtTime(0.0001,t+len);o.connect(g);g.connect(dst);o.start(t);o.stop(t+len+0.02)}
@@ -43,7 +46,8 @@ window.fpRestSound=restSound;
 /* the end of rest calls beep(): play the chosen sound instead */
 if(typeof beep==='function'){beep=function(){restSound()}}
 /* iPhone allows sound and speech later only if they were started once from a tap: do it silently when the rest starts */
-if(typeof startRestTimer==='function'){const o=startRestTimer;startRestTimer=function(){const r=o.apply(this,arguments);try{ctx();const k=cfg().kind;if(k==='voice'||k==='beepvoice')speak(' ',true)}catch(_){}wake(true);return r}}
+let primed=false;
+if(typeof startRestTimer==='function'){const o=startRestTimer;startRestTimer=function(){duck(false);const r=o.apply(this,arguments);try{ctx();const k=cfg().kind;if(!primed&&(k==='voice'||k==='beepvoice')){primed=true;speak(' ',true)}}catch(_){}wake(true);return r}}
 
 /* ---------- keep the screen on during a workout ---------- */
 let lock=null,wantLock=false;

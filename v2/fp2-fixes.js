@@ -221,7 +221,7 @@ if(typeof renderOnb==='function'){
   renderOnb=function(){
     const r=oR.apply(this,arguments);
     try{const o=state.onb;if(!o)return r;if(o.d.calKind===undefined)o.d.calKind=kind()||guessKind();
-      if(o.step===1){const fs=$('onbBody')&&$('onbBody').querySelector('fieldset');const panels=fs?fs.querySelectorAll('.onb-panel'):[];const panel=panels[panels.length-1];
+      if(false){const fs=$('onbBody')&&$('onbBody').querySelector('fieldset');const panels=fs?fs.querySelectorAll('.onb-panel'):[];const panel=panels[panels.length-1];
         const html=`<div class="field" id="fpOnbCal" style="margin-top:14px"><label>באיזה יומן אתה משתמש בטלפון?</label>${chipRow('calKind',Object.keys(KINDS).map(x=>[x,KINDS[x]]))}<p class="muted" style="font-size:12px;margin:4px 0 0">ככה אירועים כמו מסעדות וארוחות משפחתיות יעברו בין היומן לאפליקציה. אפשר לשנות בהגדרות.</p></div>`;
         if(!$('fpOnbCal')){if(panel)panel.insertAdjacentHTML('beforeend',html);else if(fs)fs.insertAdjacentHTML('beforeend',html)}}
     }catch(e){console.error(e)}

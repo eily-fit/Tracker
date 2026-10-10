@@ -1529,7 +1529,7 @@ function saveSettings(payload) {
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'hidden_workout_plans')){const ids=JSON.parse(String(payload.hidden_workout_plans||'[]'));if(!Array.isArray(ids)||ids.length>300||ids.some(x=>typeof x!=='string'||x.length>200))throw new Error('רשימת תוכניות לא תקינה');setSetting_('hidden_workout_plans',JSON.stringify(ids));}
   ['has_watch','shake_hidden','notifications_in_app'].forEach(k=>{if(payload&&Object.prototype.hasOwnProperty.call(payload,k))setSetting_(k,payload[k]==='on'?'on':'off');});
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'meal_hours')){const h=String(payload.meal_hours||'').split(',').map(Number);if(h.length!==3||h.some(x=>!Number.isInteger(x)||x<0||x>23)||!(h[0]<h[1]&&h[1]<h[2]))throw new Error('שעות לא תקינות');setSetting_('meal_hours','h:'+h.join(','));}
-  if(payload&&payload.day_cut){const c=payload.day_cut,d=String(c.date||''),amt=Math.round(Number(c.amount)/10)*10,cap=Math.round((Number(getSettings_().calorie_goal)||2200)*goalRules_().shift/10)*10;
+  if(payload&&payload.day_cut){const c=payload.day_cut,d=String(c.date||''),amt=Math.round(Number(c.amount)/10)*10,cap=Math.round((Number(getSettings_().calorie_goal)||2200)*Math.max(userShift_(),0.0001)/10)*10;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!(amt>=0&&amt<=cap))throw new Error('אפשר להוריד עד '+cap+' קל׳');
     const m=dayCuts_(),keep=addDays_(d,-14);Object.keys(m).forEach(k=>{if(k<keep)delete m[k]});m[d]=amt;setSetting_('day_cuts',JSON.stringify(m));}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'debug_today')){const v=String(payload.debug_today||'');if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v))throw new Error('תאריך לא תקין');setSetting_('debug_today',v);
@@ -1538,6 +1538,7 @@ function saveSettings(payload) {
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'event_cut_pct')){const v=Math.round(Number(payload.event_cut_pct)),r=goalRules_().save;if(!(v>=Math.round(r[0]*100)&&v<=Math.round(r[1]*100)))throw new Error('אפשר בין '+Math.round(r[0]*100)+'% ל-'+Math.round(r[1]*100)+'%');setSetting_('event_cut_pct',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'oil_profile')){const v=String(payload.oil_profile||'');if(['s','r','g'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('oil_profile',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'day_rollover_hour')){const v=Number(payload.day_rollover_hour);if(!Number.isInteger(v)||v<0||v>6)throw new Error('אפשר בין חצות ל-6 בבוקר');setSetting_('day_rollover_hour',v);delete payload.day_rollover_hour;}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'shift_pct')){const v=Math.round(Number(payload.shift_pct)),mx=Math.round(goalRules_().shift*100);if(!(v>=0&&v<=mx))throw new Error('אפשר בין 0% ל-'+mx+'%');setSetting_('shift_pct',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'holidays')){const v=String(payload.holidays||'').split(',').filter(x=>['jewish','muslim','christian','civil','none'].indexOf(x)>=0);setSetting_('holidays',v.join(',')||'none');}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'shabbat_json')){const v=String(payload.shabbat_json||'');if(v.length>4000)throw new Error('ארוך מדי');try{JSON.parse(v||'{}')}catch(_){throw new Error('נתונים לא תקינים')}setSetting_('shabbat_json',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'chicken_skin')){setSetting_('chicken_skin',payload.chicken_skin==='with'?'with':'without');}
@@ -2159,6 +2160,8 @@ function calculateTotals_(date) {
 // - The goal the app suggests never goes below the daily minimum (bankContext_).
 const GOAL_RULES={lose:{shift:.10,save:[.05,.10],event:.30,name:'חיטוב'},recomp:{shift:.12,save:[.05,.12],event:.35,name:'שמירה על שריר וירידה בשומן'},maintain:{shift:.12,save:[.05,.12],event:.35,name:'שמירה'},gain:{shift:.15,save:[.10,.15],event:.45,name:'מסה נקייה'}};
 function goalRules_(settings){let p={};try{p=JSON.parse((settings||getSettings_()).profile_json||'{}')}catch(_){}return GOAL_RULES[p.goal]||GOAL_RULES.recomp;}
+/* 2.14.0: how much the goal may move after yesterday — the user's choice, up to the goal's limit; 0 = off */
+function userShift_(settings){const s=settings||getSettings_(),r=goalRules_(s),v=s.shift_pct;if(v===''||v===undefined||v===null||isNaN(Number(v)))return r.shift;return Math.max(0,Math.min(r.shift,Number(v)/100));}
 function dayCuts_(settings){try{const m=JSON.parse(String((settings||getSettings_()).day_cuts||'{}'));return m&&typeof m==='object'?m:{}}catch(_){return {}}}
 function dayGap_(d,events,s,base,cap,extra){
   const eaten=getEntriesForDate_(d).reduce((n,x)=>n+(Number(x.calories)||0),0),goal=base+bankAdjust_(d,events,s).delta+(Number(extra)||0),gap=goal-eaten;
@@ -2190,20 +2193,23 @@ function dayShift_(date,settings,goalBefore){
     const evCap=Math.round(base*rules.event/10)*10,already=Number(own.plan&&own.plan.adj&&own.plan.adj[date])||0;
     if(sum>0)sum=Math.max(0,Math.min(sum,evCap-already));
     out.toEvent=sum;if(sum>0)out.plus=sum;else if(sum<0)out.cut=-sum;out.source='event';
+  }else if(!eventOfDay_(y,events)&&userShift_(s)===0){
+    out.source='off';
   }else if(!eventOfDay_(y,events)){
+    const ucap=Math.round(base*userShift_(s)/10)*10;
     const yEvent=events.some(e=>e.date===y),extra=yEvent?Number(dayShift_(y,s,base+bankAdjust_(y,events,s).delta).toEvent)||0:0;
-    const gap=dayGap_(y,events,s,base,cap,extra),cuts=dayCuts_(s);
+    const gap=dayGap_(y,events,s,base,ucap,extra),cuts=dayCuts_(s);
     // 2.12.0: 3 days in a row on the same side of the goal → it is a habit, not a single day: nothing moves, the app asks what happened
     const streak=yEvent?null:dayStreak_(y,events,s,base);
     if(streak){out.streak=streak;out.source='streak';out.total=0;out.cap=cap;return out;}
     if(gap>0)out.plus=gap;
-    else if(gap<0){out.cut=-gap;out.over=-gap;if(Object.prototype.hasOwnProperty.call(cuts,date))out.cut=Math.max(0,Math.min(-gap,Number(cuts[date])||0));}
+    else if(gap<0){out.cut=-gap;out.over=-gap;out.cap=ucap;if(Object.prototype.hasOwnProperty.call(cuts,date))out.cut=Math.max(0,Math.min(-gap,Number(cuts[date])||0));}
     out.source=yEvent?'after-event':'yesterday';
   }else out.source='event-week';
   let total=out.plus-out.cut;
   const floor=ctx.noDeficit?Math.max(goalBefore,ctx.minDay):ctx.minDay;
   if(goalBefore+total<floor)total=Math.min(0,floor-goalBefore);
-  out.total=total;out.cap=cap;return out;
+  out.total=total;if(!out.cap)out.cap=cap;return out;
 }
 function calculateTotalsFromEntries_(entries,settings,date){
   const total = key => round1_(entries.reduce((s,x)=>s+(Number(x[key])||0),0));
@@ -2812,7 +2818,7 @@ function bankContext_(settings){
   const rules=GOAL_RULES[profile.goal]||GOAL_RULES.recomp,range=rules.save;
   let pct=Number(s.event_cut_pct)/100;if(!(pct>=range[0]&&pct<=range[1]))pct=range[1];
   const maxCut=noDeficit?0:Math.max(0,Math.min(Math.round(goal*pct/10)*10,goal-minDay));
-  return {goal,protein,fatMin,minDay,maxCut,noDeficit,savePct:Math.round(pct*100),saveRange:[Math.round(range[0]*100),Math.round(range[1]*100)],eventPct:Math.round(rules.event*100),eventCap:Math.round(goal*rules.event/10)*10,goalType:profile.goal||'recomp',goalName:rules.name,shiftPct:Math.round(rules.shift*100)};
+  return {goal,protein,fatMin,minDay,maxCut,noDeficit,savePct:Math.round(pct*100),saveRange:[Math.round(range[0]*100),Math.round(range[1]*100)],eventPct:Math.round(rules.event*100),eventCap:Math.round(goal*rules.event/10)*10,goalType:profile.goal||'recomp',goalName:rules.name,shiftPct:Math.round(userShift_(s)*100),shiftMax:Math.round(rules.shift*100)};
 }
 // v0.32: an event far ahead is saved without a plan ("pending"). Its reminder opens on the Sunday of its week,
 // or on the Thursday before when the event is on Sunday–Tuesday, and the plan is built then with the goal of that time.

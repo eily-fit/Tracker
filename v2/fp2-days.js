@@ -12,7 +12,7 @@ if(typeof recalcTotalsLocal!=='function')return;
 const LS={get(k){try{return localStorage.getItem(k)}catch(_){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(_){}}};
 const addD=(d,n)=>{const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)};
 const todayISO=()=>state.todayDate||(state.data&&state.data.bank&&state.data.bank.today)||(state.data&&state.data.date);
-const busy=()=>{try{return $('fpWelcome')||$('fpTour')||document.documentElement.classList.contains('onboarding-mode')||document.documentElement.classList.contains('entry-mode')||[...document.querySelectorAll('.overlay')].some(o=>!o.classList.contains('hide')&&getComputedStyle(o).display!=='none')}catch(_){return false}};
+const busy=()=>{try{const av=document.querySelector('.view.active');return (av&&av.id!=='today')||$('fpI')||$('fpWelcome')||$('fpTour')||document.documentElement.classList.contains('onboarding-mode')||document.documentElement.classList.contains('entry-mode')||[...document.querySelectorAll('.overlay')].some(o=>!o.classList.contains('hide')&&getComputedStyle(o).display!=='none')}catch(_){return false}};
 function whenFree(fn,tries){tries=tries||0;if(busy()){if(tries<200)setTimeout(()=>whenFree(fn,tries+1),3000);return}fn()}
 
 /* The server sends the shift with every day it returns. When the device recalculates a day by itself it keeps

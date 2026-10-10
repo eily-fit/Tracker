@@ -22,6 +22,7 @@ const getProfile=()=>{
 /* something else is on screen (welcome, questionnaire, tour, another sheet): don't pop up over it */
 function uiBusy(){
   try{
+    {const av=document.querySelector('.view.active');if(av&&av.id!=='today')return true}
     if($('fpWelcome')||$('fpTour')||document.documentElement.classList.contains('onboarding-mode')||document.documentElement.classList.contains('entry-mode'))return true;
     if([...document.querySelectorAll('.overlay')].some(o=>!o.classList.contains('hide')&&getComputedStyle(o).display!=='none'))return true;
     if(window.FP2&&FP2.getProp&&FP2.getProp('NEW_ACCOUNT')==='1'&&FP2.getProp('TOUR_DONE')!=='1')return true;

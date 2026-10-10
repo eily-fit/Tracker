@@ -124,7 +124,9 @@ function makeEnv(store,user){
     Utilities:loose({getUuid:uuid,formatDate:fmtDate,sleep(){},
       computeDigest:(alg,s)=>{let h=2166136261;const b=enc.encode(String(s));const out=[];for(let r=0;r<32;r++){for(const x of b)h=Math.imul(h^x^r,16777619);out.push((h>>>0)%256-128)}return out},
       DigestAlgorithm:{SHA_256:'SHA_256',MD5:'MD5'},Charset:{UTF_8:'UTF_8'},
-      base64Encode:s=>btoa(typeof s==='string'?unescape(encodeURIComponent(s)):String.fromCharCode.apply(null,s)),
+      base64Encode:s=>btoa(typeof s==='string'?unescape(encodeURIComponent(s)):String.fromCharCode.apply(null,Array.from(s,x=>x&255))),
+      /* 2.14.1: was missing, so every "same workout saved twice" check got the same key and a second exercise saved within a minute was dropped */
+      base64EncodeWebSafe:s=>btoa(typeof s==='string'?unescape(encodeURIComponent(s)):String.fromCharCode.apply(null,Array.from(s,x=>x&255))).replace(/\+/g,'-').replace(/\//g,'_'),
       base64Decode:s=>Array.from(atob(s),c=>c.charCodeAt(0)),newBlob:needRemote,parseCsv:needRemote}),
     UrlFetchApp:thrower,DriveApp:thrower,MailApp:thrower,GmailApp:thrower,
     ScriptApp:loose({getProjectTriggers:()=>[],deleteTrigger(){},newTrigger:()=>loose({}),getService:()=>({getUrl:()=>location.href}),getOAuthToken:()=>''}),

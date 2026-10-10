@@ -10,7 +10,7 @@ const addD=(d,n)=>{const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+
 const dow=d=>new Date(d+'T12:00:00Z').getUTCDay();
 const todayISO=()=>state.todayDate||(state.data&&state.data.date);
 const NAMES=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-const busy=()=>{try{return $('fpWelcome')||$('fpTour')||document.documentElement.classList.contains('onboarding-mode')||document.documentElement.classList.contains('entry-mode')||[...document.querySelectorAll('.overlay')].some(o=>!o.classList.contains('hide')&&getComputedStyle(o).display!=='none')}catch(_){return false}};
+const busy=()=>{try{const av=document.querySelector('.view.active');return (av&&av.id!=='today')||$('fpI')||$('fpWelcome')||$('fpTour')||document.documentElement.classList.contains('onboarding-mode')||document.documentElement.classList.contains('entry-mode')||[...document.querySelectorAll('.overlay')].some(o=>!o.classList.contains('hide')&&getComputedStyle(o).display!=='none')}catch(_){return false}};
 function whenFree(fn,tries){tries=tries||0;if(busy()){if(tries<200)setTimeout(()=>whenFree(fn,tries+1),3000);return}fn()}
 const S=k=>String((state.data&&state.data.settings&&state.data.settings[k])??'');
 
@@ -189,7 +189,7 @@ if(typeof renderOnb==='function'){
   const oR=renderOnb;
   renderOnb=function(){
     const r=oR.apply(this,arguments);
-    try{const o=state.onb;if(!o||o.step!==1)return r;if(o.d.dayStart===undefined)o.d.dayStart=0;if(!Array.isArray(o.d.hol))o.d.hol=['jewish'];
+    try{const o=state.onb;if(!o||true)return r;/* 2.14.0: moved to the last step (fp2-setup.js) */if(o.d.dayStart===undefined)o.d.dayStart=0;if(!Array.isArray(o.d.hol))o.d.hol=['jewish'];
       const fs=$('onbBody')&&$('onbBody').querySelector('fieldset');if(!fs||$('fpOnbDay'))return r;
       const html=`<div class="field" id="fpOnbDay" style="margin-top:14px"><label>מתי להתחיל לך יום חדש?</label>${chipRow('dayStart',HOURS)}<p class="muted" style="font-size:12px;margin:4px 0 0">בשעה הזאת העיגול מתאפס. עובד בלילות? בחר שעה מאוחרת.</p></div>
         <div class="field" id="fpOnbHol" style="margin-top:14px"><label>אילו חגים אתה חוגג?</label><div class="onb-options">${Object.keys(CALS).map(k=>`<button type="button" class="onb-choice ${o.d.hol.indexOf(k)>=0?'selected':''}" aria-pressed="${o.d.hol.indexOf(k)>=0}" onclick="fpOnbHol('${k}')">${CALS[k]}</button>`).join('')}</div><p class="muted" style="font-size:12px;margin:4px 0 0">שבוע לפני חג האפליקציה תשאל אם לשמור לו קלוריות.</p></div>`;
