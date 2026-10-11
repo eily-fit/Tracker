@@ -63,7 +63,7 @@ window.fpRecStart=async function(){
     rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());if(rec&&rec._cancel){rec=null;return}const blob=new Blob(chunks,{type:rec.mimeType||type||'audio/mp4'});rec=null;
       const fr=new FileReader();fr.onload=()=>{const s=String(fr.result);R.audioType=s.slice(5,s.indexOf(';'))||'audio/mp4';R.audio=s.split(',')[1]||'';if(R.audio.length>900000){R.audio='';toast('ההקלטה ארוכה מדי',true)}renderReq()};fr.readAsDataURL(blob)};
     rec.start(1000);timer=setInterval(()=>{secs++;if(secs>=60)fpRecStop();else{const b=document.querySelector('#fpReq .btn.danger');if(b)b.textContent=`⏹ עצור (${60-secs})`}},1000);renderReq();
-  }catch(e){toast('אין גישה למיקרופון',true)}
+  }catch(e){toast(window.fpMicMsg?fpMicMsg(e):'אין גישה למיקרופון',true)}
 };
 function stopRec(cancel){clearInterval(timer);if(rec){if(cancel)rec._cancel=true;try{rec.stop()}catch(_){}}}
 window.fpRecStop=()=>stopRec(false);
@@ -154,7 +154,9 @@ window.fpTimeMachine=async function(date){
     ['fp2.cutAsked','fp2.twoAsked','fp2.evStart'].forEach(k=>{try{localStorage.removeItem(k)}catch(_){}});
     state.data=await call('getBootstrapData');state.date=state.data.date;state.todayDate=state.data.date;renderAll();tmBanner();
     toast(date?'מצב בדיקה: היום = '+displayDate(date):'חזרת להיום האמיתי'+msg);
-    setTimeout(()=>{try{window.fpMorningChecks&&window.fpMorningChecks()}catch(_){}},600);
+    try{showView('today')}catch(_){}
+    /* 2.16: the holiday and Shabbat checks run too (before, only the morning checks did) */
+    setTimeout(()=>{try{window.fpMorningChecks&&window.fpMorningChecks()}catch(_){}try{window.fpHolidaysRefresh&&window.fpHolidaysRefresh()}catch(_){}setTimeout(()=>{try{window.fpWeekChecks&&window.fpWeekChecks()}catch(_){}},1500)},600);
   }catch(e){toast(e.message,true)}finally{loading(false)}
 };
 window.fpTimeShift=function(n){const cur=(state.data.settings&&state.data.settings.debug_today)||state.todayDate;const d=new Date(cur+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);fpTimeMachine(d.toISOString().slice(0,10))};

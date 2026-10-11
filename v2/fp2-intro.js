@@ -26,8 +26,18 @@ const STEPS=[
   {kind:'s',view:'today',before:()=>{try{fpHolidayPreview()}catch(_){}},t:()=>q('#fpHoliday .sheet'),title:'חגים',text:'שבוע לפני חג: ״לשמור לך?״. מכל הלוחות שבחרת.',after:closeAll},
   {kind:'s',view:'today',before:()=>{try{fpShabPreview()}catch(_){}},t:()=>q('#fpShab .sheet'),title:'שבת',text:'אחרי כמה שבתות האפליקציה יודעת כמה אתה אוכל, ויכולה לחסוך לזה ולמלא לבד.',after:closeAll},
   {kind:'s',view:'today',before:()=>{try{openPlusMenu()}catch(_){}},t:()=>byText('#plusList button, #plusList .plus-item, #plusList [onclick]',/בקשה|רעיון/)||q('#plusList'),title:'חסר לך משהו? תגיד',text:'בכפתור הפלוס: ״בקשה או רעיון״. מקליטים או כותבים. כשהבקשה מאושרת, מקבלים התראה.',after:closeAll},
-  {kind:'b',view:'workoutHome',t:()=>q('#startWorkoutCard'),title:'אימון',text:'בוחרים סוג ומתחילים. רושמים משקל וחזרות, ויש טיימר מנוחה עם צליל.'},
+  {kind:'b',view:'workoutHome',t:()=>q('#startWorkoutCard'),title:'🏋 מתחילים אימון',text:'בוחרים סוג, מקום וציוד, או אימון מוכן מהספרייה, ולוחצים ״התחל״.'},
+  {kind:'b',view:'workoutHome',t:()=>byText('#workoutHome > button',/צור אימון חדש/),title:'אימון משלך',text:'בונים פעם אחת את התרגילים לפי הסדר. בפעם הבאה מתחילים בלחיצה, ו״שמור ועבור לתרגיל הבא״ מעביר אותך הלאה.'},
+  {kind:'b',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="border-color:rgba(215,243,107,.45)"><b>לחיצת חזה</b><div style="margin-top:6px">סט 1 · <b>20</b> ק״ג × <b>8</b></div><div class="muted" style="font-size:13px;margin-top:4px">📝 הערה / תת־סט (שינוי משקל בתוך הסט)</div></div>',title:'רושמים סטים',text:'משקל וחזרות לכל סט. ירדת במשקל באמצע הסט? ״תת־סט״. ואפשר הערה.'},
+  {kind:'s',view:'workoutHome',t:null,mock:'<div class="fpI-mock"><b>בפעם הקודמת · יום ג׳</b><div style="margin-top:4px">סט 1: 14 ק״ג × 7 ← 10 ק״ג × 4</div><div style="margin-top:8px"><span class="fpI-btn">לאימון הקודם ←</span></div></div>',title:'✨ מה עשית בפעם הקודמת',text:'בכל תרגיל רואים את הפעם הקודמת, כולל תת־סטים. לחיצה פותחת את האימון הקודם, וכפתור אחד מחזיר לסט.'},
+  {kind:'s',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="text-align:center"><div style="font-size:30px;font-weight:800">1:30</div><div>⏱ מנוחה · 🗣 ״יאללה, סט הבא!״</div></div>',title:'✨ מנוחה שמתחילה לבד',text:'אחרי כל תרגיל שומרים, והמנוחה רצה. בסוף: צפצוף, קול שאומר משפט שכתבת, או הקלטה שלך. המוזיקה ממשיכה, והמסך לא נכבה.'},
+  {kind:'s',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="text-align:center;font-size:18px">🎉🏆🎉<div style="font-weight:800;margin-top:4px">שיא חדש בלחיצת חזה!</div></div>',title:'✨ שיא חדש',text:'שברת שיא במשקל או בחזרות? קונפטי.'},
+  {kind:'b',view:'workoutDiary',t:()=>q('#workoutHistory .journal-day')||q('#workoutHistory'),title:'יומן האימונים',text:'כל אימון נשמר עם הסטים. אפשר לערוך, להעביר תרגיל, או להוסיף תרגיל לאימון שכבר נגמר.'},
   {kind:'b',view:'process',t:()=>q('#fpWeekCard')||q('#photoCard'),title:'ההתקדמות שלך',text:'כל שבוע במקום אחד: תמונות, משקל והיקף טבור, עם השוואה.'},
+  {kind:'b',view:'settings',before:()=>{try{const d=q('#fpGoalSet');if(d)d.open=false}catch(_){}},t:()=>q('#fpGoalSet'),title:'⚙️ ההגדרות: היעד',text:'״🎯 היעד והאירועים״: כמה היעד זז לפי אתמול (או לכבות), וכמה לחסוך לפני אירוע.'},
+  {kind:'b',view:'settings',t:()=>q('#fpWeekSet'),title:'יום, חגים ושבת',text:'מתי היום שלך מתחיל (אם אתה אוכל אחרי חצות), אילו חגים, ושבת.'},
+  {kind:'b',view:'settings',t:()=>q('#fpRestSet'),title:'צליל סוף מנוחה',text:'צפצוף, קול, משפט שלך או הקלטה. ועוצמה.'},
+  {kind:'b',view:'settings',t:()=>q('#notificationSettings'),title:'התראות',text:'תזכורת לאירועי השבוע, גם כשהאפליקציה סגורה.'},
   {kind:'end',view:'today',t:null,title:'זהו, אתה מוכן',text:'יאללה, תרשום את הארוחה הראשונה.'}
 ];
 const css=`#fpI{position:fixed;inset:0;z-index:2147482400;pointer-events:none}

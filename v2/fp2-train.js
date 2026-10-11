@@ -92,12 +92,43 @@ if(typeof renderWorkoutPlanItems==='function'){
 if(typeof saveWorkout==='function'){
   const o=saveWorkout;
   saveWorkout=async function(){
-    const P=state.activePlan,before=P?(state.activePlanDone||[]).length:-1,idx=state.activePlanIndex;
+    const P=state.activePlan,idx=state.activePlanIndex,editing=!!state.editingWorkoutId,cardio=state.muscleGroup==='אירובי'||(P&&P.category==='אירובי');
+    const H=()=>((state.data.workout&&state.data.workout.history)||[]).length,h0=H(),w0=state.data.workout;
     const r=await o.apply(this,arguments);
-    try{if(P&&state.activePlan===P&&(state.activePlanDone||[]).length>before&&state.activePlanIndex!==null&&state.activePlanIndex!==idx&&P.category!=='אירובי')startRestTimer()}catch(e){console.warn(e)}
+    /* 2.16: the rest starts after every saved exercise — not after editing, cardio, or the last exercise of a saved workout */
+    try{const saved=state.data.workout!==w0&&H()>=h0;const planOver=P&&state.activePlan===P&&state.activePlanIndex===null&&idx!==null;
+      if(saved&&!editing&&!cardio&&!planOver)startRestTimer()}catch(e){console.warn(e)}
     return r;
   };
 }
+/* ---------- 2.16: the list on top follows the saves (it looked for the date of the day, and missed when the workout's date was different) ---------- */
+if(typeof reconcileWorkoutPlan==='function'){reconcileWorkoutPlan=function(){if(!state.activePlan)return;const P=state.activePlan;
+  state.activePlanDone=[...new Set(((state.data.workout&&state.data.workout.history)||[]).filter(x=>x.sessionId===P.sessionId&&Number.isInteger(x.planItemIndex)&&x.planItemIndex>=0&&x.planItemIndex<P.items.length).map(x=>x.planItemIndex))]}}
+
+/* ---------- 2.16: a workout in the diary: "＋ הוסף תרגיל לאימון" ---------- */
+function addExBtns(){document.querySelectorAll('details.session-card[data-session] > .session-body').forEach(b=>{if(b.querySelector('.fp-addex'))return;const id=b.parentElement.dataset.session;
+  b.insertAdjacentHTML('beforeend',`<button type="button" class="btn secondary full fp-addex" style="margin-top:10px" onclick="fpAddExToSession('${esc(id)}')">＋ הוסף תרגיל לאימון</button>`)})}
+window.fpAddExToSession=async function(id){const s=((state.data.workout&&state.data.workout.sessions)||[]).find(x=>x.id===id);if(!s)return;
+  if(state.activePlan&&state.activePlan.sessionId!==id)return toast('יש אימון פעיל אחר. סיים אותו קודם',true);
+  if(state.activePlan&&state.activePlan.sessionId===id){showView('workouts');return}
+  if(s.status==='finished')return reopenSession(id);
+  state.sessionId=id;$('sessionName').value=s.name;try{localStorage.setItem('elaiWorkoutSession',JSON.stringify({id,name:s.name,date:state.date}))}catch(_){}
+  renderWorkouts(false);try{renderSessionBanner()}catch(_){}showView('workouts');toast('אפשר להוסיף תרגיל לאימון')};
+if(typeof renderWorkoutHistory==='function'){const o=renderWorkoutHistory;renderWorkoutHistory=function(){const r=o.apply(this,arguments);try{addExBtns()}catch(e){console.error(e)}return r}}
+
+/* ---------- 2.16: "לאימון הקודם" opens only that workout, with a button back to the set ---------- */
+if(typeof goToPreviousWorkout==='function'){const o2=goToPreviousWorkout;goToPreviousWorkout=function(sessionId,workoutId){
+  try{if(!($('workouts')&&$('workouts').classList.contains('active')))return o2.apply(this,arguments);
+    const ss=(state.data.workout&&state.data.workout.sessions)||[],s=ss.find(x=>x.id===sessionId)||ss.find(x=>(x.items||[]).some(i=>i.id===workoutId));if(!s)return o2.apply(this,arguments);
+    const cur=($('exerciseSelect')&&$('exerciseSelect').selectedOptions[0]||{}).text||'';
+    const sets=x=>(x.sets||[]).map((v,i)=>`<span class="set-badge"><strong>סט ${Number(v.set)||i+1}</strong> · ${v.side?esc(v.side)+' · ':''}${v.weight===null||v.weight===''?'ללא משקל':fmt(v.weight)+' ק״ג'} × ${v.reps}${(v.segments||[]).map(g=>` ← ${g.weight?fmt(g.weight)+' ק״ג':''} × ${g.reps}`).join('')}${v.note?' · '+esc(v.note):''}</span>`).join('');
+    let el=$('fpPrevW');if(el)el.remove();
+    document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpPrevW"><div class="sheet" style="max-height:88vh;overflow:auto"><div class="sheet-head"><h3 style="margin:0">${esc(displayDate(s.date))} · ${esc(s.name)}</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpPrevW').remove()">✕</button></div>
+      ${(s.items||[]).map(x=>`<div class="workout-item" style="${x.exercise===cur?'border:1px solid var(--brand,#D7F36B);border-radius:12px;padding:8px':''}"><b>${esc(x.exercise)}</b>${x.notes?`<div class="muted">${esc(x.notes)}</div>`:''}<div class="set-badges">${sets(x)}</div></div>`).join('')}
+      <button type="button" class="btn full" style="margin-top:12px;position:sticky;bottom:0" onclick="document.getElementById('fpPrevW').remove()">‹ חזרה לסט</button></div></div>`);
+    setTimeout(()=>{try{const h=[...document.querySelectorAll('#fpPrevW .workout-item')].find(d=>d.style.border);if(h)h.scrollIntoView({block:'center'})}catch(_){}},50);
+  }catch(e){console.error(e);return o2.apply(this,arguments)}}}
+
 /* ---------- a saved workout: "שמור ועבור לתרגיל הבא" ---------- */
 function saveLabel(){
   const b=$('saveWorkoutBtn');if(!b)return;

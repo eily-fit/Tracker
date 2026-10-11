@@ -71,14 +71,14 @@ function renderList(){
   const open=state.pickOpen||(state.pickOpen=new Set());
   listEl.innerHTML=order.map(s=>{const m=fams.get(s);
     if(m.length===1)return rowHtml(m[0],pm,false,s[0]==='#'?null:null);
-    const has=m.some(x=>x.id===pm.current),isOpen=open.has(s)||has;
-    return `<div class="exfam ${isOpen?'open':''}" data-fam="${esc2(s)}"><button type="button" class="exfam-h" onclick="FP2Lib.toggle(this)"><span><b>${esc2(s)}</b> <small>· ${m.length} וריאציות</small></span><span class="chev">‹</span></button><div class="exfam-b">${m.map(x=>rowHtml(x,pm,false,s)).join('')}</div></div>`}).join('');
+    const has=m.some(x=>x.id===pm.current),isOpen=open.has(s);/* 2.16: everything starts closed */
+    return `<div class="exfam ${isOpen?'open':''}" data-fam="${esc2(s)}"><button type="button" class="exfam-h" onclick="FP2Lib.toggle(this)"><span><b>${has?'✓ ':''}${esc2(s)}</b> <small>· ${m.length} וריאציות</small></span><span class="chev">‹</span></button><div class="exfam-b">${m.map(x=>rowHtml(x,pm,false,s)).join('')}</div></div>`}).join('');
 }
 window.FP2Lib.toggle=function(btn){const f=btn.closest('.exfam');if(!f)return;f.classList.toggle('open');const s=f.dataset.fam,o=state.pickOpen||(state.pickOpen=new Set());f.classList.contains('open')?o.add(s):o.delete(s)};
 if(typeof window.renderExercisePicker==='function')window.renderExercisePicker=render;
 /* picker opens fresh (clears search) */
-const op=window.openExercisePicker;if(typeof op==='function')window.openExercisePicker=function(){state.pickQuery='';state.pickFresh=null;return op.apply(this,arguments)};
-const opp=window.openPlanExercisePicker;if(typeof opp==='function')window.openPlanExercisePicker=function(){state.pickQuery='';state.pickFresh=null;return opp.apply(this,arguments)};
+const op=window.openExercisePicker;if(typeof op==='function')window.openExercisePicker=function(){state.pickQuery='';state.pickFresh=null;state.pickOpen=new Set();return op.apply(this,arguments)};
+const opp=window.openPlanExercisePicker;if(typeof opp==='function')window.openPlanExercisePicker=function(){state.pickQuery='';state.pickFresh=null;state.pickOpen=new Set();return opp.apply(this,arguments)};
 /* the selected exercise shows what it works */
 const ec=window.exerciseChanged;
 if(typeof ec==='function')window.exerciseChanged=function(){const r=ec.apply(this,arguments);try{const g=document.getElementById('exerciseGuide'),nm=document.getElementById('exercisePickName');const w=nm&&worksOf(nm.textContent);if(g&&w&&!g.querySelector('.wk2'))g.insertAdjacentHTML('beforeend','<p class="wk2" style="color:#FF8A80;margin:4px 0 0">🔴 עובד על: '+esc2(w)+'</p>')}catch(e){}return r};

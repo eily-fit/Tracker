@@ -35,7 +35,7 @@ function shiftNote(){
     else if(sh&&sh.total&&sh.source==='after-event')text='היעד היום: '+(sh.total<0?`−${kc(-sh.total)} כי באירוע אתמול עברת ב-${kc(sh.over||-sh.total)}`:`+${kc(sh.total)} שנשארו מהאירוע אתמול`);
     else if(sh&&sh.total){const parts=[];if(sh.plus)parts.push(`+${kc(sh.plus)} שלא אכלת אתמול`);if(sh.cut)parts.push(`−${kc(sh.cut)} כי אתמול עברת את היעד`);if(!parts.length)parts.push((sh.total>0?'+':'')+kc(sh.total));text='היעד היום: '+parts.join(' · ')}
     else if(sh&&sh.source==='streak'&&sh.streak)text='היעד היום רגיל · '+(sh.streak.dir==='under'?`3 ימים ברצף חסרים לך בערך ${kc(sh.streak.avg)} ביום`:`3 ימים ברצף עברת בערך ב-${kc(sh.streak.avg)} ביום`);
-    else if(sh&&sh.source==='event-week'&&state.date===todayISO())text='השבוע יש אירוע: מה שנשאר מאתמול נשמר ליום האירוע';
+    else if(sh&&sh.source==='event-week'&&state.date===todayISO())text=sh.weekOver&&sh.weekOver.mode!=='none'?`השבוע יש אירוע: ${kc(sh.weekOver.cut||sh.weekOver.over)} ממה שעברת אתמול יורדים מיום האירוע`:sh.weekOver?'השבוע יש אירוע · מה שעברת אתמול לא יורד':'השבוע יש אירוע: מה שנשאר מאתמול נשמר ליום האירוע';
     if(!text){if(el)el.remove();return}
     const anchor=document.querySelector('#today .progress-wrap');if(!anchor)return;
     if(!el){anchor.insertAdjacentHTML('afterend','<div id="fpShiftNote" class="muted" style="text-align:center;font-size:13px;margin:6px 0"></div>');el=$('fpShiftNote')}
@@ -114,7 +114,7 @@ function showStreak(st){
   let to=under?base-st.avg:base+st.avg;to=Math.round(to/10)*10;if(under&&c.minDay)to=Math.max(c.minDay,to);
   const opt=(fn,title,sub)=>`<button type="button" class="remind-opt" onclick="${fn}"><b>${title}</b>${sub?`<span>${sub}</span>`:''}</button>`;
   document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpStreak"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">${under?`3 ימים ברצף חסרים לך בערך ${kc(st.avg)} קל׳ ביום`:`3 ימים ברצף עברת בערך ב-${kc(st.avg)} קל׳ ביום`}</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpStreak').remove()">✕</button></div>
-    <p class="muted" style="margin:0 0 10px">לכן ההפרש לא עובר להיום. מה קרה?</p><div id="fpStreakBody">
+    <p class="muted" style="margin:0 0 10px">${st.eventWeek?'השבוע יש אירוע, וההפרש יורד ממנו. מה קרה?':'לכן ההפרש לא עובר להיום. מה קרה?'}</p><div id="fpStreakBody">
     ${opt("fpStreakAns('event')",'היה אירוע','')}
     ${under?opt("fpStreakAns('add')",'להוסיף משהו קבוע','למשל שייק. נכנס כקיצור, לחיצה אחת ביום.'):''}
     ${to!==base?opt(`fpStreakAns('goal',${to})`,`${under?'להוריד':'להעלות'} את היעד ל-${kc(to)}`,under?'היעד שאתה באמת אוכל. התוצאה תגיע לאט יותר.':'היעד שאתה באמת אוכל. התוצאה תגיע לאט יותר.'):''}
@@ -132,18 +132,44 @@ window.fpStreakPreview=(dir)=>showStreak({dir:dir||'under',avg:350,start:'',end:
 /* ---------- 2.12.0: the morning after an event ---------- */
 function showEventSummary(ev,t,sh,today){
   const old=$('fpEvSum');if(old)old.remove();
-  const b=Math.max(0,Number(t.bank&&t.bank.delta)||0),toEv=t.shift&&t.shift.source==='event'?Math.max(0,Number(t.shift.toEvent)||0):0,saved=Math.round(b+toEv);
   const goal=Math.round(Number(t.calorieGoal)||0),ate=Math.round(Number(t.calories)||0),diff=ate-goal,ok=diff<=30;
-  const cut=sh&&sh.source==='after-event'?Math.max(0,Number(sh.cut)||0):0,over=Math.max(0,diff);
-  const row=(a,b)=>`<div class="bank-line"><span>${a}</span><span><b>${b}</b></span></div>`;
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpEvSum"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">${esc(ev.label)}: סיכום</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpEvSum').remove()">✕</button></div>
-    ${row('שמרת לאירוע',saved>0?'+'+kc(saved):'0')}${row('היעד של היום ההוא',kc(goal))}${row('אכלת',kc(ate))}
-    <div style="margin:12px 0 0;font-size:16px;font-weight:700;color:${ok?'#7FD67F':'#FF8A8A'}">${ok?'✓ עמדת במה ששמרת':'✗ עברת ב-'+kc(diff)+' קל׳'}</div>
-    ${ok?(sh&&sh.plus?`<p style="margin:6px 0 0">${kc(sh.plus)} שנשארו עוברים להיום.</p>`:''):`<p style="margin:6px 0 0">${cut?`היום היעד יורד ב-${kc(cut)}.${over>cut?' זה הגבול ליום אחד, השאר לא מתקזז.':''}`:'היום היעד לא יורד.'}</p>`}
-    <button type="button" class="btn full" style="margin-top:12px" onclick="document.getElementById('fpEvSum').remove()">הבנתי</button>
-    ${!ok&&cut?`<button type="button" class="btn secondary full" style="margin-top:8px" id="fpEvSumCut">לשנות את ההורדה</button>`:''}</div></div>`);
-  const bc=$('fpEvSumCut');if(bc)bc.onclick=()=>{$('fpEvSum').remove();showOver(today,sh)};
+  const cut=sh&&sh.source==='after-event'?Math.max(0,Number(sh.cut)||0):0,over=Math.max(0,diff),plus=ok&&sh&&sh.plus?Number(sh.plus):0;
+  const opt=(fn,title,sub)=>`<button type="button" class="remind-opt" onclick="${fn}"><b>${title}</b>${sub?`<span>${sub}</span>`:''}</button>`;
+  /* 2.16: plain words, and a clear choice when you went over */
+  const body=ok
+    ?`<p style="margin:0 0 4px">היו לך <b>${kc(goal)}</b> קל׳ לאירוע. אכלת <b>${kc(ate)}</b>.</p>
+      <div style="margin:10px 0 0;font-size:17px;font-weight:800;color:#7FD67F">✓ נשארת בתוך מה שחסכת</div>
+      ${plus?`<p style="margin:6px 0 0">${kc(plus)} קל׳ שנשארו עוברים להיום.</p>`:'<p style="margin:6px 0 0">היום חוזרים ליעד הרגיל.</p>'}
+      <button type="button" class="btn full" style="margin-top:12px" onclick="document.getElementById('fpEvSum').remove()">יופי 💪</button>`
+    :`<p style="margin:0 0 4px">היו לך <b>${kc(goal)}</b> קל׳ לאירוע. אכלת <b>${kc(ate)}</b>.</p>
+      <div style="margin:10px 0 0;font-size:17px;font-weight:800;color:#FF8A8A">✗ עברת ב-${kc(over)} קל׳</div>
+      <p style="margin:10px 0 6px"><b>מה עושים עם זה היום?</b></p>
+      ${cut?opt('fpEvSumAns(-1)',`להוריד מהיום ${kc(cut)} קל׳ · מומלץ`,`היעד של היום: ${kc(Number(state.data.settings.calorie_goal||0)-cut)}. מחר חוזרים לרגיל.${over>cut?` את ${kc(over-cut)} הנותרים לא מקזזים, זה הגבול ליום אחד.`:''}`):''}
+      ${cut?opt('fpEvSumAns(1)','להוריד פחות','בוחרים כמה'):''}
+      ${opt('fpEvSumAns(0)','לא להוריד, להמשיך כרגיל','היעד של היום נשאר רגיל')}`;
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpEvSum"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">🎉 ${esc(ev.label)}: איך היה?</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpEvSum').remove()">✕</button></div>${body}</div></div>`);
+  window.fpEvSumAns=async function(a){const s=$('fpEvSum');if(s)s.remove();
+    if(a===-1){toast(`היעד של היום ירד ב-${kc(cut)}`);return}
+    if(a===1){showOver(today,sh);return}
+    try{await call('saveSettings',{day_cut:{date:today,amount:0}});let m={};try{m=JSON.parse(String(state.data.settings.day_cuts||'{}'))||{}}catch(_){}m[today]=0;state.data.settings.day_cuts=JSON.stringify(m);
+      if(state.date===today){const d=await call('getDayView',today);applyDay(d);renderDay()}toast('בסדר, היעד של היום נשאר רגיל')}catch(e){toast(e.message,true)}};
 }
+/* 2.16: a day over the goal in the week of an event: where to take it from */
+function showWeekOver(wo,today){
+  const old=$('fpWeekOver');if(old)old.remove();
+  const ev=(state.data.bank&&state.data.bank.events||[]).find(e=>e.id===wo.eventId)||{label:'אירוע',date:wo.eventDate};
+  const day=ev.date?'ביום '+NAMES[new Date(ev.date+'T12:00:00Z').getUTCDay()]:'';
+  const opt=(m,title,sub)=>`<button type="button" class="remind-opt" onclick="fpWeekOverAns('${m}')"><b>${title}</b>${sub?`<span>${sub}</span>`:''}</button>`;
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpWeekOver"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">אתמול עברת את היעד ב-${kc(wo.over)} קל׳</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpWeekOver').remove()">✕</button></div>
+    <p style="margin:0 0 10px">${wo.eventDate===today?`היום ${esc(ev.label||'האירוע')}. להוריד את זה מהאירוע?`:`יש לך ${esc(ev.label||'אירוע')} ${day}. מאיפה להוריד את זה?`}</p>
+    ${wo.eventDate===today?opt('event','להוריד מהאירוע של היום · מומלץ',`היום יהיו לך ${kc(wo.cut||wo.over)} קל׳ פחות לאירוע${(wo.cut&&wo.cut<wo.over)?' (זה הגבול ליום אחד)':''}.`):opt('event','מהאירוע · מומלץ',`ביום האירוע יהיו לך ${kc(wo.cut||wo.over)} קל׳ פחות${(wo.cut&&wo.cut<wo.over)?' (זה הגבול ליום אחד)':''}. בשאר השבוע לא משתנה כלום.`)}
+    ${wo.eventDate===today?'':opt('today','מהיום','היעד של היום יורד (עד הגבול היומי). האירוע נשאר כמו שתכננת.')}
+    ${opt('none','לא להוריד','לא משנים כלום.')}</div></div>`);
+  window.fpWeekOverAns=async function(m){const s=$('fpWeekOver');if(s)s.remove();LS.set('fp2.cutAsked',today);
+    try{await call('saveSettings',{gap_mode:{date:wo.date,mode:m}});const v=await call('getDayView',state.date);applyDay(v);renderDay();
+      toast(m==='event'?'יורד מהאירוע':m==='today'?'יורד מהיום':'לא מורידים')}catch(e){toast(e.message,true)}};
+}
+window.fpWeekOverPreview=()=>showWeekOver({date:addD(todayISO(),-1),over:620,eventId:'',eventDate:addD(todayISO(),2)},todayISO());
 window.fpEvSumPreview=(ok)=>showEventSummary({label:'חתונה'},{calories:ok?3050:3800,calorieGoal:3200,bank:{delta:600},shift:{source:'event',toEvent:300}},ok?{source:'after-event',plus:150}:{source:'after-event',cut:350,over:600},todayISO());
 
 const NAMES=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
@@ -152,8 +178,11 @@ async function morningChecks(){
   try{
     const shT=state.date===today&&state.data.totals&&state.data.totals.shift?state.data.totals.shift:(await call('getDayView',today)).totals.shift;
     // 1. 2.12.0: 3 days in a row on the same side → "what happened?" (once per streak)
-    if(shT&&shT.source==='streak'&&shT.streak){const st=shT.streak,last=LS.get('fp2.streakEnd')||'';
+    if(shT&&shT.streak){const st=shT.streak,last=LS.get('fp2.streakEnd')||'';
       if(!last||st.start>last){LS.set('fp2.streakEnd',st.end);LS.set('fp2.cutAsked',today);return whenFree(()=>showStreak(st))}}
+    // 1a. 2.16: a day over the goal in an event week: where to take it from (once per day)
+    if(shT&&shT.weekOver&&!shT.weekOver.mode&&Number(shT.weekOver.over)>=Math.max(80,Number(state.data.settings.calorie_goal||2200)*0.05)){let seen=[];try{seen=JSON.parse(LS.get('fp2.weekOver')||'[]')}catch(_){}
+      if(seen.indexOf(shT.weekOver.date)<0){seen.push(shT.weekOver.date);LS.set('fp2.weekOver',JSON.stringify(seen.slice(-20)));return whenFree(()=>showWeekOver(shT.weekOver,today))}}
     // 1b. 2.12.0: the morning after an event: the numbers, nothing else
     {const y=addD(today,-1),ev=(state.data.bank&&state.data.bank.events||[]).find(e=>e.date===y);let seenS=[];try{seenS=JSON.parse(LS.get('fp2.evSum')||'[]')}catch(_){}
       if(ev&&seenS.indexOf(y)<0){const t=(await call('getDayView',y)).totals;

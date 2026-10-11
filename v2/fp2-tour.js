@@ -237,7 +237,7 @@
   function ensureButton(){
     const v=$('settings');if(!v||$('tourRerun'))return;
     const b=document.createElement('button');b.id='tourRerun';b.className='btn secondary full';b.style.margin='6px 0 12px';
-    b.textContent='🎓 מה יש באפליקציה (דקה)';
+    b.textContent='🎓 מה יש באפליקציה (2 דקות)';
     b.onclick=()=>{try{showView('today')}catch(_){}startTour()};
     const h=v.querySelector('h2');(h||v.firstChild).insertAdjacentElement(h?'afterend':'beforebegin',b);
   }

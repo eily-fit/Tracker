@@ -84,10 +84,10 @@ function renderGoalSet(){
   box.innerHTML=`<summary>🎯 היעד והאירועים</summary><div class="settings-body">
     <label style="font-weight:700">היעד מתאזן לפי אתמול</label>
     <p class="muted" style="margin:2px 0 6px;font-size:13px">לא אכלת מספיק אתמול? היום מקבל את ההפרש. עברת? היום יורד. בחרת ${esc(c.goalName||'')}, אז ברירת המחדל היא עד ${mx}% ביום.</p>
-    <div class="meal-tabs" style="flex-wrap:wrap">${shiftOpts.map(v=>`<button type="button" class="chip${cur===v?' active':''}" onclick="fpSetShift(${v})">${v===0?'כבוי':`עד ${v}% · <bdi>${kc(Math.round((c.goal||2200)*v/1000)*10)}</bdi>`}</button>`).join('')}</div>
+    <div class="meal-tabs" style="flex-wrap:wrap">${shiftOpts.map(v=>`<button type="button" class="chip${cur===v?' active':''}" onclick="fpSetShift(${v})">${v===0?'כבוי':`עד ${v}% · <bdi>${kc(Math.round((c.goal||2200)*v/1000)*10)}</bdi>`}${v===mx?' · מומלץ':''}</button>`).join('')}</div>
     <label style="font-weight:700;display:block;margin-top:14px">כמה לחסוך ביום לפני אירוע</label>
     <p class="muted" style="margin:2px 0 6px;font-size:13px">עד 4 ימים לפני אירוע, כל יום קצת פחות. מה שנחסך מחכה לך באירוע.</p>
-    <div class="meal-tabs" style="flex-wrap:wrap">${saveOpts.map(v=>`<button type="button" class="chip${sp===v?' active':''}" onclick="fpSetSavePct(${v}).then(()=>fpGoalSetRender())">${v}% · <bdi>${kc(Math.round((c.goal||2200)*v/1000)*10)}</bdi> קל׳</button>`).join('')}</div>
+    <div class="meal-tabs" style="flex-wrap:wrap">${saveOpts.map(v=>`<button type="button" class="chip${sp===v?' active':''}" onclick="fpSetSavePct(${v}).then(()=>fpGoalSetRender())">${v}% · <bdi>${kc(Math.round((c.goal||2200)*v/1000)*10)}</bdi> קל׳${v===range[1]?' · מומלץ':''}</button>`).join('')}</div>
   </div>`;box.open=open;
 }
 window.fpGoalSetRender=()=>{try{renderGoalSet()}catch(_){}};

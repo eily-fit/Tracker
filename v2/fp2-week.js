@@ -209,5 +209,7 @@ async function daily(){
   try{if(holCheck())return;await shabbatCheck()}catch(e){console.warn('week checks',e&&e.message)}
 }
 window.fpWeekChecks=()=>whenFree(daily);
+/* 2.16: also when the app comes back (it can stay open for days), once a day */
+let lastDaily='';document.addEventListener('visibilitychange',()=>{try{if(document.visibilityState!=='visible')return;const t=todayISO();if(!t||t===lastDaily)return;lastDaily=t;setTimeout(()=>whenFree(daily),4000)}catch(_){}});
 const boot=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.settings&&typeof call==='function'){clearInterval(boot);try{window.fpHolidaysRefresh()}catch(_){}setTimeout(()=>whenFree(daily),12000)}},1000);
 })();

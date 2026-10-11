@@ -96,6 +96,7 @@ window.fpDishScale=f=>{const r=state.dishEstimate;if(!r)return;f=Number(f);const
 window.fpDishGrams=g=>{const r=state.dishEstimate;if(!r)return;if(!r._base)setBase(r);const G=r._base.reduce((n,a)=>n+a,0);g=Number(g);if(!(g>0)||!G)return;const u=U(r);u.k=r2(u.n*g/G);scale(r,g/G)};
 window.fpDishUnits=(which,delta)=>{const r=state.dishEstimate;if(!r)return;const u=U(r);
   if(which==='n')u.n=Math.max(1,Math.min(60,Math.round(u.n+delta)));else u.k=Math.max(0.5,Math.min(60,r2(u.k+delta)));scale(r,u.k/u.n)};
+window.fpDishMode=m=>{const r=state.dishEstimate;if(r){r._mode=m;renderDishEstimate()}};
 window.fpDishName=v=>{const r=state.dishEstimate;if(r)r.name=String(v||'')};
 window.fpDishOilEach=()=>{const el=$('dishPreview');if(el)el.classList.toggle('fp-oil-each')};
 const step=(which,val,d)=>`<span class="fp-step"><button type="button" onclick="fpDishUnits('${which}',-${d})">−</button><b>${fmt(val)}</b><button type="button" onclick="fpDishUnits('${which}',${d})">+</button></span>`;
@@ -110,7 +111,8 @@ if(typeof renderDishEstimate==='function'){
       const box=`<div class="fp-portion"><b>🍽 כמה אכלת מזה?</b><div class="meal-tabs" style="flex-wrap:wrap">${FR.map(([v,l])=>`<button type="button" class="chip${Math.abs((d._f||1)-v)<0.01?' active':''}" onclick="fpDishScale(${v})"><bdi dir="ltr">${l}</bdi></button>`).join('')}</div>
         <div class="row2"><span>בגרמים:</span><input id="fpDishG" type="number" min="1" step="1" inputmode="numeric" value="${now}" onchange="fpDishGrams(this.value)"><span class="muted">מתוך ${G} ג׳</span></div>
         <div class="row2 fp-units"><span>ביחידות:</span><span class="muted">כל המנה =</span>${step('n',u.n,1)}<span class="muted">${u.n===1?'יחידה':'יחידות'}</span></div><div class="row2 fp-units"><span style="visibility:hidden">ביחידות:</span><span class="muted">אכלתי</span>${step('k',u.k,0.5)}<span class="muted">${u.k===1?'יחידה':'יחידות'}</span></div>
-        <p class="muted" style="margin:8px 0 0;font-size:12.5px">למשל בצל ממולא, קציצות, פרוסות פיצה. אפשר גם לשנות כל רכיב בנפרד למטה.</p></div>`;
+        <p class="muted" style="margin:8px 0 0;font-size:12.5px">למשל בצל ממולא, קציצות, פרוסות פיצה. אפשר גם לשנות כל רכיב בנפרד למטה.</p>
+        <div class="row2" style="flex-wrap:wrap"><span>ביומן:</span><button type="button" class="chip${d._mode!=='split'?' active':''}" onclick="fpDishMode('one')">כפריט אחד</button><button type="button" class="chip${d._mode==='split'?' active':''}" onclick="fpDishMode('split')">מפורט לפי רכיבים</button></div></div>`;
       const h=el.querySelector('h3');if(h){h.insertAdjacentHTML('afterend',name+box);h.remove()}else el.insertAdjacentHTML('afterbegin',name+box);
       /* oil: one choice for the whole dish; each item only on request */
       const all=$('dishOilAll');if(all&&!$('fpOilEachBtn'))all.insertAdjacentHTML('beforeend','<button type="button" class="chip" id="fpOilEachBtn" style="margin-top:6px" onclick="fpDishOilEach()">שמן שונה לכל רכיב</button>');
@@ -171,10 +173,24 @@ if(typeof saveDishEstimate==='function'){
   saveDishEstimate=async function(perm){
     const d=state.dishEstimate;if(!d)return o.apply(this,arguments);
     const nm=String(($('fpDishName')||{}).value||'').trim();if(nm)d.name=nm;else if(!String(d.name||'').trim())return toast('תן שם למנה',true);
-    const prod=perm?dishProduct(d):null,u=U(d),name=d.name,keep=keepDishItemsInLibrary;
+    const prod=perm?dishProduct(d):null,u=U(d),name=d.name,keep=keepDishItemsInLibrary,f=d._f||1;
+    let rest=null;try{if(f<0.99){const t=dishTotals();rest={};['calories','protein','carbs','fat'].forEach(k=>rest[k]=Math.round((Number(t[k])||0)*(1/f-1)*10)/10)}}catch(_){}
+    if(d._mode!=='split'){
+      if(d.items.some(x=>!x.choices.length&&!Object.values(x.manual||{}).some(v=>Number(v)>0)))return toast('חסרים ערכים לרכיב. מלא ערכים או הסר אותו.',true);
+      const t=dishTotals();if(!(Number(t.calories)>0||Number(t.protein)>0))return toast('לא נמצאו ערכים תזונתיים',true);
+      const byUnit=u.n>1||u.k!==1,amt=byUnit?u.k:1,cat=(($('dishSaveCategory')||{}).value)||addCategoryValue();state.dishCategory=cat;
+      const item={date:state.date,category:cat,source:'AI',name,amount:amt,baseQty:amt,unit:byUnit?'יחידה':'מנה',calories:Math.round(t.calories),protein:n1(t.protein),carbs:n1(t.carbs),fat:n1(t.fat)};
+      try{optimisticMutate('saveFood',item,'')}catch(e){return toast(e.message,true)}
+      if(perm&&prod)queueSaveMine([prod],'');if(perm&&(u.n>1||u.k!==1))setMealUnits(name,u.k);
+      if(rest&&window.fpLeftAdd)fpLeftAdd(name,f,rest,cat);
+      toast(`${name} נוסף${perm?' ונשמר במאגר שלך':''} · ${kc(item.calories)} קל׳`);
+      state.dishEstimate=null;state.dishSkin=null;state.dishBone=null;state.dishFor=null;$('dishPreview').innerHTML='';$('foodQuery').value='';if($('dishExtras'))$('dishExtras').value='';try{document.activeElement.blur()}catch(_){}showView('today');
+      return;
+    }
     if(perm)keepDishItemsInLibrary=function(){};
     try{const r=await o.apply(this,arguments);
       if(perm&&state.dishEstimate!==d){if(prod)queueSaveMine([prod],'');if(u.n>1||u.k!==1)setMealUnits(name,u.k)}
+      if(state.dishEstimate!==d&&rest&&window.fpLeftAdd)fpLeftAdd(name,f,rest,state.dishCategory);
       return r}finally{keepDishItemsInLibrary=keep}
   };
 }

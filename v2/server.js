@@ -86,7 +86,7 @@ function apiJsonp_(p){
 }
 
 function apiFunctions_(){
-  return {getBootstrapData,getDayView,getDayData:getDayView,saveFood,saveMeal,saveDishEntries,updateEntry,editEntry,deleteEntry,deleteEntries,restoreEntry,deleteMealGroup,restoreMealGroup,groupEntries,ungroupEntries,
+  return {getBootstrapData,getDayView,getDayData:getDayView,saveFood,saveMeal,saveDishEntries,updateEntry,editEntry,deleteEntry,deleteEntries,restoreEntry,deleteMealGroup,restoreMealGroup,groupEntries,ungroupEntries,renameFoodEverywhere,
     addFreeCalories,addProteinShake,addQuickAction,saveQuickAction,deleteQuickAction,saveDailyMetrics,closeDay,getNutritionJournal,deleteDay,deleteDays,restoreEntries,
     saveCustomMeal,deleteCustomMeal,restoreCustomMeal,hideMeal,restoreMeal,saveSettings,smartFoodSearch,searchFoods,estimateDish,estimateFoodWithOpenAI,lookupBarcode,testUsdaConnection,
     importTzameret,getTzameretData,
@@ -500,7 +500,7 @@ function saveFood(payload) {
   const oil=Number(payload&&payload.oilGrams);
   if(Number.isFinite(oil)&&oil>0){row[9]=round1_(row[9]+oil*9);row[12]=round1_(row[12]+oil);row[15]=setOilNote_(row[15],oil);}
   appendRows_(APP.sheets.entries,[row]);
-  if (!/צמרת/.test(String(payload.source||''))) cacheFood_(payload);
+  if (!/צמרת/.test(String(payload.source||''))&&!payload.noCache) cacheFood_(payload);
   touchDay_(date);
   return getDayData_(date);
 }
@@ -759,6 +759,20 @@ function renameMealGroup(payload){
   for(let i=1;i<values.length;i++){const r=values[i];if(String(r[16]||'')!==gid||r[14]===true)continue;sh.getRange(i+1,6).setValue(name);if(r[4]!=='meal'&&r[4]!=='dish')sh.getRange(i+1,5).setValue('meal');date=formatDateValue_(r[1]);}
   if(!date)throw new Error('הארוחה לא נמצאה. רענן ונסה שוב');
   touchDay_(date);return getDayData_(date);
+}
+// 2.16: a name changed once is changed everywhere: the diary (all days), your saved food, your saved meal.
+function renameFoodEverywhere(payload){
+  const from=String(payload&&payload.from||'').trim(),to=String(payload&&payload.to||'').trim().slice(0,60),date=String(payload&&payload.date||'');
+  if(!from||!to)throw new Error('חסר שם');if(from===to)return date?getDayData_(date):{ok:true};
+  let n=0;const one=String(payload&&payload.entryId||'');
+  {const sh=sheet_(APP.sheets.entries),values=sh.getDataRange().getValues();
+    for(let i=1;i<values.length;i++){const r=values[i];if(r[14]===true)continue;if(one&&String(r[0])!==one)continue;if(String(r[5])===from){sh.getRange(i+1,6).setValue(to);n++}if(String(r[6])===from){sh.getRange(i+1,7).setValue(to);n++}}}
+  if(!one){const sh=sheet_(APP.sheets.foods),values=sh.getDataRange().getValues();
+    for(let i=1;i<values.length;i++){const r=values[i];if(r[13]===false||!/המזונות שלי/.test(String(r[10]||'')))continue;if(String(r[1])===from){sh.getRange(i+1,2).setValue(to);n++}}}
+  if(!one){const sh=sheet_(APP.sheets.meals),values=sh.getDataRange().getValues();
+    for(let i=1;i<values.length;i++){const r=values[i];if(String(r[10])===from){sh.getRange(i+1,11).setValue(to);n++}}}
+  if(date&&/^\d{4}-\d{2}-\d{2}$/.test(date)){touchDay_(date);const d=getDayData_(date);d.renamed=n;d.myFoods=getMyFoods_();d.meals=getMealOptions_();return d}
+  return {renamed:n,myFoods:getMyFoods_(),meals:getMealOptions_()};
 }
 function ungroupEntries(prev){
   // Undo for grouping and merging: the first snapshot of a row wins, later ones only add the missing fields.
@@ -1532,6 +1546,9 @@ function saveSettings(payload) {
   if(payload&&payload.day_cut){const c=payload.day_cut,d=String(c.date||''),amt=Math.round(Number(c.amount)/10)*10,cap=Math.round((Number(getSettings_().calorie_goal)||2200)*Math.max(userShift_(),0.0001)/10)*10;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!(amt>=0&&amt<=cap))throw new Error('אפשר להוריד עד '+cap+' קל׳');
     const m=dayCuts_(),keep=addDays_(d,-14);Object.keys(m).forEach(k=>{if(k<keep)delete m[k]});m[d]=amt;setSetting_('day_cuts',JSON.stringify(m));}
+  if(payload&&payload.gap_mode){const c=payload.gap_mode,d=String(c.date||''),mode=String(c.mode||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||['event','today','none'].indexOf(mode)<0)throw new Error('בחירה לא תקינה');
+    const m=gapModes_(),keep=addDays_(d,-21);Object.keys(m).forEach(k=>{if(k<keep)delete m[k]});m[d]=mode;setSetting_('gap_modes',JSON.stringify(m));}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'debug_today')){const v=String(payload.debug_today||'');if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v))throw new Error('תאריך לא תקין');setSetting_('debug_today',v);
     if(v){const cur=getSettings_();if(cur.debug_since){let ds=[];try{ds=JSON.parse(String(cur.debug_dates||'[]'))||[]}catch(_){}if(ds.indexOf(v)<0){ds.push(v);setSetting_('debug_dates',JSON.stringify(ds.slice(-60)))}}}}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'calendar_kind')){const v=String(payload.calendar_kind||'');if(['apple','google','other'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('calendar_kind',v);}
@@ -2162,6 +2179,14 @@ const GOAL_RULES={lose:{shift:.10,save:[.05,.10],event:.30,name:'חיטוב'},re
 function goalRules_(settings){let p={};try{p=JSON.parse((settings||getSettings_()).profile_json||'{}')}catch(_){}return GOAL_RULES[p.goal]||GOAL_RULES.recomp;}
 /* 2.14.0: how much the goal may move after yesterday — the user's choice, up to the goal's limit; 0 = off */
 function userShift_(settings){const s=settings||getSettings_(),r=goalRules_(s),v=s.shift_pct;if(v===''||v===undefined||v===null||isNaN(Number(v)))return r.shift;return Math.max(0,Math.min(r.shift,Number(v)/100));}
+/* 2.16: a day over the goal in the week of an event: where its gap goes — 'event' (the event day, default), 'today' (the next day, like a regular day), 'none' */
+function gapModes_(settings){try{const m=JSON.parse(String((settings||getSettings_()).gap_modes||'{}'));return m&&typeof m==='object'?m:{}}catch(_){return {}}}
+function dayStreakLoose_(y,events,s,base){
+  const min=Math.max(80,Math.round(base*0.05)),gaps=[];
+  for(let i=0;i<3;i++){const d=addDays_(y,-i);if(events.some(e=>e.date===d))return null;const g=dayGap_(d,events,s,base,1e9);if(Math.abs(g)<min)return null;gaps.push(g);}
+  if(!gaps.every(g=>g<0))return null;
+  return {dir:'over',avg:Math.round(gaps.reduce((n,g)=>n+Math.abs(g),0)/3/10)*10,start:addDays_(y,-2),end:y,eventWeek:true};
+}
 function dayCuts_(settings){try{const m=JSON.parse(String((settings||getSettings_()).day_cuts||'{}'));return m&&typeof m==='object'?m:{}}catch(_){return {}}}
 function dayGap_(d,events,s,base,cap,extra){
   const eaten=getEntriesForDate_(d).reduce((n,x)=>n+(Number(x.calories)||0),0),goal=base+bankAdjust_(d,events,s).delta+(Number(extra)||0),gap=goal-eaten;
@@ -2189,10 +2214,16 @@ function dayShift_(date,settings,goalBefore){
     // event day: the gaps of the days before it (since it was added) come here, within the event limit
     out.eventId=own.id;let sum=0;
     // 2.11.0: an event added at the last moment still gets what was saved in the 3 days before it was added
-    for(let d=addDays_(date,-6);d<date;d=addDays_(d,1)){if(d<today&&(!own.created||addDays_(own.created,-3)<=d)&&!events.some(e=>e.date===d))sum+=dayGap_(d,events,s,base,cap);}
+    const gm=gapModes_(s);
+    for(let d=addDays_(date,-6);d<date;d=addDays_(d,1)){if(d<today&&(!own.created||addDays_(own.created,-3)<=d)&&!events.some(e=>e.date===d)&&!(gm[d]==='today'||gm[d]==='none'))sum+=dayGap_(d,events,s,base,cap);}
     const evCap=Math.round(base*rules.event/10)*10,already=Number(own.plan&&own.plan.adj&&own.plan.adj[date])||0;
     if(sum>0)sum=Math.max(0,Math.min(sum,evCap-already));
     out.toEvent=sum;if(sum>0)out.plus=sum;else if(sum<0)out.cut=-sum;out.source='event';
+    try{if(eventOfDay_(y,events)&&!events.some(e=>e.date===y)){const g=dayGap_(y,events,s,base,1e9);if(g<0)out.weekOver={date:y,over:-g,cut:Math.min(-g,cap),eventId:own.id,eventDate:date,mode:gm[y]||''}}}catch(_){}
+  }else if(eventOfDay_(y,events)&&gapModes_(s)[y]==='today'&&userShift_(s)>0){
+    const ucap=Math.round(base*userShift_(s)/10)*10,gap=dayGap_(y,events,s,base,ucap),cuts=dayCuts_(s);
+    if(gap>0)out.plus=gap;else if(gap<0){out.cut=-gap;out.over=-gap;out.cap=ucap;if(Object.prototype.hasOwnProperty.call(cuts,date))out.cut=Math.max(0,Math.min(-gap,Number(cuts[date])||0));}
+    out.source='yesterday';out.fromEventWeek=true;
   }else if(!eventOfDay_(y,events)&&userShift_(s)===0){
     out.source='off';
   }else if(!eventOfDay_(y,events)){
@@ -2205,7 +2236,10 @@ function dayShift_(date,settings,goalBefore){
     if(gap>0)out.plus=gap;
     else if(gap<0){out.cut=-gap;out.over=-gap;out.cap=ucap;if(Object.prototype.hasOwnProperty.call(cuts,date))out.cut=Math.max(0,Math.min(-gap,Number(cuts[date])||0));}
     out.source=yEvent?'after-event':'yesterday';
-  }else out.source='event-week';
+  }else{out.source='event-week';
+    /* 2.16: the app asks about a day over the goal in an event week; 3 days over in a row is a pattern */
+    try{const ev=eventOfDay_(y,events),gm=gapModes_(s),g=dayGap_(y,events,s,base,1e9);if(g<0){out.weekOver={date:y,over:-g,cut:Math.min(-g,cap),eventId:ev?ev.id:'',eventDate:ev?ev.date:'',mode:gm[y]||''}}
+      const st=dayStreakLoose_(y,events,s,base);if(st)out.streak=st}catch(_){}}
   let total=out.plus-out.cut;
   const floor=ctx.noDeficit?Math.max(goalBefore,ctx.minDay):ctx.minDay;
   if(goalBefore+total<floor)total=Math.min(0,floor-goalBefore);

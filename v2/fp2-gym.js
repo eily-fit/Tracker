@@ -15,8 +15,24 @@ const setCfg=c=>LS.set('fp2.restSound',JSON.stringify(c));
 function ctx(){try{if(!state.audioCtx){const AC=window.AudioContext||window.webkitAudioContext;if(AC)state.audioCtx=new AC()}const c=state.audioCtx;if(c&&c.state==='suspended'&&c.resume)c.resume();return c}catch(_){return null}}
 /* 2.14.1: while nothing plays the app's sound is "ambient" (mixes with your music, never lowers it);
    only for the end-of-rest sound it becomes "transient" (the music goes down for a moment) */
-function duck(on){try{if(navigator.audioSession)navigator.audioSession.type=on?'transient':'ambient'}catch(_){}}
+let recording=0;
+function duck(on){try{if(navigator.audioSession&&!recording)navigator.audioSession.type=on?'transient':'ambient'}catch(_){}}
 duck(false);
+/* 2.16: on iPhone an "ambient" audio session does not allow the microphone. While recording it is "play-and-record", then back. */
+if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&!navigator.mediaDevices.__fp){
+  const gum=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getUserMedia=async function(c){
+    const audio=!!(c&&c.audio);if(!audio)return gum(c);
+    try{if(navigator.audioSession)navigator.audioSession.type='play-and-record'}catch(_){}
+    recording++;
+    try{const st=await gum(c);st.getTracks().forEach(t=>{const o=t.stop.bind(t);t.stop=function(){o();recording=Math.max(0,recording-1);if(!recording)setTimeout(()=>duck(false),300)}});return st}
+    catch(e){recording=Math.max(0,recording-1);if(!recording)duck(false);
+      const m=e&&e.name==='NotAllowedError'?'אין הרשאה למיקרופון. באייפון: הגדרות ← Safari ← מיקרופון ← לאפשר, ואז לסגור ולפתוח את האפליקציה.':e&&e.name==='NotFoundError'?'לא נמצא מיקרופון':'המיקרופון לא נפתח: '+((e&&e.message)||'');
+      const err=new Error(m);err.name=e&&e.name;err.fpMsg=m;throw err}
+  };
+  navigator.mediaDevices.__fp=true;
+}
+window.fpMicMsg=e=>(e&&e.fpMsg)||'אין גישה למיקרופון';
 function out(c){const comp=c.createDynamicsCompressor();comp.threshold.value=-10;comp.ratio.value=4;comp.connect(c.destination);return comp}
 function tone(c,dst,t,f,len,type,vol,f2){const o=c.createOscillator(),g=c.createGain();o.type=type||'square';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+len);
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.02);g.gain.setValueAtTime(vol,t+len*0.7);g.gain.exponentialRampToValueAtTime(0.0001,t+len);o.connect(g);g.connect(dst);o.start(t);o.stop(t+len+0.02)}
@@ -36,7 +52,7 @@ async function playMine(){const data=LS.get('fp2.restRec');if(!data)return playT
 function restSound(kindOverride){
   const c=cfg(),kind=kindOverride||c.kind;if(kind==='none')return;
   duck(true);setTimeout(()=>duck(false),3500);
-  const phrase=PHRASES[c.phrase]||PHRASES[0];
+  const phrase=c.phrase==='custom'&&String(c.custom||'').trim()?String(c.custom).trim():(PHRASES[c.phrase]||PHRASES[0]);
   if(kind==='voice'){if(!speak(phrase))playTones('beeps');return}
   if(kind==='beepvoice'){const len=playTones('beeps');setTimeout(()=>{if(!speak(phrase))playTones('beeps')},len*1000);return}
   if(kind==='mine'){playMine();return}
@@ -83,7 +99,8 @@ function renderSet(){
   const open=box.open,c=cfg(),vs=heVoices(),hasRec=!!LS.get('fp2.restRec'),voiceOn=c.kind==='voice'||c.kind==='beepvoice';
   box.innerHTML=`<summary>🔔 צליל סוף מנוחה</summary><div class="settings-body">
     <div class="meal-tabs" style="flex-wrap:wrap">${SOUNDS.map(([k,l])=>`<button type="button" class="chip${c.kind===k?' active':''}" onclick="fpRestSet('kind','${k}')">${l}</button>`).join('')}</div>
-    ${voiceOn?`<label style="font-weight:700;display:block;margin-top:12px">מה הקול אומר?</label><div class="meal-tabs" style="flex-wrap:wrap">${PHRASES.map((p,i)=>`<button type="button" class="chip${c.phrase===i?' active':''}" onclick="fpRestSet('phrase',${i})">${p}</button>`).join('')}</div>
+    ${voiceOn?`<label style="font-weight:700;display:block;margin-top:12px">מה הקול אומר?</label><div class="meal-tabs" style="flex-wrap:wrap">${PHRASES.map((p,i)=>`<button type="button" class="chip${c.phrase===i?' active':''}" onclick="fpRestSet('phrase',${i})">${p}</button>`).join('')}<button type="button" class="chip${c.phrase==='custom'?' active':''}" onclick="fpRestSet('phrase','custom')">✏️ משפט שלי</button></div>
+      ${c.phrase==='custom'?`<div style="display:flex;gap:8px;margin-top:8px"><input id="fpRestCustom" maxlength="60" placeholder="למשל: יאללה אילי, סט אחרון!" value="${esc(c.custom||'')}" style="flex:1" oninput="fpRestSet('custom',this.value,true)"><button type="button" class="btn light" onclick="fpRestTest()">▶</button></div><p class="muted" style="font-size:12.5px;margin:4px 0 0">הטלפון יקריא את מה שכתבת בסוף כל מנוחה.</p>`:''}
       <label style="font-weight:700;display:block;margin-top:12px">סגנון</label><div class="meal-tabs" style="flex-wrap:wrap">${STYLES.map(s=>`<button type="button" class="chip${c.style===s[0]?' active':''}" onclick="fpRestSet('style','${s[0]}')">${s[1]}</button>`).join('')}</div>
       ${vs.length>1?`<label style="font-weight:700;display:block;margin-top:12px">קול</label><div class="meal-tabs" style="flex-wrap:wrap">${vs.map(v=>`<button type="button" class="chip${(c.voice||vs[0].name)===v.name?' active':''}" onclick="fpRestSet('voice',${JSON.stringify(v.name).replace(/"/g,'&quot;')})">${esc(v.name)}</button>`).join('')}</div>`:''}`:''}
     ${c.kind==='mine'?`<div style="margin-top:12px">${hasRec?'<p class="muted" style="margin:0 0 6px">יש הקלטה שמורה.</p>':''}<button type="button" class="btn light full" id="fpRecBtn" onclick="fpRestRec()">${rec?'⏹ עצור':hasRec?'🎙 להקליט מחדש (עד 4 שניות)':'🎙 להקליט (עד 4 שניות)'}</button></div>`:''}
@@ -102,7 +119,7 @@ window.fpRestRec=async()=>{
       if(blob.size>400000){toast('ההקלטה ארוכה מדי',true);renderSet();return}
       const fr=new FileReader();fr.onload=()=>{LS.set('fp2.restRec',fr.result);toast('ההקלטה נשמרה');renderSet()};fr.readAsDataURL(blob)};
     rec.start();renderSet();setTimeout(()=>{if(rec)try{rec.stop()}catch(_){}},4000);
-  }catch(e){rec=null;toast('אין גישה למיקרופון',true);renderSet()}
+  }catch(e){rec=null;toast(fpMicMsg(e),true);renderSet()}
 };
 try{speechSynthesis.onvoiceschanged=()=>{if($('fpRestSet'))renderSet()}}catch(_){}
 if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{renderSet()}catch(e){console.error(e)}return r}}

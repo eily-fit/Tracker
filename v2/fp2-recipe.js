@@ -57,10 +57,11 @@ function render(){
     <div class="field"><label>כמה מנות יוצא המתכון?</label><input id="fpRecipeServ" type="number" min="1" step="1" inputmode="numeric" value="${R.servings}" onchange="fpRecipeSet('servings',this.value)"></div>
     <div class="card" style="padding:10px 12px;margin:8px 0"><div style="font-size:17px;font-weight:800">מנה אחת: ${kc(p.calories)} קל׳</div><div class="muted">${fmt(p.protein)} ג׳ חלבון · ${fmt(p.carbs)} ג׳ פחמימות · ${fmt(p.fat)} ג׳ שומן</div>
       ${R.site&&R.site.calories?`<div class="muted" style="font-size:12.5px;margin-top:4px">האתר כותב ${kc(R.site.calories)} קל׳ למנה. <button type="button" class="linkish" onclick="fpRecipeUseSite()">להשתמש בערכים של האתר</button></div>`:''}</div>
-    ${miss?`<p class="muted" style="margin:4px 0">${miss===1?'מצרך אחד לא נמצא במאגר':miss+' מצרכים לא נמצאו במאגר'}. אפשר לכתוב שם אחר או לדלג.</p>`:''}
+    ${miss?`<p class="muted" style="margin:4px 0">${miss===1?'מצרך אחד לא נמצא במאגר':miss+' מצרכים לא נמצאו במאגר'}. אפשר לכתוב שם אחר, לדלג, או לתת ל-AI לחשב.</p><button type="button" class="btn secondary full" ${R.ai?'disabled':''} onclick="fpRecipeAI(false)">${R.ai?'ה-AI חושב…':'✨ לחשב את החסרים עם AI'}</button>`:''}
+    <button type="button" class="linkish muted" style="margin-top:6px" ${R.ai?'disabled':''} onclick="fpRecipeAI(true)">✨ לחשב את כל המתכון עם AI</button>
     <h4 style="margin:12px 0 6px">המצרכים (${R.rows.length})</h4>
     ${R.rows.map((r,i)=>{const m=mac(r);return `<div class="history-card${r.on?'':' off'}" style="padding:8px 10px">
-      <div class="history-top"><label style="display:flex;gap:8px;align-items:center;min-width:0"><input type="checkbox" style="width:auto" ${r.on?'checked':''} ${r.food?'':'disabled'} onchange="fpRecipeRow(${i},'on',this.checked)"><span style="min-width:0">${esc(r.text)}</span></label>${m?`<span class="muted" style="flex:none">${kc(m.calories)} קל׳</span>`:''}</div>
+      <div class="history-top"><label style="display:flex;gap:8px;align-items:center;min-width:0"><input type="checkbox" style="width:auto" ${r.on?'checked':''} ${r.food?'':'disabled'} onchange="fpRecipeRow(${i},'on',this.checked)"><span style="min-width:0">${esc(r.text)}${r.ai?' <small class="muted">· AI</small>':''}</span></label>${m?`<span class="muted" style="flex:none">${kc(m.calories)} קל׳</span>`:''}</div>
       ${r.food?`<select onchange="fpRecipeRow(${i},'pick',this.value)">${r.options.map((o,k)=>`<option value="${k}" ${o.name===r.food.name?'selected':''}>${esc(o.name)}</option>`).join('')}</select>
         <div class="row"><div class="field"><input type="number" min="0" step="0.1" inputmode="decimal" value="${r.amount}" onchange="fpRecipeRow(${i},'amount',this.value)"></div><div class="field"><select onchange="fpRecipeRow(${i},'unit',this.value)">${foodUnitOptions(r.food).map(u=>`<option value="${esc(u)}" ${u===r.unit?'selected':''}>${esc(unitLabel(r.food,u))}</option>`).join('')}</select></div></div>`
         :`<div class="row"><div class="field"><input placeholder="שם אחר לחיפוש" onchange="fpRecipeRow(${i},'q',this.value)"></div></div>`}</div>`}).join('')}
@@ -107,6 +108,23 @@ async function save(addToDay){
     else{queueSaveMine([{name,amount:1,unit:'מנה',calories:item.calories,protein:item.protein,carbs:item.carbs,fat:item.fat}],'נשמר במאגר שלך. יופיע ראשון בחיפוש')}
   }catch(e){toast(e.message,true)}
 }
+
+/* 2.16: what the database didn't find goes to the AI (or the whole recipe) */
+function aiFood(x){const f=x.manualOverride?x.manual:(x.choices&&x.choices.length?x.choices[x.choice||0]:x.manual)||{};
+  return {name:x.label,unit:'גרם',baseQty:100,calories:Number(f.calories)||0,protein:Number(f.protein)||0,carbs:Number(f.carbs)||0,fat:Number(f.fat)||0,source:'AI',units:[]}}
+window.fpRecipeAI=async function(all){
+  const rows=all?R.rows:R.rows.filter(r=>!r.food);if(!rows.length)return;
+  R.ai=true;render();
+  try{const d=await call('estimateFoodWithOpenAI','מצרכים של מתכון (כל מצרך בנפרד, בכמות שכתובה): '+rows.map(r=>r.text).join(' ; '),'');
+    const its=(d&&d.items||[]).filter(x=>{const f=aiFood(x);return f.calories||f.protein});if(!its.length)throw new Error('ה-AI לא החזיר ערכים');
+    const toks=t=>normHe(cleanLine(t)).split(' ').filter(w=>w.length>=2&&!/^\d/.test(w));
+    const used=new Set();let n=0;
+    rows.forEach(r=>{const tk=toks(r.text);let best=-1,bs=0;its.forEach((x,i)=>{if(used.has(i))return;const L=' '+normHe(x.label)+' ';const sc=tk.filter(w=>L.indexOf(w)>=0||L.indexOf(w.replace(/(ים|ות|ה)$/,''))>=0).length;if(sc>bs){bs=sc;best=i}});
+      if(best<0&&its.length===rows.length)best=rows.indexOf(r);if(best<0||used.has(best))return;used.add(best);const x=its[best],f=aiFood(x);
+      r.food=f;r.options=[f].concat((r.options||[]).filter(o=>o.name!==f.name)).slice(0,6);r.amount=Math.round((Number(x.amount)||100)*10)/10;r.unit='גרם';r.on=true;r.ai=true;n++});
+    R.ai=false;render();toast(n?`ה-AI חישב ${n} מצרכים. בדוק את הכמויות`:'ה-AI לא הצליח להתאים',!n)}
+  catch(e){R.ai=false;render();toast(e.message,true)}
+};
 window.fpRecipeAdd=()=>save(true);
 window.fpRecipeSave=()=>save(false);
 /* the button, next to "📸 צלם את הארוחה" */
