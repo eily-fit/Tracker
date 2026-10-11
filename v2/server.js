@@ -745,6 +745,10 @@ function debugEnd(){
     out.measures=del('App_BodyMeasurements',r=>r[0]&&ts(r[7])>=since);
     out.days=del('App_DailySummary',r=>r[0]&&ts(r[8])>=since&&dates.indexOf(formatDateValue_(r[0]))>=0,(sh,i)=>sh.getRange(i+1,6,1,2).setValues([['','']]));
     try{out.checkins=del('App_WeeklyCheckins',r=>r[0]&&ts(r[3])>=since)}catch(_){}
+    /* 2.17: workouts, sessions and foods added during the test or the demo go too */
+    try{out.workouts=del(APP.sheets.workouts,r=>r[0]&&ts(r[3])>=since)}catch(_){}
+    try{out.sessions=del(APP.sheets.sessions,r=>r[0]&&ts(r[3])>=since)}catch(_){}
+    try{out.foods=del(APP.sheets.foods,r=>r[0]&&/המזונות שלי/.test(String(r[10]||''))&&ts(r[14])>=since)}catch(_){}
     let snap={};try{snap=JSON.parse(String(s.debug_snapshot||'{}'))||{}}catch(_){}
     Object.keys(s).forEach(k=>{if(DEBUG_SKIP.indexOf(k)>=0)return;const was=Object.prototype.hasOwnProperty.call(snap,k)?snap[k]:'';if(String(was)!==String(s[k]))setSetting_(k,was)});
     dates.forEach(d=>{try{touchDay_(d)}catch(_){}});
@@ -770,7 +774,7 @@ function renameFoodEverywhere(payload){
   if(!one){const sh=sheet_(APP.sheets.foods),values=sh.getDataRange().getValues();
     for(let i=1;i<values.length;i++){const r=values[i];if(r[13]===false||!/המזונות שלי/.test(String(r[10]||'')))continue;if(String(r[1])===from){sh.getRange(i+1,2).setValue(to);n++}}}
   if(!one){const sh=sheet_(APP.sheets.meals),values=sh.getDataRange().getValues();
-    for(let i=1;i<values.length;i++){const r=values[i];if(String(r[10])===from){sh.getRange(i+1,11).setValue(to);n++}}}
+    for(let i=1;i<values.length;i++){const r=values[i];if(String(r[10])===from||(!String(r[10]||'').trim()&&String(r[1])===from)){sh.getRange(i+1,11).setValue(to);n++}}}
   if(date&&/^\d{4}-\d{2}-\d{2}$/.test(date)){touchDay_(date);const d=getDayData_(date);d.renamed=n;d.myFoods=getMyFoods_();d.meals=getMealOptions_();return d}
   return {renamed:n,myFoods:getMyFoods_(),meals:getMealOptions_()};
 }
@@ -1552,8 +1556,8 @@ function saveSettings(payload) {
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'debug_today')){const v=String(payload.debug_today||'');if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v))throw new Error('תאריך לא תקין');setSetting_('debug_today',v);
     if(v){const cur=getSettings_();if(cur.debug_since){let ds=[];try{ds=JSON.parse(String(cur.debug_dates||'[]'))||[]}catch(_){}if(ds.indexOf(v)<0){ds.push(v);setSetting_('debug_dates',JSON.stringify(ds.slice(-60)))}}}}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'calendar_kind')){const v=String(payload.calendar_kind||'');if(['apple','google','other'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('calendar_kind',v);}
-  if(payload&&Object.prototype.hasOwnProperty.call(payload,'event_cut_pct')){const v=Math.round(Number(payload.event_cut_pct)),r=goalRules_().save;if(!(v>=Math.round(r[0]*100)&&v<=Math.round(r[1]*100)))throw new Error('אפשר בין '+Math.round(r[0]*100)+'% ל-'+Math.round(r[1]*100)+'%');setSetting_('event_cut_pct',v);}
-  if(payload&&Object.prototype.hasOwnProperty.call(payload,'oil_profile')){const v=String(payload.oil_profile||'');if(['s','r','g'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('oil_profile',v);}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'event_cut_pct')){const v=Math.round(Number(payload.event_cut_pct)),r=goalRules_().save;if(!(v===0||(v>=Math.round(r[0]*100)&&v<=Math.round(r[1]*100))))throw new Error('אפשר בין '+Math.round(r[0]*100)+'% ל-'+Math.round(r[1]*100)+'%');setSetting_('event_cut_pct',v);}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'oil_profile')){const v=String(payload.oil_profile||'');if(['s','r','g','v'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('oil_profile',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'day_rollover_hour')){const v=Number(payload.day_rollover_hour);if(!Number.isInteger(v)||v<0||v>6)throw new Error('אפשר בין חצות ל-6 בבוקר');setSetting_('day_rollover_hour',v);delete payload.day_rollover_hour;}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'shift_pct')){const v=Math.round(Number(payload.shift_pct)),mx=Math.round(goalRules_().shift*100);if(!(v>=0&&v<=mx))throw new Error('אפשר בין 0% ל-'+mx+'%');setSetting_('shift_pct',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'holidays')){const v=String(payload.holidays||'').split(',').filter(x=>['jewish','muslim','christian','civil','none'].indexOf(x)>=0);setSetting_('holidays',v.join(',')||'none');}
@@ -2850,9 +2854,10 @@ function bankContext_(settings){
   const fatMin=Math.round(weight*0.6),minDay=Math.max(male?1500:1200,Math.round(protein*4+fatMin*9+320),tdee?Math.round(tdee*0.75/10)*10:0);
   const noDeficit=Number(profile.age)<18||profile.medical===true;
   const rules=GOAL_RULES[profile.goal]||GOAL_RULES.recomp,range=rules.save;
-  let pct=Number(s.event_cut_pct)/100;if(!(pct>=range[0]&&pct<=range[1]))pct=range[1];
+  /* 2.17: 0 = no saving before events */
+  const saveOff=String(s.event_cut_pct)==='0';let pct=Number(s.event_cut_pct)/100;if(saveOff)pct=0;else if(!(pct>=range[0]&&pct<=range[1]))pct=range[1];
   const maxCut=noDeficit?0:Math.max(0,Math.min(Math.round(goal*pct/10)*10,goal-minDay));
-  return {goal,protein,fatMin,minDay,maxCut,noDeficit,savePct:Math.round(pct*100),saveRange:[Math.round(range[0]*100),Math.round(range[1]*100)],eventPct:Math.round(rules.event*100),eventCap:Math.round(goal*rules.event/10)*10,goalType:profile.goal||'recomp',goalName:rules.name,shiftPct:Math.round(userShift_(s)*100),shiftMax:Math.round(rules.shift*100)};
+  return {goal,protein,fatMin,minDay,maxCut,noDeficit,saveOff,savePct:Math.round(pct*100),saveRange:[Math.round(range[0]*100),Math.round(range[1]*100)],eventPct:Math.round(rules.event*100),eventCap:Math.round(goal*rules.event/10)*10,goalType:profile.goal||'recomp',goalName:rules.name,shiftPct:Math.round(userShift_(s)*100),shiftMax:Math.round(rules.shift*100)};
 }
 // v0.32: an event far ahead is saved without a plan ("pending"). Its reminder opens on the Sunday of its week,
 // or on the Thursday before when the event is on Sunday–Tuesday, and the plan is built then with the goal of that time.

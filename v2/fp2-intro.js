@@ -6,7 +6,7 @@
 const q=s=>document.querySelector(s);
 const vis=el=>{if(!el)return false;const r=el.getBoundingClientRect();return r.width>0&&r.height>0};
 const byText=(sel,re)=>[...document.querySelectorAll(sel)].find(e=>re.test(e.textContent||'')&&vis(e));
-const closeAll=()=>{['fpUnplanned','fpEvSum','fpStreak','fpHoliday','fpShab','fpShabFill','fpAddMoreSheet'].forEach(i=>{const e=document.getElementById(i);if(e)e.remove()});try{closePlusMenu()}catch(_){}};
+const closeAll=()=>{['fpUnplanned','fpEvSum','fpStreak','fpHoliday','fpShab','fpShabFill','fpAddMoreSheet','fpWeekOver'].forEach(i=>{const e=document.getElementById(i);if(e)e.remove()});try{closePlusMenu()}catch(_){}};
 const ctx=()=>{try{return bankCtx()}catch(_){return {}}};
 /* steps. kind: 'b' basic (green) | 's' special (purple). tap: the user may tap the target (it really works). */
 const STEPS=[
@@ -16,7 +16,7 @@ const STEPS=[
   {kind:'b',view:'add',t:()=>q('#fpAddMoreBtn'),title:'עוד דרכים',text:'צילום של הצלחת, ברקוד, תמונה של מתכון, או קישור למתכון.',tap:true,tapText:'לחץ ותראה'},
   {kind:'b',view:'add',before:()=>{if(!q('#fpAddMoreSheet'))try{fpAddMore()}catch(_){}},t:()=>q('#fpAddMoreSheet .sheet'),title:'הכל פה',text:'כל אחת מהדרכים נותנת ערכים שאפשר לתקן לפני ששומרים.',after:closeAll},
   {kind:'s',view:'today',t:null,title:'✨ ככה נראה משהו שיש רק אצלנו',text:'כשמשהו זוהר בסגול, זה משהו שלא תמצא באפליקציות אחרות. בוא נראה מה.'},
-  {kind:'s',view:'today',t:null,mock:'<div class="fpI-mock"><b>חזה עוף בגריל</b> · 150 ג׳ · 248 קל׳<div class="fpI-oil">כולל 5 ג׳ שמן · <u>לשנות</u></div></div>',title:'השמן כבר בפנים',text:'מאכל מבושל כבר כולל את השמן בקלוריות. בישלת עם יותר או בלי? לוחצים על השורה ומשנים.'},
+  {kind:'b',view:'today',t:null,mock:'<div class="fpI-mock"><b>חזה עוף בגריל</b> · 150 ג׳ · 248 קל׳<div class="fpI-oil">כולל 5 ג׳ שמן · <u>לשנות</u></div></div>',title:'השמן כבר בפנים',text:'מאכל מבושל כבר כולל את השמן בקלוריות. בישלת עם יותר או בלי? לוחצים על השורה ומשנים.'},
   {kind:'s',view:'today',t:()=>q('#hdrCal'),title:'אירוע? חוסכים מראש',text:'יש חתונה או מסעדה? שמים ביומן של הטלפון, והאפליקציה קולטת את זה ושואלת איך להתכונן.'},
   {kind:'s',view:'today',before:()=>{try{fpUnplannedPreview()}catch(_){}},t:()=>q('#fpUnplanned .sheet'),title:'אתה מחליט כמה לחסוך',text:'בוחרים כמה פחות ביום ואיך. מה שנחסך מחכה לך באירוע. אפשר לשנות גם בהגדרות.',after:closeAll},
   {kind:'s',view:'today',t:null,mock:'<div class="fpI-mock"><b>🎉 היום: חתונה</b> · שמורים לך <b>+960</b> קל׳<div style="margin-top:8px"><span class="fpI-btn">התחלתי את האירוע</span></div></div>',title:'ביום האירוע',text:'מגיעים לאירוע? לוחצים ״התחלתי את האירוע״, ומה ששמרת נכנס לעיגול.'},
@@ -30,8 +30,8 @@ const STEPS=[
   {kind:'b',view:'workoutHome',t:()=>byText('#workoutHome > button',/צור אימון חדש/),title:'אימון משלך',text:'בונים פעם אחת את התרגילים לפי הסדר. בפעם הבאה מתחילים בלחיצה, ו״שמור ועבור לתרגיל הבא״ מעביר אותך הלאה.'},
   {kind:'b',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="border-color:rgba(215,243,107,.45)"><b>לחיצת חזה</b><div style="margin-top:6px">סט 1 · <b>20</b> ק״ג × <b>8</b></div><div class="muted" style="font-size:13px;margin-top:4px">📝 הערה / תת־סט (שינוי משקל בתוך הסט)</div></div>',title:'רושמים סטים',text:'משקל וחזרות לכל סט. ירדת במשקל באמצע הסט? ״תת־סט״. ואפשר הערה.'},
   {kind:'s',view:'workoutHome',t:null,mock:'<div class="fpI-mock"><b>בפעם הקודמת · יום ג׳</b><div style="margin-top:4px">סט 1: 14 ק״ג × 7 ← 10 ק״ג × 4</div><div style="margin-top:8px"><span class="fpI-btn">לאימון הקודם ←</span></div></div>',title:'✨ מה עשית בפעם הקודמת',text:'בכל תרגיל רואים את הפעם הקודמת, כולל תת־סטים. לחיצה פותחת את האימון הקודם, וכפתור אחד מחזיר לסט.'},
-  {kind:'s',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="text-align:center"><div style="font-size:30px;font-weight:800">1:30</div><div>⏱ מנוחה · 🗣 ״יאללה, סט הבא!״</div></div>',title:'✨ מנוחה שמתחילה לבד',text:'אחרי כל תרגיל שומרים, והמנוחה רצה. בסוף: צפצוף, קול שאומר משפט שכתבת, או הקלטה שלך. המוזיקה ממשיכה, והמסך לא נכבה.'},
-  {kind:'s',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="text-align:center;font-size:18px">🎉🏆🎉<div style="font-weight:800;margin-top:4px">שיא חדש בלחיצת חזה!</div></div>',title:'✨ שיא חדש',text:'שברת שיא במשקל או בחזרות? קונפטי.'},
+  {kind:'b',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="text-align:center;border-color:rgba(215,243,107,.45)"><div style="font-size:30px;font-weight:800">1:30</div><div>⏱ מנוחה · <b>+30 שנ׳</b> · <b>⏹ עצור</b></div></div>',title:'מנוחה',text:'המנוחה מתחילה לבד: כשממלאים סט, כשמוסיפים סט או כששומרים תרגיל. לחיצה על השעון: לעצור או להוסיף חצי דקה. בסוף יש צליל, קול או הקלטה שלך.'},
+  {kind:'b',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="text-align:center;font-size:18px;border-color:rgba(215,243,107,.45)">🎉🏆🎉<div style="font-weight:800;margin-top:4px">שיא חדש בלחיצת חזה!</div></div>',title:'שיא חדש',text:'שברת שיא במשקל או בחזרות? קונפטי.'},
   {kind:'b',view:'workoutDiary',t:()=>q('#workoutHistory .journal-day')||q('#workoutHistory'),title:'יומן האימונים',text:'כל אימון נשמר עם הסטים. אפשר לערוך, להעביר תרגיל, או להוסיף תרגיל לאימון שכבר נגמר.'},
   {kind:'b',view:'process',t:()=>q('#fpWeekCard')||q('#photoCard'),title:'ההתקדמות שלך',text:'כל שבוע במקום אחד: תמונות, משקל והיקף טבור, עם השוואה.'},
   {kind:'b',view:'settings',before:()=>{try{const d=q('#fpGoalSet');if(d)d.open=false}catch(_){}},t:()=>q('#fpGoalSet'),title:'⚙️ ההגדרות: היעד',text:'״🎯 היעד והאירועים״: כמה היעד זז לפי אתמול (או לכבות), וכמה לחסוך לפני אירוע.'},
@@ -55,6 +55,7 @@ const css=`#fpI{position:fixed;inset:0;z-index:2147482400;pointer-events:none}
 #fpI h3{margin:2px 0 6px;font-size:19px}#fpI p{margin:0;font-size:15.5px;line-height:1.55}
 #fpI .fpI-tap{margin-top:8px;font-size:13.5px;font-weight:700}
 #fpI .fpI-tap.b{color:#D7F36B}#fpI .fpI-tap.s{color:#C9B2FF}
+#fpI .fpI-back{border:1px solid var(--line,#2A333C);border-radius:14px;padding:13px 14px;font:inherit;font-weight:700;background:none;color:inherit}
 #fpI .fpI-next{margin-top:12px;width:100%;border:0;border-radius:14px;padding:13px;font:inherit;font-weight:800;font-size:16px;background:var(--brand,#D7F36B);color:#14190a}
 #fpI .fpI-card.s .fpI-next{background:#B693FF;color:#170f2b}
 #fpI .fpI-bar{height:3px;background:var(--line,#2A333C);border-radius:3px;margin-bottom:8px;overflow:hidden}#fpI .fpI-bar i{display:block;height:100%;background:currentColor}
@@ -62,10 +63,10 @@ const css=`#fpI{position:fixed;inset:0;z-index:2147482400;pointer-events:none}
 .fpI-oil{margin-top:4px;color:#C9B2FF;font-size:13px}
 .fpI-btn{display:inline-block;background:var(--brand,#D7F36B);color:#14190a;border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
 @media (prefers-reduced-motion:reduce){#fpI .fpI-ring{animation:none}#fpI .fpI-blk,#fpI .fpI-ring,#fpI .fpI-card{transition:none}}`;
-let I=-1,root=null,timer=null,tgt=null,clickHook=null;
+let I=-1,root=null,timer=null,tgt=null,clickHook=null,ST=STEPS,OPT={},doneAt=-1;
 function el(){return document.getElementById('fpI')}
 function place(){
-  if(!root)return;const s=STEPS[I];let r=null;
+  if(!root)return;const s=ST[I];let r=null;
   if(tgt&&vis(tgt)){const b=tgt.getBoundingClientRect(),p=6;r={l:Math.max(0,b.left-p),t:Math.max(0,b.top-p),r:Math.min(innerWidth,b.right+p),b:Math.min(innerHeight,b.bottom+p)}}
   const [b0,b1,b2,b3]=root.querySelectorAll('.fpI-blk'),ring=root.querySelector('.fpI-ring'),card=root.querySelector('.fpI-card');
   const set=(e,l,t,w,h)=>{e.style.left=l+'px';e.style.top=t+'px';e.style.width=Math.max(0,w)+'px';e.style.height=Math.max(0,h)+'px'};
@@ -80,42 +81,44 @@ function place(){
   card.style.top=Math.max(8,Math.min(innerHeight-ch-8,top))+'px';
 }
 function draw(){
-  const s=STEPS[I],kind=s.kind==='s'?'s':'b',card=root.querySelector('.fpI-card'),n=STEPS.length,text=typeof s.text==='function'?s.text():s.text;
+  const s=ST[I],kind=s.kind==='s'?'s':'b',card=root.querySelector('.fpI-card'),n=ST.length,text=typeof s.text==='function'?s.text():s.text;
   card.className='fpI-card '+kind;
   card.innerHTML=`<div class="fpI-bar" style="color:${kind==='s'?'#B693FF':'#D7F36B'}"><i style="width:${Math.round((I+1)/n*100)}%"></i></div><div class="fpI-top"><span class="fpI-tag ${kind}">${kind==='s'?'✨ רק אצלנו':'הבסיס'}</span><span>${I+1} / ${n}</span></div>
     <h3>${esc(s.title)}</h3><p>${esc(text)}</p>${s.mock||''}${s.tap?`<div class="fpI-tap ${kind}">👆 ${esc(s.tapText||'לחץ על מה שזוהר')}</div>`:''}
-    <button type="button" class="fpI-next">${s.kind==='end'?'יאללה, לרשום ארוחה ראשונה':'הבא'}</button>`;
-  card.querySelector('.fpI-next').onclick=()=>go(I+1);
+    <div style="display:flex;gap:8px;margin-top:12px">${I>0?'<button type="button" class="fpI-back">‹ חזרה</button>':''}<button type="button" class="fpI-next" style="margin-top:0;flex:1">${s.kind==='end'?(OPT.endLabel||'יאללה, לרשום ארוחה ראשונה'):s.done?'דלג על זה':'הבא'}</button></div>`;
+  card.querySelector('.fpI-next').onclick=()=>go(I+1);const bk=card.querySelector('.fpI-back');if(bk)bk.onclick=()=>go(I-1);
 }
 function go(n){
-  const prev=STEPS[I];if(prev&&prev.after)try{prev.after()}catch(_){}
-  if(n>=STEPS.length)return finish(true);
-  I=n;const s=STEPS[I];tgt=null;
+  const prev=ST[I];if(prev&&prev.after)try{prev.after()}catch(_){}
+  if(n>=ST.length)return finish(true);
+  I=n;const s=ST[I];tgt=null;
   try{if(s.view&&!(q('#'+s.view)||{}).classList?.contains('active'))showView(s.view)}catch(_){}
   try{window.scrollTo(0,0)}catch(_){}
   if(s.before)try{s.before()}catch(_){}
   draw();place();
   let tries=0;clearInterval(timer);
-  timer=setInterval(()=>{if(!root)return clearInterval(timer);const s2=STEPS[I];if(s2.t&&(!tgt||!tgt.isConnected||!vis(tgt))){tries++;try{const e=s2.t();if(e&&vis(e)){tgt=e;try{e.scrollIntoView({block:'center'})}catch(_){}}}catch(_){}}place()},200);
+  doneAt=-1;try{if(s.start)s.start()}catch(_){}
+  timer=setInterval(()=>{if(!root)return clearInterval(timer);const s2=ST[I];try{if(s2.done&&doneAt!==I&&s2.done()){doneAt=I;const at=I;const c=root.querySelector('.fpI-card');if(c)c.querySelector('.fpI-next').textContent='✓ יופי';setTimeout(()=>{if(I===at)go(I+1)},700)}}catch(_){}if(s2.t&&(!tgt||!tgt.isConnected||!vis(tgt))){tries++;try{const e=s2.t();if(e&&vis(e)){tgt=e;try{e.scrollIntoView({block:'center'})}catch(_){}}}catch(_){}}place()},200);
 }
 function finish(toAdd){
   clearInterval(timer);closeAll();if(clickHook)document.removeEventListener('click',clickHook,true);clickHook=null;
   const r=el();if(r)r.remove();root=null;I=-1;tgt=null;
+  if(OPT.onFinish){const f=OPT.onFinish;ST=STEPS;OPT={};try{f(toAdd)}catch(e){console.error(e)}return}
   try{FP2.setProp('TOUR_DONE','1')}catch(_){}
   try{localStorage.getItem('fp2.firstDay')||localStorage.setItem('fp2.firstDay',state.todayDate||state.date||'')}catch(_){}
   try{showView(toAdd?'add':'today');if(toAdd){const f=$('foodQuery');if(f)setTimeout(()=>f.focus(),300)}}catch(_){}
 }
-window.fpIntro=function(start){
-  if(el())return;
+window.fpIntro=function(start,steps,opt){
+  if(el())return;ST=Array.isArray(steps)&&steps.length?steps:STEPS;OPT=opt||{};
   if(!document.getElementById('fpICss'))document.head.insertAdjacentHTML('beforeend',`<style id="fpICss">${css}</style>`);
   document.body.insertAdjacentHTML('beforeend','<div id="fpI" role="dialog" aria-label="היכרות עם האפליקציה" dir="rtl"><div class="fpI-blk"></div><div class="fpI-blk"></div><div class="fpI-blk"></div><div class="fpI-blk"></div><div class="fpI-blk fpI-cover" style="background:transparent"></div><div class="fpI-ring b"></div><div class="fpI-card"></div><i id="fpTour" hidden></i></div>');
   root=el();
   try{document.querySelectorAll('.overlay:not(.hide)').forEach(o=>{if(o.id!=='onbSheet')o.classList.add('hide')})}catch(_){}
   /* a tap on what glows does its real job, then the tour moves on */
-  clickHook=e=>{if(!root||I<0)return;const s=STEPS[I];if(!s||!s.tap||!tgt)return;if(tgt.contains(e.target)){const at=I;setTimeout(()=>{if(I===at)go(I+1)},450)}};
+  clickHook=e=>{if(!root||I<0)return;const s=ST[I];if(!s||!s.tap||!tgt||s.done)return;if(tgt.contains(e.target)){const at=I;setTimeout(()=>{if(I===at)go(I+1)},450)}};
   document.addEventListener('click',clickHook,true);
   addEventListener('resize',place);
-  go(Math.max(0,Math.min(STEPS.length-1,Number(start)||0)));
+  go(Math.max(0,Math.min(ST.length-1,Number(start)||0)));
 };
-window.fpIntroSteps=STEPS.length;
+window.fpIntroSteps=STEPS.length;window.fpIntroAll=STEPS;
 })();

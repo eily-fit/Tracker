@@ -78,7 +78,7 @@ function showHoliday(h){
   const when=n===0?'היום':n===1?'מחר':`בעוד ${n} ימים`;
   const range=c.saveRange||[10,15],opts=[...new Set([range[0],Math.round((range[0]+range[1])/2),range[1]])];
   if(HP.pct==null||opts.indexOf(HP.pct)<0)HP.pct=c.savePct&&opts.indexOf(c.savePct)>=0?c.savePct:range[1];
-  const canSave=!c.noDeficit&&n>=1;
+  const canSave=!c.noDeficit&&!c.saveOff&&n>=1;
   const opt=(m,title,sub,rec)=>`<button type="button" class="remind-opt${rec?' rec':''}" onclick="fpHolidayGo('${m}')"><b>${title}${rec?' (מומלץ)':''}</b>${sub?`<span>${sub}</span>`:''}</button>`;
   document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpHoliday"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">${h.emoji} ${esc(h.name)} ${when}</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpHoliday').remove()">✕</button></div>
     <p class="muted" style="margin:0 0 10px">יום ${NAMES[dow(h.date)]} ${displayDate(h.date)}${h.approx?' (לפי הלוח הרשמי. יכול לזוז ביום לפי הירח)':''}. ארוחת חג זה בדרך כלל הרבה. לשמור לך קלוריות?</p>
@@ -99,6 +99,8 @@ window.fpHolidayPreview=()=>showHoliday({date:addD(todayISO(),5),name:'ראש ה
 const AUTO='שבת אוטומטי';
 const MEALS=[{k:'fri',day:5,cat:'ערב',name:'שישי בערב'},{k:'satB',day:6,cat:'בוקר',name:'שבת בבוקר'},{k:'satL',day:6,cat:'צהריים',name:'שבת בצהריים'}];
 function shab(){try{return JSON.parse(S('shabbat_json')||'{}')||{}}catch(_){return {}}}
+/* 2.17: which Shabbat meals to learn (default: Friday night and Saturday morning) */
+const pickK=()=>{const p=shab().pick;return Array.isArray(p)&&p.length?p:['fri','satB']};const pickM=()=>MEALS.filter(m=>pickK().indexOf(m.k)>=0);
 async function saveShab(o){state.data=await call('saveSettings',{shabbat_json:JSON.stringify(o)})}
 const isAuto=e=>String(e.source||'')===AUTO||/\(ממוצע\)/.test(String(e.name||''));
 async function learnShabbat(){
@@ -107,7 +109,7 @@ async function learnShabbat(){
   for(let w=0;w<5;w++){const F=addD(fri,-7*w),Sa=addD(F,1);let a=null,b=null;try{a=await call('getDayView',F);b=await call('getDayView',Sa)}catch(_){continue}
     weeks.push({F:a,S:b})}
   const meals={};
-  MEALS.forEach(m=>{const vals=[];weeks.forEach(w=>{const d=m.day===5?w.F:w.S;const es=(d&&d.entries||[]).filter(e=>e.category===m.cat&&!isAuto(e));if(es.length){const s={calories:0,protein:0,carbs:0,fat:0};es.forEach(e=>['calories','protein','carbs','fat'].forEach(k=>s[k]+=Number(e[k])||0));vals.push(s)}});
+  pickM().forEach(m=>{const vals=[];weeks.forEach(w=>{const d=m.day===5?w.F:w.S;const es=(d&&d.entries||[]).filter(e=>e.category===m.cat&&!isAuto(e));if(es.length){const s={calories:0,protein:0,carbs:0,fat:0};es.forEach(e=>['calories','protein','carbs','fat'].forEach(k=>s[k]+=Number(e[k])||0));vals.push(s)}});
     if(vals.length>=3){const avg={};['calories','protein','carbs','fat'].forEach(k=>avg[k]=Math.round(vals.reduce((n,v)=>n+v[k],0)/vals.length));meals[m.k]=avg}});
   const overOf=key=>{const v=weeks.map(w=>w[key]).filter(d=>d&&d.totals&&Number(d.totals.calories)>0&&!(d.entries||[]).every(isAuto)).map(d=>Number(d.totals.calories)-base);return v.length>=3?Math.max(0,Math.round(v.reduce((n,x)=>n+x,0)/v.length/10)*10):0};
   return {meals,over:{fri:overOf('F'),sat:overOf('S')}};
@@ -174,6 +176,7 @@ function renderSet(){
     <label style="font-weight:700;display:block;margin-top:14px">אילו חגים?</label><p class="muted" style="margin:2px 0 6px;font-size:13px">שבוע לפני חג תישאל אם לשמור לו קלוריות.</p>
     <div class="meal-tabs" style="flex-wrap:wrap">${Object.keys(CALS).map(k=>`<button type="button" class="chip${cals.indexOf(k)>=0?' active':''}" onclick="fpToggleCal('${k}')">${CALS[k]}</button>`).join('')}</div>
     <label style="font-weight:700;display:block;margin-top:14px">🕯️ שבת</label>
+    <p class="muted" style="margin:2px 0 6px;font-size:13px">אילו ארוחות האפליקציה לומדת וממלאת?</p><div class="meal-tabs" style="flex-wrap:wrap">${MEALS.map(m=>`<button type="button" class="chip${pickK().indexOf(m.k)>=0?' active':''}" onclick="fpShabPick('${m.k}')">${m.name}</button>`).join('')}</div>
     ${o.asked?`${mealRows(o.meals||{})}<div class="meal-tabs" style="flex-wrap:wrap;margin-top:6px"><button type="button" class="chip${o.save?' active':''}" onclick="fpShabSet('save')">לחסוך במהלך השבוע</button><button type="button" class="chip${o.fill?' active':''}" onclick="fpShabSet('fill')">למלא את הארוחות לבד</button></div><button type="button" class="linkish muted" style="margin-top:6px" onclick="fpShabRelearn()">ללמוד מחדש</button>`
       :`<p class="muted" style="margin:2px 0 0;font-size:13px">רושמים את ארוחות שישי ושבת כרגיל (שומר שבת? ממלאים מראש). אחרי 3 שבועות האפליקציה תדע כמה אתה אוכל, ותציע לשמור לזה ולמלא לבד.</p>`}
   </div>`;box.open=open;
@@ -181,6 +184,7 @@ function renderSet(){
 window.fpSetDayStart=async v=>{try{state.data=await call('saveSettings',{day_rollover_hour:v});renderSet();toast('יום חדש מתחיל ב'+(HOURS.find(x=>x[0]===v)||[0,v+':00'])[1])}catch(e){toast(e.message,true)}};
 window.fpToggleCal=async k=>{const c=myCals();const i=c.indexOf(k);if(i>=0)c.splice(i,1);else c.push(k);try{state.data=await call('saveSettings',{holidays:c.join(',')||'none'});renderSet()}catch(e){toast(e.message,true)}};
 window.fpShabSet=async k=>{const o=shab();o[k]=!o[k];try{await saveShab(o);renderSet()}catch(e){toast(e.message,true)}};
+window.fpShabPick=async k=>{const o=shab(),a=pickK().slice(),i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);o.pick=a;if(o.meals){Object.keys(o.meals).forEach(x=>{if(a.indexOf(x)<0)delete o.meals[x]})}try{await saveShab(o);renderSet()}catch(e){toast(e.message,true)}};
 window.fpShabRelearn=async()=>{try{await saveShab({});LS.set('fp2.shabLook','');renderSet();toast('בסדר, לומד מחדש')}catch(e){toast(e.message,true)}};
 if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{renderSet()}catch(e){console.error(e)}return r}}
 

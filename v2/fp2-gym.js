@@ -47,11 +47,17 @@ function playTones(kind){
 function heVoices(){try{return speechSynthesis.getVoices().filter(v=>/^he|^iw/i.test(v.lang))}catch(_){return []}}
 function speak(text,quiet){try{if(!('speechSynthesis' in window))return false;const c=cfg(),u=new SpeechSynthesisUtterance(text);u.lang='he-IL';const vs=heVoices(),pick=vs.find(v=>v.name===c.voice)||vs[0];if(pick)u.voice=pick;
   const st=STYLES.find(s=>s[0]===c.style)||STYLES[0];u.rate=st[2];u.pitch=st[3];u.volume=quiet?0:Math.max(0.1,Math.min(1,c.vol));speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(_){return false}}
-async function playMine(){const data=LS.get('fp2.restRec');if(!data)return playTones('beeps');const c=ctx();if(!c)return;
+/* 2.17: the recording plays through an <audio> element that was unlocked by a tap, so it is heard over music too */
+let mineEl=null,mineSrc='';
+function mineAudio(){const data=LS.get('fp2.restRec');if(!data)return null;if(!mineEl||mineSrc!==data){mineEl=new Audio(data);mineEl.preload='auto';mineSrc=data;mineEl.fpReady=false}return mineEl}
+function primeMine(){try{if(cfg().kind!=='mine')return;const a=mineAudio();if(!a||a.fpReady)return;a.muted=true;const p=a.play();if(p&&p.then)p.then(()=>{a.pause();a.currentTime=0;a.muted=false;a.fpReady=true}).catch(()=>{a.muted=false});else{a.pause();a.muted=false;a.fpReady=true}}catch(_){}}
+document.addEventListener('touchend',primeMine,{passive:true});document.addEventListener('click',primeMine,true);
+async function playMine(){const a=mineAudio();if(a){try{a.muted=false;a.volume=1;a.currentTime=0;await a.play();return}catch(_){}}return playMineWA()}
+async function playMineWA(){const data=LS.get('fp2.restRec');if(!data)return playTones('beeps');const c=ctx();if(!c)return;
   try{const b=await fetch(data).then(r=>r.arrayBuffer());const buf=await new Promise((ok,no)=>c.decodeAudioData(b,ok,no));const s=c.createBufferSource(),g=c.createGain();g.gain.value=Math.max(0.1,Math.min(1,cfg().vol))*1.6;s.buffer=buf;s.connect(g);g.connect(out(c));s.start()}catch(e){try{const a=new Audio(data);a.play()}catch(_){}}}
 function restSound(kindOverride){
   const c=cfg(),kind=kindOverride||c.kind;if(kind==='none')return;
-  duck(true);setTimeout(()=>duck(false),3500);
+  duck(true);setTimeout(()=>duck(false),kind==='mine'?6000:3500);
   const phrase=c.phrase==='custom'&&String(c.custom||'').trim()?String(c.custom).trim():(PHRASES[c.phrase]||PHRASES[0]);
   if(kind==='voice'){if(!speak(phrase))playTones('beeps');return}
   if(kind==='beepvoice'){const len=playTones('beeps');setTimeout(()=>{if(!speak(phrase))playTones('beeps')},len*1000);return}
@@ -103,7 +109,9 @@ function renderSet(){
       ${c.phrase==='custom'?`<div style="display:flex;gap:8px;margin-top:8px"><input id="fpRestCustom" maxlength="60" placeholder="למשל: יאללה אילי, סט אחרון!" value="${esc(c.custom||'')}" style="flex:1" oninput="fpRestSet('custom',this.value,true)"><button type="button" class="btn light" onclick="fpRestTest()">▶</button></div><p class="muted" style="font-size:12.5px;margin:4px 0 0">הטלפון יקריא את מה שכתבת בסוף כל מנוחה.</p>`:''}
       <label style="font-weight:700;display:block;margin-top:12px">סגנון</label><div class="meal-tabs" style="flex-wrap:wrap">${STYLES.map(s=>`<button type="button" class="chip${c.style===s[0]?' active':''}" onclick="fpRestSet('style','${s[0]}')">${s[1]}</button>`).join('')}</div>
       ${vs.length>1?`<label style="font-weight:700;display:block;margin-top:12px">קול</label><div class="meal-tabs" style="flex-wrap:wrap">${vs.map(v=>`<button type="button" class="chip${(c.voice||vs[0].name)===v.name?' active':''}" onclick="fpRestSet('voice',${JSON.stringify(v.name).replace(/"/g,'&quot;')})">${esc(v.name)}</button>`).join('')}</div>`:''}`:''}
-    ${c.kind==='mine'?`<div style="margin-top:12px">${hasRec?'<p class="muted" style="margin:0 0 6px">יש הקלטה שמורה.</p>':''}<button type="button" class="btn light full" id="fpRecBtn" onclick="fpRestRec()">${rec?'⏹ עצור':hasRec?'🎙 להקליט מחדש (עד 4 שניות)':'🎙 להקליט (עד 4 שניות)'}</button></div>`:''}
+    ${c.kind==='mine'?`<div style="margin-top:12px">${hasRec?'<p class="muted" style="margin:0 0 6px">יש הקלטה שמורה.</p>':''}<button type="button" class="btn light full" id="fpRecBtn" onclick="fpRestRec()">${rec?'⏹ עצור':hasRec?'🎙 להקליט מחדש (עד 4 שניות)':'🎙 להקליט (עד 4 שניות)'}</button>
+      <label class="btn light full" style="margin-top:8px;display:block;text-align:center">📁 או לבחור קובץ קול<input type="file" accept="audio/*" style="display:none" onchange="fpRestFile(this.files&&this.files[0])"></label>
+      ${hasRec?'<button type="button" class="btn light full" style="margin-top:8px" onclick="fpRestTest()">▶ לשמוע את ההקלטה</button>':''}</div>`:''}
     <label style="font-weight:700;display:block;margin-top:12px">עוצמה</label><input type="range" id="fpRestVol" min="0.2" max="1" step="0.1" value="${c.vol}" oninput="fpRestSet('vol',Number(this.value),true)" style="width:100%">
     <button type="button" class="btn full" style="margin-top:12px" onclick="fpRestTest()">▶ לשמוע</button>
     <p class="muted" style="font-size:12.5px;margin:10px 0 0">במסך האימון המסך נשאר דלוק, כדי שהשעון ימשיך והצליל יישמע. מוזיקה ברקע אמורה להיות שקטה לרגע ולחזור. באייפון אין רטט מאפליקציה מסוג זה, יש רק ״טיק״ קטן.</p>
@@ -111,16 +119,25 @@ function renderSet(){
 }
 window.fpRestSet=(k,v,quiet)=>{const c=cfg();c[k]=v;setCfg(c);if(!quiet)renderSet()};
 window.fpRestTest=()=>{ctx();restSound()};
+/* 2.17: every step says what failed, and a recorder is made with the first format that works */
+window.fpMakeRecorder=function(st,extra){const tries=[];['audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm','audio/ogg'].forEach(t=>{try{if(window.MediaRecorder&&(!MediaRecorder.isTypeSupported||MediaRecorder.isTypeSupported(t)))tries.push(Object.assign({mimeType:t},extra||{}))}catch(_){}});tries.push(extra||undefined);tries.push(undefined);
+  let last=null;for(const o of tries){try{return new MediaRecorder(st,o)}catch(e){last=e}}throw Object.assign(new Error('ההקלטה לא נתמכת בטלפון הזה ('+((last&&last.name)||'')+')'),{fpMsg:'ההקלטה לא נתמכת בטלפון הזה. אפשר לבחור קובץ קול במקום.'})};
 window.fpRestRec=async()=>{
   if(rec){try{rec.stop()}catch(_){}return}
-  try{const st=await navigator.mediaDevices.getUserMedia({audio:true});const mt=['audio/mp4','audio/webm','audio/ogg'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
-    const chunks=[];rec=new MediaRecorder(st,mt?{mimeType:mt}:undefined);rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
-    rec.onstop=()=>{st.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:rec.mimeType||mt||'audio/mp4'});rec=null;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('המיקרופון לא זמין כאן. אפשר לבחור קובץ קול במקום.',true);return}
+  if(typeof MediaRecorder==='undefined'){toast('ההקלטה לא נתמכת בטלפון הזה. אפשר לבחור קובץ קול במקום.',true);return}
+  let st=null;
+  try{st=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){rec=null;toast(fpMicMsg(e)+(e&&e.name&&!e.fpMsg?' ('+e.name+')':''),true);renderSet();return}
+  try{const chunks=[];rec=fpMakeRecorder(st);const mt=rec.mimeType||'';rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+    rec.onstop=()=>{st.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:mt||'audio/mp4'});rec=null;
+      if(!blob.size){toast('ההקלטה יצאה ריקה. נסה שוב, או בחר קובץ קול.',true);renderSet();return}
       if(blob.size>400000){toast('ההקלטה ארוכה מדי',true);renderSet();return}
-      const fr=new FileReader();fr.onload=()=>{LS.set('fp2.restRec',fr.result);toast('ההקלטה נשמרה');renderSet()};fr.readAsDataURL(blob)};
+      const fr=new FileReader();fr.onload=()=>{LS.set('fp2.restRec',fr.result);mineEl=null;toast('ההקלטה נשמרה');renderSet()};fr.readAsDataURL(blob)};
     rec.start();renderSet();setTimeout(()=>{if(rec)try{rec.stop()}catch(_){}},4000);
-  }catch(e){rec=null;toast(fpMicMsg(e),true);renderSet()}
+  }catch(e){try{st.getTracks().forEach(t=>t.stop())}catch(_){}rec=null;toast(e.fpMsg||('ההקלטה לא התחילה: '+(e.name||'')+' '+(e.message||'')),true);renderSet()}
 };
+window.fpRestFile=function(f){if(!f)return;if(f.size>600000)return toast('הקובץ גדול מדי. קובץ של כמה שניות',true);const fr=new FileReader();fr.onload=()=>{LS.set('fp2.restRec',fr.result);mineEl=null;toast('הקול נשמר');renderSet()};fr.readAsDataURL(f)};
+
 try{speechSynthesis.onvoiceschanged=()=>{if($('fpRestSet'))renderSet()}}catch(_){}
 if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{renderSet()}catch(e){console.error(e)}return r}}
 })();

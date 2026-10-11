@@ -70,17 +70,20 @@ if(typeof estimateMealPhoto==='function'){const o=estimateMealPhoto;estimateMeal
 let SERV=4;
 function recipePhotoSheet(){
   sheet('fpRecipePhoto','🖼 תמונה של מתכון',`<p class="muted" style="margin:0 0 8px">מצלמים את המתכון או את רשימת המרכיבים (גם צילום מסך). ה-AI קורא ומחשב.</p>
-    <div class="field"><label>כמה מנות יוצא המתכון?</label><input id="fpRpServ" type="number" min="1" max="50" step="1" inputmode="numeric" value="${SERV}"></div>
+    <div class="field"><label>כמה מנות (או פרוסות) יוצא המתכון?</label><input id="fpRpServ" type="number" min="1" max="50" step="1" inputmode="numeric" value="${SERV}"></div>
+    <label style="display:flex;gap:8px;align-items:center;margin:0 0 10px"><input type="checkbox" id="fpRpUnknown" style="width:auto"> לא יודע. אחשב את כל המתכון, ואחר כך אגיד כמה פרוסות יצאו וכמה אכלתי</label>
     <input id="fpRpFile" type="file" accept="image/*" style="display:none">
     <button type="button" class="btn full" onclick="document.getElementById('fpRpFile').click()">בחר תמונה או צלם</button>`);
-  $('fpRpFile').onchange=e=>{const f=e.target.files&&e.target.files[0];SERV=Math.max(1,Math.min(50,Math.round(Number($('fpRpServ').value)||1)));const s=$('fpRecipePhoto');if(s)s.remove();if(f)recipeFromPhoto(f,SERV)};
+  $('fpRpFile').onchange=e=>{const f=e.target.files&&e.target.files[0];const unk=$('fpRpUnknown')&&$('fpRpUnknown').checked;SERV=Math.max(1,Math.min(50,Math.round(Number($('fpRpServ').value)||1)));const s=$('fpRecipePhoto');if(s)s.remove();if(f)recipeFromPhoto(f,unk?0:SERV)};
 }
 async function recipeFromPhoto(file,serv){
   showView('add');state.dishEstimate=null;thinking('ה-AI קורא את המתכון…');
-  try{const image=await shrinkImage(file,1600,0.8);
+  try{/* 2.17: small enough for the server (it refused big photos: "התמונה לא תקינה או גדולה מדי") */
+    let image='';for(const [w,q] of [[1400,0.75],[1100,0.7],[900,0.65],[700,0.6]]){image=await shrinkImage(file,w,q);if(String(image).replace(/^data:[^,]*,/,'').length<2400000)break}
     const note='זו תמונה של מתכון או של רשימת מרכיבים, לא של צלחת. קרא כל מרכיב והכמות שכתובה לידו, המר לגרמים, והחזר את כל המתכון כמו שהוא (כל המנות יחד). אל תוסיף מרכיבים שלא כתובים. השם: שם המתכון.';
     const r=await call('estimateFoodPhoto',{image,note});
     state.dishEstimate=r;state.dishSkin=null;state.dishBone=null;state.dishFor=null;if($('foodQuery'))$('foodQuery').value=r.name;
+    if(!serv){setBase(r);r._units={n:1,k:1};renderDishEstimate();toast('חישבתי את כל המתכון. למטה: ״כל המנה =״ כמה פרוסות, ו״אכלתי״ כמה');try{const u=document.querySelector('.fp-units');if(u)u.scrollIntoView({block:'center'})}catch(_){}return}
     setBase(r);r._serv=serv;r._units={n:serv,k:1};scale(r,1/serv);
     toast(serv>1?`חישבתי מנה אחת מתוך ${serv}. אפשר לשנות למטה`:'בדוק את הכמויות לפני הוספה');
   }catch(e){done();toast(e.message,true)}

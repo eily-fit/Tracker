@@ -13,7 +13,8 @@ const PROFILE_KEY='fp2.oilProfile';
 const PROFILES={
   s:{label:'ספריי / כמעט בלי שמן',hint:'ריסוס במחבת, בלי כפות שמן',oil:'little',spoon:10},
   r:{label:'רגיל',hint:'כף שמן פה ושם בבישול',oil:'normal',spoon:10},
-  g:{label:'בנדיבות',hint:'שמן בכל בישול, בכמות יפה',oil:'lots',spoon:13.5}
+  g:{label:'בנדיבות',hint:'שמן בכל בישול, בכמות יפה',oil:'lots',spoon:13.5},
+  v:{label:'משתנה',hint:'כל פעם אחרת. ברירת המחדל: רגיל, ומשנים במאכל עצמו',oil:'normal',spoon:10}
 };
 const X={hidden:new Set(),basics:[],famOf:new Map(),families:[],oils:new Set()};
 const getProfile=()=>{

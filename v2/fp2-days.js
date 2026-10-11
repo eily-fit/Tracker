@@ -288,7 +288,7 @@ if(typeof renderTotals==='function'){const o2=renderTotals;renderTotals=function
 /* ---------- how much to save per day for an event ---------- */
 window.fpSetSavePct=async function(v){
   try{await call('saveSettings',{event_cut_pct:v});
-    const c=state.data.bank&&state.data.bank.ctx;if(c){c.savePct=v;c.maxCut=c.noDeficit?0:Math.max(0,Math.min(Math.round(c.goal*v/1000)*10,c.goal-c.minDay))}
+    const c=state.data.bank&&state.data.bank.ctx;if(c){c.savePct=v;c.saveOff=Number(v)===0;c.maxCut=c.noDeficit?0:Math.max(0,Math.min(Math.round(c.goal*v/1000)*10,c.goal-c.minDay))}
     if(state.data.settings)state.data.settings.event_cut_pct=v;
     if(state.ev)renderEventSheet();
   }catch(e){toast(e.message,true)}

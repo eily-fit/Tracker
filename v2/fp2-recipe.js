@@ -77,6 +77,8 @@ function load(title,servings,lines,site){
   R.rows=lines.map(cleanLine).filter(x=>x.length>=2).length?lines.filter(l=>cleanLine(l).length>=2).slice(0,60).map(matchRow):[];
   if(!R.rows.length){toast('לא מצאתי מצרכים',true);return}
   R.step='calc';render();
+  /* 2.17: what the database didn't find goes to the AI by itself */
+  if(R.rows.some(r=>!r.food))setTimeout(()=>{try{fpRecipeAI(false)}catch(_){}},60);
 }
 window.fpRecipeFetch=async function(){
   const url=(($('fpRecipeUrl')||{}).value||'').trim();R.url=url;

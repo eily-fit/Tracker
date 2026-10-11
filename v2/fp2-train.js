@@ -129,6 +129,26 @@ if(typeof goToPreviousWorkout==='function'){const o2=goToPreviousWorkout;goToPre
     setTimeout(()=>{try{const h=[...document.querySelectorAll('#fpPrevW .workout-item')].find(d=>d.style.border);if(h)h.scrollIntoView({block:'center'})}catch(_){}},50);
   }catch(e){console.error(e);return o2.apply(this,arguments)}}}
 
+
+/* ---------- 2.17: the rest starts when a set is filled (reps written), a set is added, or an exercise is saved. Tap the timer: stop or +30 ---------- */
+document.addEventListener('change',e=>{try{const t=e.target;if(!t||!t.classList||!t.classList.contains('set-reps'))return;if(!(Number(t.value)>0))return;
+  if(state.editingWorkoutId||state.muscleGroup==='אירובי')return;const card=t.closest('#setRows > .card');if(!card)return;
+  const key=String(t.value)+'|'+((card.querySelector('.set-weight')||{}).value||'');if(card.dataset.fpRested===key)return;card.dataset.fpRested=key;startRestTimer()}catch(_){}},true);
+function restLabels(){const c=$('restCtl');if(!c||c.dataset.fp)return;c.dataset.fp='1';const b=c.querySelectorAll('button');if(b[0])b[0].textContent='+30 שנ׳';if(b[1])b[1].textContent='⏹ עצור';
+  const t=$('restText');if(t&&!t.title)t.title='לחץ: לעצור או להוסיף חצי דקה'}
+restLabels();setInterval(restLabels,3000);
+
+/* ---------- 2.17: inside a running workout: "＋ הוסף תרגיל לאימון" (continue the workout) ---------- */
+function addExInRun(){const card=$('activeWorkoutPlan');if(!card||!state.activePlan||card.style.display==='none'||card.querySelector('.fp-addrun'))return;
+  card.insertAdjacentHTML('beforeend','<button type="button" class="btn secondary full fp-addrun" style="margin-top:8px" onclick="fpAddExRun()">＋ הוסף תרגיל לאימון</button>')}
+window.fpAddExRun=function(){if(!state.activePlan)return;const cat=(state.data.workout&&state.data.workout.exercises)||{};
+  state.pickMode={group:state.muscleGroup,current:'',all:state.equipment==='משולב',equipment:state.equipment,onPick:id=>{
+    let g=state.muscleGroup,x=null;Object.keys(cat).some(k=>{const f=(cat[k]||[]).find(e=>e.id===id);if(f){g=k;x=f;return true}return false});if(!x)return;
+    const P=state.activePlan;P.items=P.items.concat([{group:g,exerciseId:id,name:x.name,sets:3,reps:''}]);
+    try{renderWorkouts(false)}catch(_){}selectPlanExercise(P.items.length-1);try{renderWorkoutPlans()}catch(_){}toast('נוסף לאימון: '+x.name)},reopen:()=>fpAddExRun()};
+  try{renderExercisePicker()}catch(e){toast(e.message,true)}};
+if(typeof renderWorkoutPlans==='function'){const o=renderWorkoutPlans;renderWorkoutPlans=function(){const r=o.apply(this,arguments);try{addExInRun()}catch(e){console.error(e)}return r}}
+
 /* ---------- a saved workout: "שמור ועבור לתרגיל הבא" ---------- */
 function saveLabel(){
   const b=$('saveWorkoutBtn');if(!b)return;
