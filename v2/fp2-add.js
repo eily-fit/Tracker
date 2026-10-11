@@ -61,20 +61,24 @@ window.fpMore=function(k){
 };
 
 /* ---------- "ה-AI חושב…" ---------- */
-function thinking(text){const el=$('dishPreview');if(!el)return;el.innerHTML=`<div class="fp-ai-think" role="status"><i></i><span>${esc(text||'ה-AI חושב…')}</span></div>`;try{el.scrollIntoView({behavior:'smooth',block:'center'})}catch(_){}}
-function done(){const el=$('dishPreview');if(el&&el.querySelector('.fp-ai-think')&&!state.dishEstimate)el.innerHTML=''}
-if(typeof estimateWithOpenAI==='function'){const o=estimateWithOpenAI;estimateWithOpenAI=async function(){const q=($('foodQuery').value||'').trim(),ex=(($('dishExtras')||{}).value||'').trim();if(q.length>=2){state.dishEstimate=null;thinking('ה-AI חושב על המנה…')}try{const r=await o.apply(this,arguments);try{const d=state.dishEstimate;if(d){const got=applyText(d,q+(ex?', '+ex:''));renderDishEstimate();if(got)toast('לפי מה שכתבת: '+got)}}catch(e){console.error(e)}return r}finally{done()}}}
-if(typeof estimateMealPhoto==='function'){const o=estimateMealPhoto;estimateMealPhoto=async function(file){const ex=(($('dishExtras')||{}).value||'').trim();if(file){showView('add');state.dishEstimate=null;setTimeout(()=>thinking('ה-AI מסתכל על התמונה…'),30)}try{const r=await o.apply(this,arguments);try{const d=state.dishEstimate;if(d&&ex){const got=applyText(d,ex);renderDishEstimate();if(got)toast('לפי מה שכתבת: '+got)}}catch(e){console.error(e)}return r}finally{done()}}}
+/* 2.18: seconds count up, and "בטל" stops waiting */
+let thinkT=null,thinkAt=0;
+function thinking(text){const el=$('dishPreview');if(!el)return;thinkAt=Date.now();state.aiToken=(state.aiToken||0)+1;
+  el.innerHTML=`<div class="fp-ai-think" role="status"><i></i><span>${esc(text||'ה-AI חושב…')} <small id="fpAiSec" class="muted"></small></span><button type="button" class="linkish muted" style="margin-inline-start:auto" onclick="fpAiCancel()">בטל</button></div>`;
+  clearInterval(thinkT);thinkT=setInterval(()=>{const s=$('fpAiSec');if(!s){clearInterval(thinkT);return}const n=Math.round((Date.now()-thinkAt)/1000);s.textContent=n>=5?`(${n} שנ׳${n>=25?' · זה לוקח יותר מהרגיל':''})`:''},1000);
+  try{el.scrollIntoView({behavior:'smooth',block:'center'})}catch(_){}}
+window.fpAiCancel=function(){state.aiToken=(state.aiToken||0)+1;clearInterval(thinkT);const el=$('dishPreview');if(el)el.innerHTML='';try{loading(false)}catch(_){}toast('בוטל')};
+function done(){clearInterval(thinkT);const el=$('dishPreview');if(el&&el.querySelector('.fp-ai-think')&&!state.dishEstimate)el.innerHTML=''}
+if(typeof estimateWithOpenAI==='function'){const o=estimateWithOpenAI;estimateWithOpenAI=async function(){const q=($('foodQuery').value||'').trim(),ex=(($('dishExtras')||{}).value||'').trim();if(q.length>=2){state.dishEstimate=null;thinking('ה-AI חושב על המנה…')}const tk=state.aiToken;try{const r=await o.apply(this,arguments);if(tk!==state.aiToken){state.dishEstimate=null;const el=$('dishPreview');if(el)el.innerHTML='';return r}try{const d=state.dishEstimate;if(d){const got=applyText(d,q+(ex?', '+ex:''));renderDishEstimate();if(got)toast('לפי מה שכתבת: '+got)}}catch(e){console.error(e)}return r}finally{done()}}}
+if(typeof estimateMealPhoto==='function'){const o=estimateMealPhoto;estimateMealPhoto=async function(file){const ex=(($('dishExtras')||{}).value||'').trim();if(file){showView('add');state.dishEstimate=null;thinking('ה-AI מסתכל על התמונה…')}const tk=state.aiToken;try{const r=await o.apply(this,arguments);if(tk!==state.aiToken){state.dishEstimate=null;const el=$('dishPreview');if(el)el.innerHTML='';return r}try{const d=state.dishEstimate;if(d&&ex){const got=applyText(d,ex);renderDishEstimate();if(got)toast('לפי מה שכתבת: '+got)}}catch(e){console.error(e)}return r}finally{done()}}}
 
 /* ---------- photo of a recipe or an ingredient list ---------- */
 let SERV=4;
 function recipePhotoSheet(){
-  sheet('fpRecipePhoto','🖼 תמונה של מתכון',`<p class="muted" style="margin:0 0 8px">מצלמים את המתכון או את רשימת המרכיבים (גם צילום מסך). ה-AI קורא ומחשב.</p>
-    <div class="field"><label>כמה מנות (או פרוסות) יוצא המתכון?</label><input id="fpRpServ" type="number" min="1" max="50" step="1" inputmode="numeric" value="${SERV}"></div>
-    <label style="display:flex;gap:8px;align-items:center;margin:0 0 10px"><input type="checkbox" id="fpRpUnknown" style="width:auto"> לא יודע. אחשב את כל המתכון, ואחר כך אגיד כמה פרוסות יצאו וכמה אכלתי</label>
+  sheet('fpRecipePhoto','🖼 תמונה של מתכון',`<p class="muted" style="margin:0 0 8px">מצלמים את המתכון או את רשימת המרכיבים (גם צילום מסך). ה-AI מפרק לרכיבים, ואז כותבים כמה גרם אכלת מכל רכיב: עוף, תפוחי אדמה, אורז…</p>
     <input id="fpRpFile" type="file" accept="image/*" style="display:none">
     <button type="button" class="btn full" onclick="document.getElementById('fpRpFile').click()">בחר תמונה או צלם</button>`);
-  $('fpRpFile').onchange=e=>{const f=e.target.files&&e.target.files[0];const unk=$('fpRpUnknown')&&$('fpRpUnknown').checked;SERV=Math.max(1,Math.min(50,Math.round(Number($('fpRpServ').value)||1)));const s=$('fpRecipePhoto');if(s)s.remove();if(f)recipeFromPhoto(f,unk?0:SERV)};
+  $('fpRpFile').onchange=e=>{const f=e.target.files&&e.target.files[0];const s=$('fpRecipePhoto');if(s)s.remove();if(f)recipeFromPhoto(f,0)};
 }
 async function recipeFromPhoto(file,serv){
   showView('add');state.dishEstimate=null;thinking('ה-AI קורא את המתכון…');
@@ -82,8 +86,8 @@ async function recipeFromPhoto(file,serv){
     let image='';for(const [w,q] of [[1400,0.75],[1100,0.7],[900,0.65],[700,0.6]]){image=await shrinkImage(file,w,q);if(String(image).replace(/^data:[^,]*,/,'').length<2400000)break}
     const note='זו תמונה של מתכון או של רשימת מרכיבים, לא של צלחת. קרא כל מרכיב והכמות שכתובה לידו, המר לגרמים, והחזר את כל המתכון כמו שהוא (כל המנות יחד). אל תוסיף מרכיבים שלא כתובים. השם: שם המתכון.';
     const r=await call('estimateFoodPhoto',{image,note});
-    state.dishEstimate=r;state.dishSkin=null;state.dishBone=null;state.dishFor=null;if($('foodQuery'))$('foodQuery').value=r.name;
-    if(!serv){setBase(r);r._units={n:1,k:1};renderDishEstimate();toast('חישבתי את כל המתכון. למטה: ״כל המנה =״ כמה פרוסות, ו״אכלתי״ כמה');try{const u=document.querySelector('.fp-units');if(u)u.scrollIntoView({block:'center'})}catch(_){}return}
+    state.dishEstimate=r;r._recipe=true;state.dishSkin=null;state.dishBone=null;state.dishFor=null;if($('foodQuery'))$('foodQuery').value=r.name;
+    if(!serv){setBase(r);r._units={n:1,k:1};renderDishEstimate();toast('פירקתי את המתכון. עכשיו כתוב כמה גרם אכלת מכל רכיב');try{const u=document.querySelector('.fp-parts');if(u)u.scrollIntoView({block:'center'})}catch(_){}return}
     setBase(r);r._serv=serv;r._units={n:serv,k:1};scale(r,1/serv);
     toast(serv>1?`חישבתי מנה אחת מתוך ${serv}. אפשר לשנות למטה`:'בדוק את הכמויות לפני הוספה');
   }catch(e){done();toast(e.message,true)}
@@ -115,6 +119,7 @@ if(typeof renderDishEstimate==='function'){
         <div class="row2"><span>בגרמים:</span><input id="fpDishG" type="number" min="1" step="1" inputmode="numeric" value="${now}" onchange="fpDishGrams(this.value)"><span class="muted">מתוך ${G} ג׳</span></div>
         <div class="row2 fp-units"><span>ביחידות:</span><span class="muted">כל המנה =</span>${step('n',u.n,1)}<span class="muted">${u.n===1?'יחידה':'יחידות'}</span></div><div class="row2 fp-units"><span style="visibility:hidden">ביחידות:</span><span class="muted">אכלתי</span>${step('k',u.k,0.5)}<span class="muted">${u.k===1?'יחידה':'יחידות'}</span></div>
         <p class="muted" style="margin:8px 0 0;font-size:12.5px">למשל בצל ממולא, קציצות, פרוסות פיצה. אפשר גם לשנות כל רכיב בנפרד למטה.</p>
+        ${partsBox(d)}
         <div class="row2" style="flex-wrap:wrap"><span>ביומן:</span><button type="button" class="chip${d._mode!=='split'?' active':''}" onclick="fpDishMode('one')">כפריט אחד</button><button type="button" class="chip${d._mode==='split'?' active':''}" onclick="fpDishMode('split')">מפורט לפי רכיבים</button></div></div>`;
       const h=el.querySelector('h3');if(h){h.insertAdjacentHTML('afterend',name+box);h.remove()}else el.insertAdjacentHTML('afterbegin',name+box);
       /* oil: one choice for the whole dish; each item only on request */
@@ -129,6 +134,27 @@ if(typeof renderDishEstimate==='function'){
 }
 if(typeof setDishAmount==='function'){const o=setDishAmount;setDishAmount=function(i){const r=o.apply(this,arguments);try{const d=state.dishEstimate,x=d&&d.items[i];if(d&&d._base&&x)d._base[i]=(Number(x.amount)||0)/(d._f||1)}catch(_){}return r}}
 if(typeof removeDishPart==='function'){const o=removeDishPart;removeDishPart=function(i){try{const d=state.dishEstimate;if(d&&d._base)d._base.splice(i,1)}catch(_){}return o.apply(this,arguments)}}
+
+
+/* 2.18: "אכלתי לפי רכיבים": the main parts (chicken, potatoes, rice…) each with the grams you ate;
+   the small parts (oil, sauce, spices) are shared between them by weight, so 100 ג׳ עוף includes its share of the oil */
+const MINOR=/שמן|חמאה|מרגרינה|תבלין|מלח|פלפל שחור|פפריקה|כורכום|כמון|קינמון|רוטב|ציר|מים|שום|סוכר|דבש|סילאן|חומץ|מיץ לימון|לימון סחוט|עשבי|פטרוזיליה|כוסברה|שמיר|נענע|אבקת|שמרים|רסק/;
+function split(d){const w=x=>Number(x.amount)||0,W=d.items.reduce((n,x)=>n+w(x),0)||1;
+  let mains=d.items.map((x,i)=>i).filter(i=>!MINOR.test(d.items[i].label)&&w(d.items[i])>=W*0.06);if(!mains.length)mains=d.items.map((x,i)=>i);
+  return {mains,minors:d.items.map((x,i)=>i).filter(i=>mains.indexOf(i)<0)}}
+function partsBox(d){if(!d||!d.items||d.items.length<2)return '';const {mains,minors}=split(d);
+  return `<details class="fp-parts"${d._recipe?' open':''} style="margin-top:10px"><summary><b style="display:inline">🍗 אכלתי לפי רכיבים</b> <span class="muted" style="font-size:12.5px">כמה גרם מכל אחד</span></summary>
+    <p class="muted" style="margin:6px 0;font-size:12.5px">${minors.length?`השמן, הרוטב והתבלינים (${minors.map(i=>esc(d.items[i].label)).slice(0,4).join(', ')}) מתחלקים בין הרכיבים, כך ש-100 ג׳ עוף כולל את החלק שלו.`:'כותבים כמה גרם אכלת מכל רכיב.'}</p>
+    ${mains.map(i=>`<div class="row2"><span style="flex:1;min-width:0">${esc(d.items[i].label)}</span><input type="number" min="0" step="1" inputmode="numeric" data-i="${i}" class="fpPartG" placeholder="${Math.round(Number(d.items[i].amount)||0)}" style="width:90px"><span class="muted">ג׳</span></div>`).join('')}
+    <button type="button" class="btn secondary full" style="margin-top:8px" onclick="fpDishParts()">חשב לפי מה שאכלתי</button></details>`}
+window.fpDishParts=function(){const d=state.dishEstimate;if(!d)return;const {mains,minors}=split(d);
+  const eat={};document.querySelectorAll('.fpPartG').forEach(inp=>{const v=inp.value===''?NaN:Number(inp.value);eat[inp.dataset.i]=v});
+  if(!mains.some(i=>Number(eat[i])>0))return toast('כתוב כמה גרם אכלת לפחות מרכיב אחד',true);
+  const w=i=>Number(d.items[i].amount)||0,Wm=mains.reduce((n,i)=>n+w(i),0)||1,K=['calories','protein','carbs','fat'];
+  const minorT={calories:0,protein:0,carbs:0,fat:0};minors.forEach(i=>{const v=dishValues(d.items[i]);K.forEach(k=>minorT[k]+=Number(v[k])||0)});
+  const items=mains.filter(i=>Number(eat[i])>0).map(i=>{const x=d.items[i],v=dishValues(x),share=w(i)/Wm,per={};K.forEach(k=>per[k]=Math.round(((Number(v[k])||0)+minorT[k]*share)/Math.max(1,w(i))*1000)/10);
+    return {label:x.label,amount:Number(eat[i]),measure:'גרם',choices:[],manual:per,manualOverride:true,assumption:minors.length?'כולל חלק יחסי משמן, רוטב ותבלינים':'',source:x.source||'אומדן AI'}});
+  d.items=items;d._units={n:1,k:1};d._recipe=false;setBase(d);renderDishEstimate();toast('חושב לפי מה שאכלת מכל רכיב')};
 
 /* "200 גרם עוף, 150 גרם תפוחי אדמה" → those grams go to the matching items. "2 בצלים ממולאים" → 2 units. */
 const GU='(?:גרם|גרמים|גר׳|גר\'|גר|ג׳|ג\'|g|gr|מ״ל|מ"ל|מל)';

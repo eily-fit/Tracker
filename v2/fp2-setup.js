@@ -8,7 +8,7 @@
 const LS={get(k){try{return localStorage.getItem(k)}catch(_){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(_){}}};
 const ORDER=[0,2,1,4,3,5];
 /* 2.17: the bar with "חזרה / המשך" had a dark box behind it; now it fades into the screen */
-document.head.insertAdjacentHTML('beforeend','<style>.onboarding-screen .onb-nav,#onbNav{background:transparent!important;box-shadow:none!important;border:0!important;backdrop-filter:none!important}</style>');
+document.head.insertAdjacentHTML('beforeend','<style>.onboarding-screen .onb-nav,#onbNav{background:transparent!important;box-shadow:none!important;border:0!important;backdrop-filter:none!important}#onbNav button:not(:last-child),#onbNav .btn.light,#onbNav .btn.secondary{border:1.5px solid var(--brand,#D7F36B)!important;background:var(--bg2,#1A2027)!important;color:var(--brand,#D7F36B)!important;border-radius:14px}</style>');
 const LABELS={0:'פרטים',1:'פעילות',2:'מטרה',3:'ארוחות',4:'אימונים',5:'סיכום'};
 const pos=s=>Math.max(0,ORDER.indexOf(s));
 
@@ -16,12 +16,13 @@ if(typeof onbNext==='function'){
   onbNext=function(){if(state.onb.saving)return;const st=state.onb.step,err=onbValid(st);if(err)return onbError(err);const p=pos(st);state.onb.step=ORDER[Math.min(ORDER.length-1,p+1)];renderOnb();try{$('onbBody').scrollTop=0}catch(_){}};
   onbBack=function(){if(state.onb.saving)return;const p=pos(state.onb.step);if(p>0){state.onb.step=ORDER[p-1];renderOnb();try{$('onbBody').scrollTop=0}catch(_){}}};
 }
-const TT={strength:'כוח',cardio:'אירובי',mixed:'משולב',run:'ריצה'};
+const TT={strength:'כוח',cardio:'אירובי',mixed:'משולב'};/* ריצה: when there are running plans */
 const TTN={strength:'אימון כוח',cardio:'אימון אירובי',mixed:'אימון משולב',run:'ריצה'};
-const DUR={strength:{30:'3–4 תרגילים, 2–3 סטים לכל אחד. מספיק לגוף מלא בסיסי.',40:'4–5 תרגילים, 3 סטים. הכי נפוץ.',50:'5–6 תרגילים, 3–4 סטים, ויותר מנוחה בין סטים.'},
-  cardio:{30:'הליכה מהירה, אופניים או אליפטיקל בקצב שאפשר לדבר בו.',40:'אותו קצב, יותר זמן. טוב לשריפה ולסיבולת.',50:'אימון סיבולת ארוך. כדאי לשתות באמצע.'},
-  mixed:{30:'כ-20 דקות כוח ו-10 דקות אירובי.',40:'כ-30 דקות כוח ו-10 דקות אירובי.',50:'כ-35 דקות כוח ו-15 דקות אירובי.'},
-  run:{30:'בערך 4–5 ק״מ בקצב נוח.',40:'בערך 5–7 ק״מ, או אינטרוולים.',50:'ריצה ארוכה, בערך 7–9 ק״מ בקצב נוח.'}};
+/* 2.18: what each length gives you, and what is recommended */
+const DUR={strength:{30:'3–4 תרגילים, 2–3 סטים. מספיק כדי לשמור ולהתקדם בהתחלה, אבל פחות נפח בשבוע. טוב לימים עמוסים.',40:'4–5 תרגילים, 3 סטים לכל אחד. נפח טוב לבניית שריר לרוב האנשים.',50:'5–6 תרגילים, 3–4 סטים, ויותר מנוחה בין סטים כבדים. הכי הרבה נפח, טוב למתקדמים או למי שמתאמן מעט פעמים בשבוע.'},
+  cardio:{30:'הליכה מהירה, אופניים או אליפטיקל בקצב שאפשר לדבר בו. מספיק לבריאות הלב.',40:'יותר זמן באותו קצב: יותר שריפה ויותר סיבולת.',50:'אימון סיבולת ארוך. הכי הרבה שריפה, אבל דורש יותר התאוששות.'},
+  mixed:{30:'כ-20 דקות כוח ו-10 דקות אירובי. בסיס טוב כשאין זמן.',40:'כ-30 דקות כוח ו-10 אירובי. איזון טוב בין שריר לכושר.',50:'כ-35 דקות כוח ו-15 אירובי. הכי שלם, אבל ארוך.'}};
+function durRec(k,d){const days=Number(d.days)||3;if(k==='strength')return days>=4?40:50;if(k==='cardio')return 30;return 40}
 window.fpOnbTT=function(k){const d=state.onb.d,a=d.trainTypes||(d.trainTypes=[]);const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);d.trainType=a.join(',');const e=$('fpOnbType');if(e)e.remove();renderOnb()};
 window.fpOnbDur=function(k,v){const d=state.onb.d;d.durs=d.durs||{};d.durs[k]=v;const e=$('fpOnbDur');if(e)e.remove();renderOnb()};
 const CALS={apple:'📱 אפל (iCloud)',google:'Google Calendar',other:'סמסונג / Outlook / אחר'};
@@ -42,10 +43,12 @@ if(typeof renderOnb==='function'){
       if(st===1&&!$('fpOnbType')){if(!Array.isArray(d.trainTypes))d.trainTypes=d.trainType?String(d.trainType).split(',').filter(k=>TT[k]):['strength'];d.trainType=d.trainTypes.join(',');const panel=fs.querySelector('.onb-panel');
         if(panel)panel.insertAdjacentHTML('beforeend',`<div class="field" id="fpOnbType"><label>איזה סוג אימון? (אפשר כמה)</label><div class="onb-options">${Object.keys(TT).map(k=>`<button type="button" class="onb-choice ${d.trainTypes.indexOf(k)>=0?'selected':''}" aria-pressed="${d.trainTypes.indexOf(k)>=0}" onclick="fpOnbTT('${k}')">${TT[k]}</button>`).join('')}</div></div>`)}
       /* 2.17: how long, for each kind of training you chose, and what that means */
-      if(st===4&&!$('fpOnbDur')){const types=(Array.isArray(d.trainTypes)&&d.trainTypes.length?d.trainTypes:['strength']);d.durs=d.durs||{};types.forEach(k=>{if(![30,40,50].includes(Number(d.durs[k])))d.durs[k]=Number(d.duration)||40});
+      if(st===4&&!$('fpOnbDur')){const types=(Array.isArray(d.trainTypes)&&d.trainTypes.length?d.trainTypes:['strength']);d.durs=d.durs||{};types.forEach(k=>{if(![30,40,50].includes(Number(d.durs[k])))d.durs[k]=durRec(k,d)});
         const main=types.indexOf('strength')>=0?'strength':types.indexOf('mixed')>=0?'mixed':types[0];d.duration=d.durs[main];
         const panel=fs.querySelector('.onb-panel');if(panel){const lab=panel.querySelector(':scope > label'),opts=panel.querySelector(':scope > .onb-options');if(lab)lab.style.display='none';if(opts)opts.style.display='none';
-          panel.insertAdjacentHTML('afterbegin',`<div id="fpOnbDur">${types.map(k=>`<div class="field"><label>כמה זמן ${TTN[k]}?</label><div class="onb-options">${[30,40,50].map(v=>`<button type="button" class="onb-choice ${Number(d.durs[k])===v?'selected':''}" onclick="fpOnbDur('${k}',${v})">${v} דקות</button>`).join('')}</div><p class="muted" style="font-size:12.5px;margin:4px 0 0">${DUR[k][d.durs[k]]||''}</p></div>`).join('')}</div>`)}}
+          panel.querySelectorAll('.onb-info').forEach(x=>x.style.display='none');
+          const h=fs.querySelector('h2'),pi=fs.querySelector('.onb-intro');if(h)h.textContent='כמה זמן יש לך לאימון?';if(pi)pi.textContent='בחר, ותראה מה מקבלים בכל אורך.';
+          panel.insertAdjacentHTML('afterbegin',`<div id="fpOnbDur">${types.map(k=>{const rec=durRec(k,d);return `<div class="field"><label>כמה זמן ${TTN[k]}?</label><div class="onb-options">${[30,40,50].map(v=>`<button type="button" class="onb-choice ${Number(d.durs[k])===v?'selected':''}" onclick="fpOnbDur('${k}',${v})">${v} דקות${v===rec?' ⭐':''}</button>`).join('')}</div><p style="font-size:13.5px;margin:6px 0 0">${DUR[k][d.durs[k]]||''}</p><p class="muted" style="font-size:12.5px;margin:4px 0 0">⭐ מומלץ לך: ${rec} דקות${k==='strength'?` (לפי ${Number(d.days)||3} אימונים בשבוע)`:''}.</p></div>`}).join('')}</div>`)}}
       if(st===5&&!$('fpOnbSet')){
         if(!Array.isArray(d.calKinds)){let k=[];try{k=JSON.parse(LS.get('fp2.calKinds')||'[]')}catch(_){}if(!k.length&&d.calKind)k=[d.calKind];d.calKinds=k.length?k:[/iPhone|iPad|Mac/.test(navigator.userAgent)?'apple':'google']}
         if(!Array.isArray(d.hol))d.hol=['jewish'];if(d.shab===undefined)d.shab=null;if(!Array.isArray(d.shabPick))d.shabPick=['fri','satB'];
@@ -112,6 +115,6 @@ function renderGoalSet(){
 window.fpGoalSetRender=()=>{try{renderGoalSet()}catch(_){}};
 window.fpSetShift=async v=>{try{state.data=await call('saveSettings',{shift_pct:v});renderGoalSet();toast(v===0?'היעד לא ישתנה לפי אתמול':'היעד יזוז עד '+v+'% ביום');try{const d=await call('getDayView',state.date);applyDay(d);renderDay()}catch(_){}}catch(e){toast(e.message,true)}};
 function logoutBtn(){const sec=$('settings');if(!sec||$('fpLogout'))return;sec.insertAdjacentHTML('beforeend','<button type="button" class="btn light full" id="fpLogout" style="margin-top:16px" onclick="fpLogout()">🚪 התנתק / כניסה למשתמש אחר</button>')}
-window.fpLogout=function(){const b=$('fp2Out');if(b){b.click();return}try{if(typeof logoutApp==='function')return logoutApp()}catch(_){}toast('אין כאן חשבון להתנתק ממנו',true)};
+window.fpLogout=function(){if(window.FP2Logout)return FP2Logout();const b=$('fp2Out');if(b){b.click();return}try{if(typeof logoutApp==='function')return logoutApp()}catch(_){}toast('אין כאן חשבון להתנתק ממנו',true)};
 if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{renderGoalSet()}catch(e){console.error(e)}try{logoutBtn()}catch(_){}return r}}
 })();

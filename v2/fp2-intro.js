@@ -63,7 +63,7 @@ const css=`#fpI{position:fixed;inset:0;z-index:2147482400;pointer-events:none}
 .fpI-oil{margin-top:4px;color:#C9B2FF;font-size:13px}
 .fpI-btn{display:inline-block;background:var(--brand,#D7F36B);color:#14190a;border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
 @media (prefers-reduced-motion:reduce){#fpI .fpI-ring{animation:none}#fpI .fpI-blk,#fpI .fpI-ring,#fpI .fpI-card{transition:none}}`;
-let I=-1,root=null,timer=null,tgt=null,clickHook=null,ST=STEPS,OPT={},doneAt=-1;
+let I=-1,root=null,timer=null,tgt=null,clickHook=null,ST=STEPS,OPT={},doneAt=-1,scrolled=-1,lastRect='';
 function el(){return document.getElementById('fpI')}
 function place(){
   if(!root)return;const s=ST[I];let r=null;
@@ -95,10 +95,10 @@ function go(n){
   try{if(s.view&&!(q('#'+s.view)||{}).classList?.contains('active'))showView(s.view)}catch(_){}
   try{window.scrollTo(0,0)}catch(_){}
   if(s.before)try{s.before()}catch(_){}
-  draw();place();
+  draw();lastRect='';place();
   let tries=0;clearInterval(timer);
   doneAt=-1;try{if(s.start)s.start()}catch(_){}
-  timer=setInterval(()=>{if(!root)return clearInterval(timer);const s2=ST[I];try{if(s2.done&&doneAt!==I&&s2.done()){doneAt=I;const at=I;const c=root.querySelector('.fpI-card');if(c)c.querySelector('.fpI-next').textContent='✓ יופי';setTimeout(()=>{if(I===at)go(I+1)},700)}}catch(_){}if(s2.t&&(!tgt||!tgt.isConnected||!vis(tgt))){tries++;try{const e=s2.t();if(e&&vis(e)){tgt=e;try{e.scrollIntoView({block:'center'})}catch(_){}}}catch(_){}}place()},200);
+  timer=setInterval(()=>{if(!root)return clearInterval(timer);const s2=ST[I];try{if(s2.done&&doneAt!==I&&s2.done()){doneAt=I;const at=I;const c=root.querySelector('.fpI-card');if(c)c.querySelector('.fpI-next').textContent='✓ יופי';setTimeout(()=>{if(I===at)go(I+1)},700)}}catch(_){}if(s2.t&&(!tgt||!tgt.isConnected||!vis(tgt))){tries++;try{const e=s2.t();if(e&&vis(e)){tgt=e;if(scrolled!==I){scrolled=I;try{e.scrollIntoView({block:'center'})}catch(_){}}}}catch(_){}}const rr=tgt&&vis(tgt)?(()=>{const b=tgt.getBoundingClientRect();return [b.left,b.top,b.width,b.height].map(Math.round).join(',')})():'-';if(rr!==lastRect){lastRect=rr;place()}},250);
 }
 function finish(toAdd){
   clearInterval(timer);closeAll();if(clickHook)document.removeEventListener('click',clickHook,true);clickHook=null;

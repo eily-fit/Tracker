@@ -21,16 +21,21 @@ const wipeDeviceData=()=>{['elaiStateCache','elaiWorkoutSession','elaiActiveWork
 function rememberOld(url,pass){try{localStorage.setItem('elaiApi',JSON.stringify({url,pass}))}catch(_){}if(core&&core.store){core.store.props.OLD_URL=url;core.store.props.OLD_PASS=pass;core.store.propsDirty=true;core.flush()}}
 /* The old server is reached with a normal POST first (works best inside installed iPhone/iPad apps),
    and only if that fails with the older script-tag method. */
-async function postOld(fn,args){
-  const c=oldConf(),ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),60000);let res;
+async function postOld(fn,args,ms){
+  const c=oldConf(),ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),ms||60000);let res;
   try{res=await fetch(c.url,{method:'POST',body:JSON.stringify({fn,args:args||[],token:c.pass}),redirect:'follow',signal:ctl.signal})}
   catch(e){throw new Error('NET:'+(e&&e.name==='AbortError'?'timeout':(e&&e.message||'fetch')))}finally{clearTimeout(timer)}
   const txt=await res.text();let j;try{j=JSON.parse(txt)}catch(_){throw new Error('NET:status '+res.status)}
   if(!j.ok)throw new Error(String(j.error||'שגיאה').replace(/^AUTH:\s*/,''));
   return j.result;
 }
+/* 2.18: an AI request is sent once (it costs, and repeating made "טוען…" last minutes). Long wait, then a clear message. */
+const AI_ONCE=new Set(['estimateFoodWithOpenAI','estimateFoodPhoto']);
 async function remote(fn,args){
   if(!oldConf())throw new Error('לפעולה הזו צריך חיבור לשרת הישן. חבר אותו בהגדרות');
+  if(AI_ONCE.has(fn)){const t0=Date.now();try{return await postOld(fn,args,100000)}catch(e){if(!/^NET:/.test(e.message))throw e;
+    if(fn==='estimateFoodWithOpenAI'&&Date.now()-t0<20000){try{return await window.httpCall(fn,args||[])}catch(_){}}
+    throw new Error(/timeout/.test(e.message)?'ה-AI לא ענה תוך דקה וחצי. נסה שוב, או בדוק בהגדרות ← 🤖 בדיקת AI':'אין חיבור לשרת ה-AI ('+e.message.slice(4)+')')}}
   let first;
   for(let k=0;k<3;k++){
     try{return await postOld(fn,args)}catch(e){if(!/^NET:/.test(e.message))throw e;first=first||e.message.slice(4)}
@@ -157,8 +162,11 @@ function accountCard(){
   $id('fp2Repair').onclick=async()=>{if(!oldConf())return toast('חבר קודם את השרת הישן',true);const b=$id('fp2Repair'),m=$id('fp2RepairMsg');b.disabled=true;
     try{const n=await core.repairFromOld((t,p)=>{m.textContent=t+' · '+p+'%'});await flushAll(true);m.textContent='✓ הושלם. נוספו '+n+' שורות שהיו חסרות.';scheduleRefresh()}
     catch(e){m.textContent='לא הצליח: '+e.message}finally{b.disabled=false}};
-  $id('fp2Out').onclick=async()=>{if(!confirm('להתנתק? הנתונים שמורים בענן ויחזרו בכניסה הבאה.'))return;await Promise.all(pendingCommits).catch(()=>{});if(localStorage.getItem(pushKey())==='on'){try{await disablePush()}catch(e){if(!confirm('אין חיבור לשירות ההתראות, ולכן ההתראות של החשבון עלולות להמשיך להגיע למכשיר הזה. להתנתק בכל זאת?'))return;try{localStorage.removeItem(pushKey())}catch(_){}}}await signOut(auth);wipeDeviceData();location.reload()};
+  $id('fp2Out').onclick=()=>window.FP2Logout();
 }
+/* 2.18: logging out never hangs: waits at most a few seconds for saving and for the push service */
+const within=(p,ms)=>Promise.race([Promise.resolve(p).catch(()=>{}),new Promise(r=>setTimeout(r,ms))]);
+window.FP2Logout=async()=>{{if(!confirm('להתנתק? הנתונים שמורים בענן ויחזרו בכניסה הבאה.'))return;try{toast('מתנתק…')}catch(_){}await within(Promise.all(pendingCommits),5000);if(localStorage.getItem(pushKey())==='on'){try{await Promise.race([disablePush(),new Promise((_,no)=>setTimeout(()=>no(new Error('timeout')),6000))])}catch(e){if(!confirm('אין חיבור לשירות ההתראות, ולכן ההתראות של החשבון עלולות להמשיך להגיע למכשיר הזה. להתנתק בכל זאת?'))return;try{localStorage.removeItem(pushKey())}catch(_){}}}try{await within(signOut(auth),5000)}catch(_){}wipeDeviceData();location.reload()}};
 /* Push goes through a free Google Apps Script web app (backend/apps-script/Push.gs), signed in with the user's Firebase login.
    No server keys live in the app. After deploying Push.gs, paste its web-app URL (ends with /exec) between the quotes. */
 const PUSH_URL='https://script.google.com/macros/s/AKfycbzNHWZsYOt9sWVWdadY3Kp3mnE5ku3W2sDdeewolJibZF1DLb090hxF2JAxCFf6Bh0b/exec';

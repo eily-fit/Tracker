@@ -320,7 +320,7 @@ window.fpRenameMeal=async function(){
   const m=selectedSingleMeal();if(!m)return;
   const name=prompt('שם חדש לארוחה',m.name||'');if(name===null||!name.trim())return;
   await waitForSync();exitSelectMode();loading();
-  try{const day=await call('renameMealGroup',{groupId:m.gid,name:name.trim()});applyDay(day);renderDay();toast('השם עודכן')}
+  try{const day=await call('renameMealGroup',{groupId:m.gid,name:name.trim()});applyDay(day);renderDay();if(window.fpRenameAll&&m.name&&m.name!==name.trim())await fpRenameAll(m.name,name.trim());toast('השם עודכן בכל מקום')}
   catch(e){toast(e.message,true)}finally{loading(false)}
 };
 })();

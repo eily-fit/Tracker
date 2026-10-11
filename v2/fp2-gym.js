@@ -6,10 +6,10 @@
 (function(){
 'use strict';
 const LS={get(k){try{return localStorage.getItem(k)}catch(_){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(_){}},del(k){try{localStorage.removeItem(k)}catch(_){}}};
-const SOUNDS=[['beeps','📢 3 צפצופים חזקים'],['whistle','😗 שריקה'],['bell','🔔 פעמון'],['horn','📯 צופר'],['voice','🗣 קול'],['beepvoice','📢+🗣 צפצוף וקול'],['mine','🎙 ההקלטה שלי'],['none','🔇 שקט']];
+const SOUNDS=[['chime','🎐 פעמונים רכים'],['marimba','🎵 מרימבה'],['softbell','🛎 צלצול עדין'],['beeps','📢 3 צפצופים חזקים'],['whistle','😗 שריקה'],['bell','🔔 פעמון'],['voice','🗣 קול'],['mine','🎙 ההקלטה שלי'],['none','🔇 שקט']];
 const PHRASES=['סט חדש!','יאללה, סט הבא!','המנוחה נגמרה, לעבודה!','קדימה, עוד סט!'];
 const STYLES=[['normal','רגיל',1,1],['radio','רדיו',0.92,0.75],['fast','אנרגטי',1.2,1.15]];
-const cfg=()=>{let c={};try{c=JSON.parse(LS.get('fp2.restSound')||'{}')||{}}catch(_){}return Object.assign({kind:'beepvoice',phrase:0,style:'normal',voice:'',vol:1},c)};
+const cfg=()=>{let c={};try{c=JSON.parse(LS.get('fp2.restSound')||'{}')||{}}catch(_){}c=Object.assign({kind:'chime',phrase:0,style:'normal',voice:'',vol:1},c);if(c.kind==='beepvoice')c.kind='voice';if(c.kind==='horn')c.kind='chime';return c};
 const setCfg=c=>LS.set('fp2.restSound',JSON.stringify(c));
 
 function ctx(){try{if(!state.audioCtx){const AC=window.AudioContext||window.webkitAudioContext;if(AC)state.audioCtx=new AC()}const c=state.audioCtx;if(c&&c.state==='suspended'&&c.resume)c.resume();return c}catch(_){return null}}
@@ -17,16 +17,18 @@ function ctx(){try{if(!state.audioCtx){const AC=window.AudioContext||window.webk
    only for the end-of-rest sound it becomes "transient" (the music goes down for a moment) */
 let recording=0;
 function duck(on){try{if(navigator.audioSession&&!recording)navigator.audioSession.type=on?'transient':'ambient'}catch(_){}}
-duck(false);
+/* 2.18: outside a workout the app does not touch the audio session at all ("auto", like before 2.14.1, when recording worked) */
+function idle(){try{if(navigator.audioSession&&!recording)navigator.audioSession.type='auto'}catch(_){}}
+idle();
 /* 2.16: on iPhone an "ambient" audio session does not allow the microphone. While recording it is "play-and-record", then back. */
 if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&!navigator.mediaDevices.__fp){
   const gum=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
   navigator.mediaDevices.getUserMedia=async function(c){
     const audio=!!(c&&c.audio);if(!audio)return gum(c);
-    try{if(navigator.audioSession)navigator.audioSession.type='play-and-record'}catch(_){}
+    try{if(navigator.audioSession)navigator.audioSession.type='auto'}catch(_){}
     recording++;
-    try{const st=await gum(c);st.getTracks().forEach(t=>{const o=t.stop.bind(t);t.stop=function(){o();recording=Math.max(0,recording-1);if(!recording)setTimeout(()=>duck(false),300)}});return st}
-    catch(e){recording=Math.max(0,recording-1);if(!recording)duck(false);
+    try{const st=await gum(c);st.getTracks().forEach(t=>{const o=t.stop.bind(t);t.stop=function(){o();recording=Math.max(0,recording-1);if(!recording)setTimeout(idle,300)}});return st}
+    catch(e){recording=Math.max(0,recording-1);if(!recording)idle();
       const m=e&&e.name==='NotAllowedError'?'אין הרשאה למיקרופון. באייפון: הגדרות ← Safari ← מיקרופון ← לאפשר, ואז לסגור ולפתוח את האפליקציה.':e&&e.name==='NotFoundError'?'לא נמצא מיקרופון':'המיקרופון לא נפתח: '+((e&&e.message)||'');
       const err=new Error(m);err.name=e&&e.name;err.fpMsg=m;throw err}
   };
@@ -42,6 +44,10 @@ function playTones(kind){
   if(kind==='whistle'){tone(c,d,t,900,0.28,'sine',v,1900);tone(c,d,t+0.38,900,0.42,'sine',v,2200);return 0.9}
   if(kind==='bell'){[0,0.5].forEach(o=>{tone(c,d,t+o,880,0.9,'sine',v);tone(c,d,t+o,1760,0.6,'sine',v*0.5);tone(c,d,t+o,2640,0.4,'sine',v*0.25)});return 1.5}
   if(kind==='horn'){tone(c,d,t,220,0.35,'sawtooth',v);tone(c,d,t+0.42,220,0.6,'sawtooth',v);return 1.1}
+  /* 2.18: softer sounds */
+  if(kind==='chime'){[[784,0],[988,0.16],[1175,0.32],[1568,0.5]].forEach(([f,o])=>{tone(c,d,t+o,f,1.1,'sine',v*0.8);tone(c,d,t+o,f*2,0.6,'sine',v*0.18)});return 1.7}
+  if(kind==='marimba'){[[523,0],[659,0.14],[784,0.28],[1047,0.46]].forEach(([f,o])=>{tone(c,d,t+o,f,0.35,'triangle',v);tone(c,d,t+o,f*4,0.08,'sine',v*0.25)});return 0.9}
+  if(kind==='softbell'){[0,0.7].forEach(o=>{tone(c,d,t+o,1046,1.2,'sine',v*0.7);tone(c,d,t+o,1568,0.8,'sine',v*0.22);tone(c,d,t+o,2093,0.5,'sine',v*0.1)});return 1.9}
   return 0;
 }
 function heVoices(){try{return speechSynthesis.getVoices().filter(v=>/^he|^iw/i.test(v.lang))}catch(_){return []}}
@@ -57,7 +63,7 @@ async function playMineWA(){const data=LS.get('fp2.restRec');if(!data)return pla
   try{const b=await fetch(data).then(r=>r.arrayBuffer());const buf=await new Promise((ok,no)=>c.decodeAudioData(b,ok,no));const s=c.createBufferSource(),g=c.createGain();g.gain.value=Math.max(0.1,Math.min(1,cfg().vol))*1.6;s.buffer=buf;s.connect(g);g.connect(out(c));s.start()}catch(e){try{const a=new Audio(data);a.play()}catch(_){}}}
 function restSound(kindOverride){
   const c=cfg(),kind=kindOverride||c.kind;if(kind==='none')return;
-  duck(true);setTimeout(()=>duck(false),kind==='mine'?6000:3500);
+  duck(true);setTimeout(()=>{if(($('workouts')||{}).classList&&$('workouts').classList.contains('active'))duck(false);else idle()},kind==='mine'?6000:3500);
   const phrase=c.phrase==='custom'&&String(c.custom||'').trim()?String(c.custom).trim():(PHRASES[c.phrase]||PHRASES[0]);
   if(kind==='voice'){if(!speak(phrase))playTones('beeps');return}
   if(kind==='beepvoice'){const len=playTones('beeps');setTimeout(()=>{if(!speak(phrase))playTones('beeps')},len*1000);return}
@@ -75,7 +81,7 @@ if(typeof startRestTimer==='function'){const o=startRestTimer;startRestTimer=fun
 let lock=null,wantLock=false;
 async function wake(on){wantLock=!!on;try{if(on&&!lock&&navigator.wakeLock){lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>{lock=null})}else if(!on&&lock){await lock.release();lock=null}}catch(_){lock=null}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantLock)wake(true)});
-if(typeof showView==='function'){const o=showView;showView=function(id){const r=o.apply(this,arguments);try{wake(id==='workouts')}catch(_){}return r}}
+if(typeof showView==='function'){const o=showView;showView=function(id){const r=o.apply(this,arguments);try{wake(id==='workouts');if(id!=='workouts'&&!state.restEnd)idle()}catch(_){}return r}}
 
 /* ---------- new record: confetti ---------- */
 function confetti(text){
@@ -102,7 +108,7 @@ let rec=null;
 function renderSet(){
   const sec=$('settings');if(!sec||!state.data)return;let box=$('fpRestSet');
   if(!box){box=document.createElement('details');box.className='settings-section';box.id='fpRestSet';const a=$('fpWeekSet')||$('calendarSettings')||$('notificationSettings');if(a)a.insertAdjacentElement('afterend',box);else{const h=sec.querySelector('h2');if(!h)return;h.insertAdjacentElement('afterend',box)}}
-  const open=box.open,c=cfg(),vs=heVoices(),hasRec=!!LS.get('fp2.restRec'),voiceOn=c.kind==='voice'||c.kind==='beepvoice';
+  const open=box.open,c=cfg(),vs=heVoices(),hasRec=!!LS.get('fp2.restRec'),voiceOn=c.kind==='voice';
   box.innerHTML=`<summary>🔔 צליל סוף מנוחה</summary><div class="settings-body">
     <div class="meal-tabs" style="flex-wrap:wrap">${SOUNDS.map(([k,l])=>`<button type="button" class="chip${c.kind===k?' active':''}" onclick="fpRestSet('kind','${k}')">${l}</button>`).join('')}</div>
     ${voiceOn?`<label style="font-weight:700;display:block;margin-top:12px">מה הקול אומר?</label><div class="meal-tabs" style="flex-wrap:wrap">${PHRASES.map((p,i)=>`<button type="button" class="chip${c.phrase===i?' active':''}" onclick="fpRestSet('phrase',${i})">${p}</button>`).join('')}<button type="button" class="chip${c.phrase==='custom'?' active':''}" onclick="fpRestSet('phrase','custom')">✏️ משפט שלי</button></div>

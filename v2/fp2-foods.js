@@ -336,12 +336,13 @@ if(typeof renderOnb==='function'){
 }
 
 /* ---------- settings: the same choice inside the Tzameret section ---------- */
+/* 2.18: its own section in Settings, for everyone (it was inside the database section) */
 function injectSettings(force){
-  const s=[...document.querySelectorAll('#settings summary')].find(x=>/צמרת/.test(x.textContent));if(!s)return;
-  const body=s.parentElement.querySelector('.settings-body');if(!body)return;
+  const sec=$('settings');if(!sec)return;
+  let box=$('fpCookSet');if(!box){box=document.createElement('details');box.className='settings-section';box.id='fpCookSet';box.innerHTML='<summary>🍳 איך אתה מבשל</summary><div class="settings-body"><div id="fpOilSettings"></div></div>';
+    const a=$('fpGoalSet')||$('fpWeekSet')||$('notificationSettings');if(a)a.insertAdjacentElement('afterend',box);else{const h=sec.querySelector('h2');if(!h)return;h.insertAdjacentElement('afterend',box)}}
   let el=$('fpOilSettings');
-  if(el&&!force)return;
-  if(!el){body.insertAdjacentHTML('afterbegin','<div id="fpOilSettings" style="margin-bottom:12px"></div>');el=$('fpOilSettings')}
+  if(!el)return;
   const p=getProfile();
   el.innerHTML=`<b>איך אתה מבשל בבית?</b><div class="muted" style="font-size:12px">${p?'כף שמן = '+PROFILES[p].spoon+' ג׳ · שמן נוסף ברירת מחדל: '+({little:'מעט',normal:'רגיל',lots:'הרבה'})[PROFILES[p].oil]:'עוד לא נבחר'}</div>${profileButtons(p,'fpSetOilProfile')}`;
 }
