@@ -2025,7 +2025,70 @@ PAT.push({id:'elliptical',n:'אליפטיקל',m:'שרירי הרגליים',v:[
  views:[elSide,elFront]});
 })();
 
-const EXMAP={"שכיבות סמיכה": ["pushup", 0], "שכיבות סמיכה על הברכיים": ["pushup", 1], "שכיבות סמיכה לקיר": ["pushup", 2], "שכיבות סמיכה רחבות ללא ציוד": ["pushup", 3], "בירד דוג ללא ציוד": ["bird_dog", 0], "סופרמן ללא ציוד": ["superman", 0], "הרמת ידיים W בשכיבה ללא ציוד": ["prone_raise", 0], "הרמת ידיים Y בשכיבה ללא ציוד": ["prone_raise", 1], "לחיצת כתפיים פייק ללא ציוד": ["pike_press", 0], "נגיעות כתף בפלאנק ללא ציוד": ["shoulder_tap", 0], "הרמת ידיים T בשכיבה ללא ציוד": ["prone_raise", 2], "שכיבות סמיכה צרות ללא ציוד": ["pushup", 4], "שכיבות סמיכה צרות על הברכיים ללא ציוד": ["pushup", 4], "פשיטת מרפקים לקיר ללא ציוד": ["wall_triceps", 0], "סקוואט ללא ציוד": ["squat", 0], "מכרעים לאחור ללא ציוד": ["lunge", 0], "גשר ישבן ללא ציוד": ["bridge", 0], "תאומים ללא ציוד": ["calf_raise", 0], "כפיפות בטן": ["crunch", 0], "פלאנק": ["plank", 0], "הרמת רגליים": ["leg_raise", 0], "דד באג ללא ציוד": ["dead_bug", 0], "כפיפת מרפקים בהתנגדות היד השנייה ללא ציוד": ["resist_curl", 0], "כפיפת מרפקים בפטיש בהתנגדות היד השנייה ללא ציוד": ["resist_curl", 1], "כפיפת מרפקים איזומטרית ללא ציוד": ["resist_curl", 2], "לחיצת חזה במשקולות על הרצפה": ["floor_press", 0], "לחיצת חזה באחיזה צרה במשקולות על הרצפה": ["floor_press", 1], "לחיצת חזה מתחלפת במשקולות על הרצפה": ["floor_press", 2], "חתירה עם משקולת": ["one_arm_row", 0], "חתירה בשתי משקולות": ["bent_row", 1], "חתירה באחיזה ניטרלית במשקולות": ["bent_row", 2], "לחיצת כתפיים במשקולות": ["ohp", 0], "הרחקת כתפיים לצדדים": ["lateral_raise", 0], "הרמה קדמית במשקולות": ["front_raise", 0], "פרפר הפוך במשקולות": ["reverse_fly", 0], "כפיפת מרפקים במשקולות": ["curl", 0], "פטישים": ["curl", 1], "כפיפת מרפקים בישיבה במשקולות": ["curl", 2], "כפיפת מרפקים מתחלפת במשקולות": ["curl", 3], "פשיטת מרפקים במשקולת בהטיית גו": ["kickback", 0], "פשיטה מעל הראש במשקולת": ["overhead_ext", 0], "לחיצה צרפתית במשקולות על הרצפה": ["skullcrusher", 0], "סקוואט גביע במשקולת": ["squat", 1], "דדליפט רומני במשקולות": ["rdl", 0], "מכרעים במשקולות": ["lunge", 1], "תאומים במשקולות": ["calf_raise", 1], "לחיצת חזה במשקולות": ["bench", 1], "לחיצת חזה בשיפוע עם משקולות": ["incline", 0], "פרפר במשקולות": ["fly_db", 0], "חתירה במשקולות עם תמיכת חזה": ["bent_row", 3], "בולגרי במשקולות": ["bulgarian", 0], "לחיצת חזה במוט": ["bench", 0], "חתירה במוט": ["bent_row", 0], "כפיפת מרפקים במוט": ["curl", 4], "לחיצה צרפתית במוט": ["skullcrusher", 1], "דדליפט רומני במוט": ["rdl", 1], "היפ טראסט במוט": ["bridge", 1], "לחיצת חזה במכונה": ["chest_machine", 0], "פרפר בכבלים": ["cable_fly", 0], "פרפר במכונה": ["chest_machine", 1], "פולי עליון": ["pulldown", 0], "חתירה במכונה": ["seated_row", 0], "פולאובר בכבל": ["cable_pullover", 0], "לחיצת כתפיים במכונה": ["ohp", 2], "כתף אחורית במכונה": ["reverse_fly", 1], "הרחקה בכבל": ["lateral_raise", 1], "כפיפה בכבל": ["curl", 5], "כפיפת מרפקים במכונה": ["curl", 6], "כפיפת מרפקים בכבל באחיזה ניטרלית": ["curl", 5], "פשיטת מרפקים בכבל": ["pushdown", 0], "פשיטה מעל הראש בכבל": ["overhead_ext", 2], "פשיטת מרפקים במכונה": ["pushdown", 2], "לחיצת רגליים": ["leg_press", 0], "כפיפת ברך": ["leg_curl", 0], "פשיטת ברך": ["leg_ext", 0], "תאומים במכונה": ["calf_raise", 2], "קרנץ׳ בכבל": ["cable_crunch", 0], "כפיפות בטן במכונה": ["cable_crunch", 1], "סיבוב גו בכבל": ["cable_twist", 0], "מתח": ["pullup", 0], "מתח באחיזה ניטרלית": ["pullup", 1], "מתח באחיזה הפוכה": ["pullup", 2], "מתח באחיזה הפוכה צרה": ["pullup", 3], "מתח באחיזה הפוכה עם תמיכת רגליים": ["pullup", 4], "מקבילים לחזה": ["dips", 0], "מקבילים ליד אחורית": ["dips", 1], "הליכה בקצב נוח": ["walk", 0], "צעידה במקום ללא ציוד": ["walk", 2], "הליכה לסירוגין": ["walk", 1], "ריצה קלה": ["jog", 0], "אופני כושר במכונה": ["bike", 0], "אליפטיקל במכונה": ["elliptical", 0], "הליכון במכונה": ["jog", 1], "שכיבות סמיכה בשיפוע ללא ציוד": ["pushup", 0], "חתירת מרפקים בשכיבה ללא ציוד": ["prone_raise", 0], "לחיצת כתפיים פייק בשיפוע ללא ציוד": ["pike_press", 0], "לחיצת כתפיים": ["ohp", 0], "שכיבות סמיכה צרות בשיפוע ללא ציוד": ["pushup", 4], "פשיטה מעל הראש": ["overhead_ext", 0], "לחיצה צרפתית": ["skullcrusher", 0], "סקוואט": ["squat", 2], "בולגרי": ["bulgarian", 0], "דדליפט רומני": ["rdl", 0], "תאומים": ["calf_raise", 0], "היפ טראסט": ["bridge", 1], "מכרעים": ["lunge", 0]};
+/* ---------- 11. ROWING MACHINE · SWIMMING · STAIR CLIMBER (2.20) ---------- */
+(function(){const C=window.__CC;
+const cl=x=>Math.max(0,Math.min(1,x)),sm=x=>{x=cl(x);return x*x*(3-2*x)},seg=(e,a,b)=>sm((e-a)/(b-a));
+/* rowing: drive = legs → back → arms; recovery = arms → back → slide */
+const RY=G-36,AF=[262,G-30],FW=[322,G-46];
+function rowPose(e,bd){const drive=e<.4;let legs,back,arms;
+ if(drive){legs=seg(e,0,.22);back=seg(e,.16,.3);arms=bd===0?seg(e,.02,.2):seg(e,.26,.38)}
+ else{arms=1-seg(e,.42,.55);back=1-seg(e,.5,.64);legs=1-seg(e,.62,.98)}
+ const lf=bd===1?36:22,lb=bd===1?-34:-18,Hx=208-40*legs,H=[Hx,RY],lean=lf+(lb-lf)*back,S=add(H,rot([0,-56],lean));
+ const round=bd===1?Math.max(0,lean)*0.5:0,hu=rot(nrm(sub(S,H)),-lean*.35+round);
+ const ext=add(S,[57,15]),pull=add(S,[24,26]),W=lerp(ext,pull,arms);
+ const K=ik(H,AF,50,48,[.25,-1]),E=ik(S,W,D.uarm,D.farm,[-.4,1]);return{H,S,hu,W,K,E}}
+function rowSide(e,bd,V){const p=rowPose(e,bd),sx=p.H[0];
+ const m=`<line x1="70" y1="${G-5}" x2="348" y2="${G-5}" stroke="#2B3540" stroke-width="9" stroke-linecap="round"/><rect x="80" y="${RY+10}" width="220" height="9" rx="4" fill="#46525F"/>`+
+  `<line x1="86" y1="${RY+18}" x2="86" y2="${G-6}" stroke="#2B3540" stroke-width="7"/><line x1="296" y1="${RY+18}" x2="306" y2="${G-6}" stroke="#2B3540" stroke-width="7"/>`+
+  `<circle cx="${FW[0]}" cy="${FW[1]}" r="26" fill="#2B3540"/><circle cx="${FW[0]}" cy="${FW[1]}" r="17" fill="#1B222A"/><circle cx="${FW[0]}" cy="${FW[1]}" r="4" fill="#9AA5B1"/>`+
+  pad([sx-18,RY+4],[sx+14,RY+4],9)+`<line x1="${AF[0]-6}" y1="${AF[1]+12}" x2="${AF[0]+16}" y2="${AF[1]-22}" stroke="#46525F" stroke-width="8" stroke-linecap="round"/>`+
+  `<line x1="${f(p.W[0])}" y1="${f(p.W[1])}" x2="${FW[0]-20}" y2="${FW[1]-6}" stroke="#9AA5B1" stroke-width="2"/>`;
+ const ft=[.5,-.86],s=floorSvg()+m+C.sideC({H:p.H,S:p.S,hu:p.hu,hot:{quads:true,glutes:true,lats:true,hams:true},
+  near:{el:p.E,wr:p.W,kn:p.K,an:AF,f:ft},far:{el:add(p.E,[-2,-1]),wr:add(p.W,[-2,-1]),kn:add(p.K,[-2,-1]),an:add(AF,[-2,-1]),f:ft},
+  over:`<line x1="${f(p.W[0])}" y1="${f(p.W[1]-7)}" x2="${f(p.W[0])}" y2="${f(p.W[1]+7)}" stroke="#46525F" stroke-width="5" stroke-linecap="round"/>`+circ(p.W,3.4,SK)});
+ return s+(bd===0?mark(p.E,17)+cross('מושכים עם הידיים לפני הרגליים'):bd===1?mark(add(p.S,[0,-4]),21)+cross('הגב מתעגל וזורקים אותו אחורה'):tick('רגליים, גב, ידיים. ובחזרה הפוך'))}
+PAT.push({id:'rower',n:'מכונת חתירה',m:'רגליים, גב וידיים',v:['מהצד'],ph:['דוחפים עם הרגליים','נשענים מעט אחורה','מושכים לבטן','חוזרים לאט'],loop:true,period:2.6,
+ good:['דוחפים קודם עם הרגליים, ואז גב, ואז ידיים','בסוף: נשענים קצת אחורה, הידית מתחת לחזה','חוזרים בסדר הפוך: ידיים, גב, ואז מחליקים קדימה','הגב ישר כל הזמן, הכתפיים רפויות'],
+ bad:[[{t:'מושכים עם הידיים לפני הרגליים',fix:'הידיים נשארות ישרות עד שהרגליים כמעט ישרות. הכוח בא מהרגליים.'},{t:'הגב מתעגל וזורקים אותו אחורה',fix:'גב ישר, ונשענים אחורה רק קצת, כמו בשעה 11.'}]],
+ views:[rowSide]});
+
+/* swimming (freestyle): long body near the surface, arms in turns, small kicks from the hip */
+const WY=128;
+function swim(e,bd,V){const Hy=bd===0?150:142,Sy=140,H=[146,Hy+(bd===0?16:0)],S=[202,Sy],u=nrm(sub(S,H)),hu=u;
+ const ph=e*2*Math.PI,arm=a=>{const c=add(S,[4,6]),w=[c[0]+56*Math.cos(a),c[1]+36*Math.sin(a)];return{w,el:ik(S,w,D.uarm,D.farm,[0,-1])}};
+ const n=arm(ph),fa=arm(ph+Math.PI);
+ const kick=(k)=>{const amp=bd===1?20:9,dy=amp*Math.sin(ph*2+k);const back=mul(u,-1),A=add(add(H,mul(back,94)),[0,dy+(bd===0?22:4)]);
+  const K=bd===1?add(lerp(H,A,.5),[0,14+dy*.4]):add(lerp(H,A,.5),[0,3+dy*.2]);return{A,K}};
+ const ln=kick(0),lf=kick(Math.PI),toe=mul(u,-1);
+ const water=`<rect x="-20" y="${WY}" width="420" height="160" fill="#13324A"/><path d="M-20 ${WY} ${Array.from({length:22},(_,i)=>`Q ${i*20-10} ${WY-3+(i%2?6:0)+2*Math.sin(ph+i)} ${i*20} ${WY}`).join(' ')}" fill="none" stroke="#5FB3E0" stroke-width="2"/>`+
+  `<line x1="-20" y1="${G}" x2="400" y2="${G}" stroke="#2E5E7A" stroke-width="3"/>`;
+ const s=water+C.sideC({H,S,hu,hot:{lats:true,delts:true,triceps:true,quads:true},near:{el:n.el,wr:n.w,kn:ln.K,an:ln.A,f:toe},far:{el:fa.el,wr:fa.w,kn:lf.K,an:lf.A,f:toe}});
+ return s+(bd===0?mark(ln.A,20)+cross('הרגליים שוקעות'):bd===1?mark(ln.K,17)+cross('בועטים מהברך'):tick('גוף ארוך וישר, בעיטות קטנות'))}
+PAT.push({id:'swim',n:'שחייה',m:'כל הגוף',v:['מהצד'],ph:['יד אחת נמתחת קדימה','מושכים מתחת לגוף','היד חוזרת מעל המים','בועטים קטן'],loop:true,period:2.2,
+ good:['הגוף ארוך וישר, קרוב לפני המים','מבט למטה, נושמים לצד','יד נכנסת קדימה ומושכת עד הירך','בעיטות קטנות ומהירות מהירך'],
+ bad:[[{t:'הרגליים שוקעות',fix:'מורידים את הראש, מבט לקרקעית, ודוחפים את החזה קצת למטה. הרגליים יעלו.'},{t:'בועטים מהברך',fix:'הבעיטה מתחילה מהירך, הברך כמעט ישרה, תנועה קטנה.'}]],
+ views:[swim]});
+
+/* stair climber: tall body, the whole foot on the step, hands only lightly on the rail */
+const HX=170,SH=38,AL=[HX-4,G-26],AH=[HX+20,G-26-SH];
+function stPose(e,bd){const lean=bd===0?26:6,small=bd===1;const ahi=small?lerp(AL,AH,.55):AH;
+ const foot=t=>{t=((t%1)+1)%1;if(t<.5){return lerp(ahi,AL,t/.5)}const q=(t-.5)/.5;const b=lerp(AL,ahi,sm(q));return add(b,[0,-14*Math.sin(Math.PI*q)])};
+ const bob=3*Math.sin(e*4*Math.PI),H=[HX,G-26-92+bob],S=add(H,rot([0,-56],lean)),hu=rot(nrm(sub(S,H)),-lean*.4);
+ const An=foot(e),Af=foot(e+.5),K=ik(H,An,50,48,[1,-.2]),K2=ik(H,Af,50,48,[1,-.2]);
+ const W=bd===0?[HX+76,H[1]-6]:[HX+40,H[1]+2],E=ik(S,W,D.uarm,D.farm,[-.3,1]);
+ const tf=small?[.86,.5]:[1,0];return{H,S,hu,An,Af,K,K2,W,E,tf}}
+function stairs(e,bd,V){const p=stPose(e,bd),off=(e*2*SH)%SH;let st='';
+ const dx=(AH[0]-AL[0])/SH,sc=bd===1?.55:1;for(let k=-1;k<6;k++){const d=(k*SH-off)*sc,y=AL[1]+5-d,x=AL[0]-26+d*dx;if(y>G-6||y<G-210)continue;st+=`<rect x="${f(x)}" y="${f(y)}" width="58" height="${f(Math.min(SH-3,G-6-y))}" rx="3" fill="${k%2?'#2B3540':'#323D49'}"/>`}
+ const m=`<rect x="${HX-60}" y="${G-200}" width="190" height="196" fill="none"/><line x1="${HX+82}" y1="${G-5}" x2="${HX+82}" y2="${f(p.H[1]-10)}" stroke="#2B3540" stroke-width="9"/>`+
+  `<line x1="${HX+20}" y1="${f(p.H[1]+4)}" x2="${HX+86}" y2="${f(p.H[1]+4)}" stroke="#46525F" stroke-width="7" stroke-linecap="round"/><line x1="${HX-70}" y1="${G-5}" x2="${HX+100}" y2="${G-5}" stroke="#2B3540" stroke-width="9" stroke-linecap="round"/>`;
+ const s=floorSvg()+st+m+C.sideC({H:p.H,S:p.S,hu:p.hu,hot:{quads:true,glutes:true,calves:true},near:{el:p.E,wr:p.W,kn:p.K,an:p.An,f:p.tf},far:{el:add(p.E,[-2,-1]),wr:add(p.W,[-2,-1]),kn:p.K2,an:p.Af,f:p.tf},over:circ(p.W,3.4,SK)});
+ return s+(bd===0?mark(add(p.S,[6,-2]),21)+cross('נשענים על המעקה'):bd===1?mark(p.An,16)+cross('צעדים קטנים על קצות האצבעות'):tick('גוף זקוף, כל כף הרגל על המדרגה'))}
+PAT.push({id:'stairs',n:'מכונת מדרגות',m:'ירכיים וישבן',v:['מהצד'],ph:['עולים מדרגה','כל כף הרגל על המדרגה','גוף זקוף','ידיים רק נוגעות'],loop:true,period:1.5,
+ good:['עומדים זקופים, מבט קדימה','כל כף הרגל על המדרגה, דוחפים דרך העקב','צעד מלא, לא חצי מדרגה','הידיים רק נוגעות במעקה, לא נשענים'],
+ bad:[[{t:'נשענים על המעקה',fix:'מורידים רמה ומזקפים את הגוף. אם צריך להישען, הרמה גבוהה מדי.'},{t:'צעדים קטנים על קצות האצבעות',fix:'מניחים את כל כף הרגל ועולים מדרגה מלאה.'}]],
+ views:[stairs]});
+})();
+const EXMAP={"שכיבות סמיכה": ["pushup", 0], "שכיבות סמיכה על הברכיים": ["pushup", 1], "שכיבות סמיכה לקיר": ["pushup", 2], "שכיבות סמיכה רחבות ללא ציוד": ["pushup", 3], "בירד דוג ללא ציוד": ["bird_dog", 0], "סופרמן ללא ציוד": ["superman", 0], "הרמת ידיים W בשכיבה ללא ציוד": ["prone_raise", 0], "הרמת ידיים Y בשכיבה ללא ציוד": ["prone_raise", 1], "לחיצת כתפיים פייק ללא ציוד": ["pike_press", 0], "נגיעות כתף בפלאנק ללא ציוד": ["shoulder_tap", 0], "הרמת ידיים T בשכיבה ללא ציוד": ["prone_raise", 2], "שכיבות סמיכה צרות ללא ציוד": ["pushup", 4], "שכיבות סמיכה צרות על הברכיים ללא ציוד": ["pushup", 4], "פשיטת מרפקים לקיר ללא ציוד": ["wall_triceps", 0], "סקוואט ללא ציוד": ["squat", 0], "מכרעים לאחור ללא ציוד": ["lunge", 0], "גשר ישבן ללא ציוד": ["bridge", 0], "תאומים ללא ציוד": ["calf_raise", 0], "כפיפות בטן": ["crunch", 0], "פלאנק": ["plank", 0], "הרמת רגליים": ["leg_raise", 0], "דד באג ללא ציוד": ["dead_bug", 0], "כפיפת מרפקים בהתנגדות היד השנייה ללא ציוד": ["resist_curl", 0], "כפיפת מרפקים בפטיש בהתנגדות היד השנייה ללא ציוד": ["resist_curl", 1], "כפיפת מרפקים איזומטרית ללא ציוד": ["resist_curl", 2], "לחיצת חזה במשקולות על הרצפה": ["floor_press", 0], "לחיצת חזה באחיזה צרה במשקולות על הרצפה": ["floor_press", 1], "לחיצת חזה מתחלפת במשקולות על הרצפה": ["floor_press", 2], "חתירה עם משקולת": ["one_arm_row", 0], "חתירה בשתי משקולות": ["bent_row", 1], "חתירה באחיזה ניטרלית במשקולות": ["bent_row", 2], "לחיצת כתפיים במשקולות": ["ohp", 0], "הרחקת כתפיים לצדדים": ["lateral_raise", 0], "הרמה קדמית במשקולות": ["front_raise", 0], "פרפר הפוך במשקולות": ["reverse_fly", 0], "כפיפת מרפקים במשקולות": ["curl", 0], "פטישים": ["curl", 1], "כפיפת מרפקים בישיבה במשקולות": ["curl", 2], "כפיפת מרפקים מתחלפת במשקולות": ["curl", 3], "פשיטת מרפקים במשקולת בהטיית גו": ["kickback", 0], "פשיטה מעל הראש במשקולת": ["overhead_ext", 0], "לחיצה צרפתית במשקולות על הרצפה": ["skullcrusher", 0], "סקוואט גביע במשקולת": ["squat", 1], "דדליפט רומני במשקולות": ["rdl", 0], "מכרעים במשקולות": ["lunge", 1], "תאומים במשקולות": ["calf_raise", 1], "לחיצת חזה במשקולות": ["bench", 1], "לחיצת חזה בשיפוע עם משקולות": ["incline", 0], "פרפר במשקולות": ["fly_db", 0], "חתירה במשקולות עם תמיכת חזה": ["bent_row", 3], "בולגרי במשקולות": ["bulgarian", 0], "לחיצת חזה במוט": ["bench", 0], "חתירה במוט": ["bent_row", 0], "כפיפת מרפקים במוט": ["curl", 4], "לחיצה צרפתית במוט": ["skullcrusher", 1], "דדליפט רומני במוט": ["rdl", 1], "היפ טראסט במוט": ["bridge", 1], "לחיצת חזה במכונה": ["chest_machine", 0], "פרפר בכבלים": ["cable_fly", 0], "פרפר במכונה": ["chest_machine", 1], "פולי עליון": ["pulldown", 0], "חתירה במכונה": ["seated_row", 0], "פולאובר בכבל": ["cable_pullover", 0], "לחיצת כתפיים במכונה": ["ohp", 2], "כתף אחורית במכונה": ["reverse_fly", 1], "הרחקה בכבל": ["lateral_raise", 1], "כפיפה בכבל": ["curl", 5], "כפיפת מרפקים במכונה": ["curl", 6], "כפיפת מרפקים בכבל באחיזה ניטרלית": ["curl", 5], "פשיטת מרפקים בכבל": ["pushdown", 0], "פשיטה מעל הראש בכבל": ["overhead_ext", 2], "פשיטת מרפקים במכונה": ["pushdown", 2], "לחיצת רגליים": ["leg_press", 0], "כפיפת ברך": ["leg_curl", 0], "פשיטת ברך": ["leg_ext", 0], "תאומים במכונה": ["calf_raise", 2], "קרנץ׳ בכבל": ["cable_crunch", 0], "כפיפות בטן במכונה": ["cable_crunch", 1], "סיבוב גו בכבל": ["cable_twist", 0], "מתח": ["pullup", 0], "מתח באחיזה ניטרלית": ["pullup", 1], "מתח באחיזה הפוכה": ["pullup", 2], "מתח באחיזה הפוכה צרה": ["pullup", 3], "מתח באחיזה הפוכה עם תמיכת רגליים": ["pullup", 4], "מקבילים לחזה": ["dips", 0], "מקבילים ליד אחורית": ["dips", 1], "הליכה בקצב נוח": ["walk", 0], "צעידה במקום ללא ציוד": ["walk", 2], "הליכה לסירוגין": ["walk", 1], "ריצה קלה": ["jog", 0], "אופני כושר במכונה": ["bike", 0], "אליפטיקל במכונה": ["elliptical", 0], "הליכון במכונה": ["jog", 1], "מכונת חתירה": ["rower", 0], "חתירה באירובי": ["rower", 0], "שחייה": ["swim", 0], "מכונת מדרגות": ["stairs", 0], "מדרגות": ["stairs", 0], "שכיבות סמיכה בשיפוע ללא ציוד": ["pushup", 0], "חתירת מרפקים בשכיבה ללא ציוד": ["prone_raise", 0], "לחיצת כתפיים פייק בשיפוע ללא ציוד": ["pike_press", 0], "לחיצת כתפיים": ["ohp", 0], "שכיבות סמיכה צרות בשיפוע ללא ציוד": ["pushup", 4], "פשיטה מעל הראש": ["overhead_ext", 0], "לחיצה צרפתית": ["skullcrusher", 0], "סקוואט": ["squat", 2], "בולגרי": ["bulgarian", 0], "דדליפט רומני": ["rdl", 0], "תאומים": ["calf_raise", 0], "היפ טראסט": ["bridge", 1], "מכרעים": ["lunge", 0]};
 /* ===== app integration ===== */
 const SHEET_HTML=`<div class="sheet an-sheet"><div class="sheet-head"><h3 id="an_title" style="margin:0"></h3><button class="btn light mini" id="an_x" type="button">✕</button></div>
 <div class="an-chips" id="an_vchips"></div><div class="an-row2"><button id="an_vs" type="button"></button><button id="an_vf" type="button"></button></div>
@@ -2105,6 +2168,85 @@ document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest
  const b=e.target.closest&&e.target.closest('.exAnimBtn');if(b){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();const n=document.getElementById('exercisePickName');openAn(n?n.textContent:'')}},true);
 function boot(){mount();mo=new MutationObserver(queue);observe();scan();let k=0;const iv=setInterval(()=>{if(hookSave()||++k>60)clearInterval(iv)},500)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-window.FP2Anim={open:openAn,close:closeAn,request:requestExercise,map:EXMAP,count:PAT.length};
+/* ---------- 2.19: running warm-up drills and post-run stretches (same rig as the gym exercises) ---------- */
+(function(){
+const C=window.__CC;
+const HOTL={quads:true,hams:true,calves:true};
+const SPAN=50+48;
+const up=(H,deg)=>add(H,rot([0,-D.torso],deg));               /* shoulder from hip, deg>0 leans forward (right) */
+const legA=(H,thighDeg,shinDeg)=>{const kn=polar(H,thighDeg,D.thigh);return{kn,an:polar(kn,shinDeg,D.shin)}};
+const armA=(S,uDeg,fDeg)=>{const el=polar(S,uDeg,D.uarm);return{el,wr:polar(el,fDeg,D.farm)}};
+const wave=e=>Math.sin(e*2*Math.PI);
+const fig=o=>C.sideC(o);
+const wall=x=>`<rect x="${x}" y="40" width="16" height="${G-40}" fill="#2B3540"/><line x1="${x}" y1="40" x2="${x}" y2="${G}" stroke="#46525F" stroke-width="2"/>`;
+const box=(x0,x1,y)=>`<rect x="${x0}" y="${y}" width="${x1-x0}" height="${G-y}" rx="4" fill="#2B3540"/><line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="#46525F" stroke-width="3"/>`;
+
+/* high knees: knees alternate up to hip height, arms swing opposite */
+function hkSide(e,bd){const w=wave(e),a=Math.max(0,w),b=Math.max(0,-w),H=[190,G-9-SPAN+2-6*Math.abs(w)],S=up(H,bd===0?-14:4);
+  const lift=k=>legA(H,92-(bd===1?55:84)*k,92+8*k);const n=lift(a),f=lift(b);
+  const an=armA(S,90-38*w,90-38*w-85),af=armA(S,90+38*w,90+38*w-85);
+  return floorSvg()+fig({H,S,hot:HOTL,near:{el:an.el,wr:an.wr,kn:n.kn,an:n.an,f:[1,0]},far:{el:af.el,wr:af.wr,kn:f.kn,an:f.an,f:[1,0]}})+
+   (bd===0?mark(S,18)+cross('נשענים אחורה'):bd===1?mark(n.kn[1]<f.kn[1]?n.kn:f.kn,18)+cross('הברך לא עולה'):tick('ברך עד גובה המותן, גוף זקוף'))}
+/* butt kicks: heel up toward the glute, thigh stays down */
+function bkSide(e,bd){const w=wave(e),a=Math.max(0,w),b=Math.max(0,-w),H=[190,G-9-SPAN+2-4*Math.abs(w)],S=up(H,bd===0?28:6);
+  const kick=k=>legA(H,92-(bd===1?40*k:4*k),92+160*k);const n=kick(a),f=kick(b);
+  const an=armA(S,90-30*w,90-30*w-80),af=armA(S,90+30*w,90+30*w-80);
+  return floorSvg()+fig({H,S,hot:{quads:true},near:{el:an.el,wr:an.wr,kn:n.kn,an:n.an,f:[1,0]},far:{el:af.el,wr:af.wr,kn:f.kn,an:f.an,f:[1,0]}})+
+   (bd===0?mark(S,18)+cross('הגב מתכופף קדימה'):bd===1?mark(n.kn[1]<f.kn[1]?n.kn:f.kn,18)+cross('הברך עולה קדימה'):tick('העקב לישבן, הירך נשארת למטה'))}
+/* leg swings: hand on the wall, straight leg swings front and back */
+function lsSide(e,bd){const w=wave(e),H=[190,G-9-SPAN+2],S=up(H,bd===1?-18:2),amp=bd===0?62:40;
+  const sw=legA(H,92-amp*w,92-amp*w),st={kn:polar(H,92,D.thigh)};st.an=polar(st.kn,92,D.shin);
+  const wr=[262,S[1]+6],el=ik(S,wr,D.uarm,D.farm,[0,1]),af=armA(S,100,30);
+  return floorSvg()+wall(270)+fig({H,S,hot:{hams:true,quads:true},near:{el,wr,kn:sw.kn,an:sw.an,f:[1,0]},far:{el:af.el,wr:af.wr,kn:st.kn,an:st.an,f:[1,0]}})+
+   (bd===0?mark(sw.an,18)+cross('זורקים את הרגל חזק מדי'):bd===1?mark(S,18)+cross('הגוף נשען אחורה'):tick('תנועה רכה, הגוף יציב'))}
+/* calf stretch at the wall: back leg straight, heel down */
+function stCalf(e,bd){const br=wave(e)*.6,H=[202+br,G-9-SPAN+12],S=up(H,32+br);
+  const back=[148,G-9],front=[232,G-9],kb=ik(H,back,D.thigh,D.shin,[1,-.2]),kf=ik(H,front,D.thigh,D.shin,[1,-1]);
+  const wr=[268,S[1]-14],el=ik(S,wr,D.uarm,D.farm,[0,1]);
+  const heel=bd===0?[back[0]+4,back[1]-12]:back;const kb2=bd===0?ik(H,heel,D.thigh,D.shin,[1,-.2]):kb;
+  return floorSvg()+wall(278)+fig({H,S,hot:{calves:true},near:{el,wr,kn:kb2,an:heel,f:bd===0?[.75,.6]:[1,0]},far:{el:add(el,[-2,-1]),wr:add(wr,[-2,0]),kn:kf,an:front,f:[1,0]}})+
+   (bd===0?mark(heel,18)+cross('העקב האחורי מתרומם'):tick('עקב על הרצפה, רגל אחורית ישרה'))}
+/* quad stretch: stand on one leg, pull the foot to the glute */
+function stQuad(e,bd){const br=wave(e)*.6,H=[190,G-9-SPAN+2],S=up(H,3+br);
+  const th=bd===0?62:94;const kn=polar(H,th,D.thigh),an=polar(kn,th-180+12,D.shin);
+  const wr=add(an,[-2,2]),el=ik(S,wr,D.uarm,D.farm,[-1,0]),af=armA(S,60,10);
+  const st={kn:polar(H,92,D.thigh)};st.an=polar(st.kn,92,D.shin);
+  return floorSvg()+fig({H,S,hot:{quads:true},near:{el,wr,kn,an,f:[-.3,-1]},far:{el:af.el,wr:af.wr,kn:st.kn,an:st.an,f:[1,0]}})+
+   (bd===0?mark(kn,18)+cross('הברך בורחת קדימה'):tick('הברכיים צמודות, מותן ישר'))}
+/* hamstring: heel on a low step, straight leg, hinge forward with a flat back */
+function stHam(e,bd){const br=wave(e)*.8,H=[182,G-9-SPAN+4],S=up(H,(bd===0?70:48)+br);
+  const heel=[262,206],kn=ik(H,heel,D.thigh,D.shin,[0,-1]);const st={an:[178,G-9]};st.kn=ik(H,st.an,D.thigh,D.shin,[1,0]);
+  const wr=lerp(kn,heel,.25),el=ik(S,wr,D.uarm,D.farm,[0,1]);
+  const hd=bd===0?add(S,rot([0,-(D.neck+D.headR)],120)):null;
+  return floorSvg()+box(236,300,214)+fig({H,S,hd,hot:{hams:true},near:{el,wr,kn,an:heel,f:[0,-1]},far:{el:add(el,[-2,-1]),wr:add(wr,[-3,0]),kn:st.kn,an:st.an,f:[1,0]}})+
+   (bd===0?mark(S,20)+cross('הגב מתעגל, הראש יורד'):tick('גב ישר, מתכופפים מהמותן'))}
+/* hip flexor: half-kneeling, push the hips forward */
+function stHip(e,bd){const br=wave(e)*1.2,H=[184+br,G-58],S=up(H,bd===0?-22:2);
+  const knB=[150,G-7],anB=[106,G-9],front=[240,G-9],knF=ik(H,front,D.thigh,D.shin,[0,-1]);
+  const wr=add(H,[18,-6]),el=ik(S,wr,D.uarm,D.farm,[1,1]);
+  return floorSvg()+fig({H,S,hot:{quads:true},near:{el,wr,kn:knB,an:anB,f:[-.2,1]},far:{el:add(el,[-2,-1]),wr:add(wr,[-2,0]),kn:knF,an:front,f:[1,0]}})+
+   (bd===0?mark(add(H,[0,-30]),20)+cross('הגב מתקמר אחורה'):tick('גב זקוף, האגן נדחף קדימה'))}
+/* glute: seated, one leg straight, hug the other knee to the opposite shoulder */
+function stGlute(e,bd){const br=wave(e)*.8,H=[170,G-14],S=up(H,(bd===0?-6:12)+br+(bd===0?0:0));
+  const anF=[268,G-9],knF=add(H,[50,2]);const anN=[214,G-9],knN=ik(H,anN,D.thigh,D.shin,[.3,-1]);
+  const wr=add(knN,[-6,8]),el=ik(S,wr,D.uarm,D.farm,[.2,1]);
+  const S2=bd===0?add(S,[-8,6]):S;
+  return floorSvg()+fig({H,S:S2,hot:{glutes:true,hams:true},near:{el,wr,kn:knN,an:anN,f:[1,0]},far:{el:add(el,[-2,-1]),wr:add(wr,[-3,-2]),kn:knF,an:anF,f:[0,-1]}})+
+   (bd===0?mark(S2,20)+cross('הגב מתעגל אחורה'):tick('גב זקוף, מחבקים את הברך לחזה'))}
+
+const drill=(id,n,m,fn,good,bad)=>PAT.push({id,n,m,v:['מהצד'],ph:[n,'','',''],loop:true,period:.8,good,bad:[bad],views:[fn]});
+const stretch=(id,n,m,fn,good,bad)=>PAT.push({id,n,m,v:['מהצד'],ph:['מחזיקים 30 שניות','','',''],loop:true,period:4,good,bad:[bad],views:[fn]});
+drill('high_knees','הרמת ברכיים','ירכיים ובטן',hkSide,['ברך עד גובה המותן','גוף זקוף','ידיים זזות הפוך לרגליים'],[{t:'נשענים אחורה',fix:'החזה קדימה, הגוף זקוף.'},{t:'הברך לא עולה',fix:'מרימים עד גובה המותן, גם אם לאט יותר.'}]);
+drill('butt_kicks','עקבים לישבן','ירך קדמית',bkSide,['העקב עולה לכיוון הישבן','הירך נשארת למטה','צעדים קטנים ומהירים'],[{t:'הגב מתכופף קדימה',fix:'גוף זקוף, מבט קדימה.'},{t:'הברך עולה קדימה',fix:'הברך מצביעה לרצפה, רק השוק זזה.'}]);
+drill('leg_swing','נדנוד רגל','ירך אחורית ומפשעה',lsSide,['יד על הקיר','רגל ישרה מתנדנדת קדימה ואחורה','10 לכל רגל'],[{t:'זורקים את הרגל חזק מדי',fix:'תנועה רכה, מגדילים את הטווח לאט.'},{t:'הגוף נשען אחורה',fix:'הגוף יציב וזקוף, רק הרגל זזה.'}]);
+stretch('st_calf','מתיחת תאומים','שריר התאום',stCalf,['ידיים על הקיר','רגל אחורית ישרה, עקב על הרצפה','מרגישים מאחורי השוק'],[{t:'העקב האחורי מתרומם',fix:'לוחצים את העקב לרצפה. אם קשה, מקרבים את הרגל.'}]);
+stretch('st_quad','מתיחת ירך קדמית','ירך קדמית',stQuad,['עומדים על רגל אחת','מושכים את הכף לישבן','מרגישים בקדמת הירך'],[{t:'הברך בורחת קדימה',fix:'הברכיים צמודות, הברך מצביעה לרצפה.'}]);
+stretch('st_ham','מתיחת ירך אחורית','ירך אחורית',stHam,['עקב על מדרגה נמוכה, רגל ישרה','מתכופפים מהמותן','מרגישים מאחורי הירך'],[{t:'הגב מתעגל, הראש יורד',fix:'גב ישר והחזה קדימה. עדיף פחות עמוק ויותר נכון.'}]);
+stretch('st_hip','מתיחת כופף ירך','קדמת המותן',stHip,['כריעה, ברך אחורית על הרצפה','דוחפים את האגן קדימה בעדינות','מרגישים בקדמת המותן של הרגל האחורית'],[{t:'הגב מתקמר אחורה',fix:'מכווצים בטן וישבן, הגב נשאר זקוף.'}]);
+stretch('st_glute','מתיחת ישבן','ישבן',stGlute,['יושבים, רגל אחת ישרה','מחבקים את הברך השנייה לחזה','מרגישים בישבן'],[{t:'הגב מתעגל אחורה',fix:'יושבים זקוף, מושכים את הברך אליך.'}]);
+window.__AN={PAT,figBox};
+})();
+
+window.FP2Anim={pat:PAT,figBox,open:openAn,close:closeAn,request:requestExercise,map:EXMAP,count:PAT.length};
 
 })();

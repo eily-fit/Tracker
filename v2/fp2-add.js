@@ -46,14 +46,16 @@ const opt=(ic,t,sub,fn)=>`<button type="button" class="fp-more-opt" onclick="${f
 window.fpAddMore=function(){
   sheet('fpAddMoreSheet','עוד דרכים להוסיף',
     opt('📸','לצלם את הארוחה','ה-AI מזהה מה בצלחת וכמה','fpMore(\'photo\')')+
+    opt('🖼','תמונה של הארוחה מהגלריה','תמונה שכבר צילמת','fpMore(\'photoGal\')')+
     opt('📷','לסרוק ברקוד','מוצר ארוז: הערכים מגיעים לבד','fpMore(\'barcode\')')+
-    opt('🖼','תמונה של מתכון או רשימת מרכיבים','ה-AI קורא את המרכיבים ומחשב','fpMore(\'recipePhoto\')')+
+    opt('📝','תמונה של מתכון או רשימת מרכיבים','ה-AI קורא את המרכיבים ומחשב','fpMore(\'recipePhoto\')')+
     opt('🔗','מתכון מקישור','מדביקים קישור לאתר מתכונים','fpMore(\'link\')')+
     opt('⌨️','להקליד מספר ברקוד','אם הסריקה לא עובדת','fpMore(\'barcodeType\')'));
 };
 window.fpMore=function(k){
   const s=$('fpAddMoreSheet');if(s)s.remove();
   if(k==='photo'){const i=$('mealPhotoFile');if(i)i.click();return}
+  if(k==='photoGal'){let g=$('fpMealGal');if(!g){document.body.insertAdjacentHTML('beforeend','<input id="fpMealGal" type="file" accept="image/*" style="display:none">');g=$('fpMealGal');g.onchange=()=>{const f=g.files&&g.files[0];g.value='';if(f)estimateMealPhoto(f)}}g.click();return}
   if(k==='barcode'){try{startLiveScan()}catch(e){toast(e.message,true)}return}
   if(k==='barcodeType'){const d=[...document.querySelectorAll('#add details')].find(x=>/ברקוד/.test(x.textContent));if(d){d.classList.remove('fp-hide');d.open=true;const b=$('barcode');if(b)setTimeout(()=>{b.scrollIntoView({block:'center'});b.focus()},200)}return}
   if(k==='link'){try{fpRecipeOpen()}catch(e){toast(e.message,true)}return}
@@ -64,8 +66,8 @@ window.fpMore=function(k){
 /* 2.18: seconds count up, and "בטל" stops waiting */
 let thinkT=null,thinkAt=0;
 function thinking(text){const el=$('dishPreview');if(!el)return;thinkAt=Date.now();state.aiToken=(state.aiToken||0)+1;
-  el.innerHTML=`<div class="fp-ai-think" role="status"><i></i><span>${esc(text||'ה-AI חושב…')} <small id="fpAiSec" class="muted"></small></span><button type="button" class="linkish muted" style="margin-inline-start:auto" onclick="fpAiCancel()">בטל</button></div>`;
-  clearInterval(thinkT);thinkT=setInterval(()=>{const s=$('fpAiSec');if(!s){clearInterval(thinkT);return}const n=Math.round((Date.now()-thinkAt)/1000);s.textContent=n>=5?`(${n} שנ׳${n>=25?' · זה לוקח יותר מהרגיל':''})`:''},1000);
+  el.innerHTML=`<div class="fp-ai-think" role="status"><i></i><span>${esc(text||'ה-AI חושב…')}</span><button type="button" class="linkish muted" style="margin-inline-start:auto" onclick="fpAiCancel()">בטל</button></div>`;
+  clearInterval(thinkT);
   try{el.scrollIntoView({behavior:'smooth',block:'center'})}catch(_){}}
 window.fpAiCancel=function(){state.aiToken=(state.aiToken||0)+1;clearInterval(thinkT);const el=$('dishPreview');if(el)el.innerHTML='';try{loading(false)}catch(_){}toast('בוטל')};
 function done(){clearInterval(thinkT);const el=$('dishPreview');if(el&&el.querySelector('.fp-ai-think')&&!state.dishEstimate)el.innerHTML=''}
@@ -142,19 +144,24 @@ const MINOR=/שמן|חמאה|מרגרינה|תבלין|מלח|פלפל שחור|
 function split(d){const w=x=>Number(x.amount)||0,W=d.items.reduce((n,x)=>n+w(x),0)||1;
   let mains=d.items.map((x,i)=>i).filter(i=>!MINOR.test(d.items[i].label)&&w(d.items[i])>=W*0.06);if(!mains.length)mains=d.items.map((x,i)=>i);
   return {mains,minors:d.items.map((x,i)=>i).filter(i=>mains.indexOf(i)<0)}}
-function partsBox(d){if(!d||!d.items||d.items.length<2)return '';const {mains,minors}=split(d);
-  return `<details class="fp-parts"${d._recipe?' open':''} style="margin-top:10px"><summary><b style="display:inline">🍗 אכלתי לפי רכיבים</b> <span class="muted" style="font-size:12.5px">כמה גרם מכל אחד</span></summary>
-    <p class="muted" style="margin:6px 0;font-size:12.5px">${minors.length?`השמן, הרוטב והתבלינים (${minors.map(i=>esc(d.items[i].label)).slice(0,4).join(', ')}) מתחלקים בין הרכיבים, כך ש-100 ג׳ עוף כולל את החלק שלו.`:'כותבים כמה גרם אכלת מכל רכיב.'}</p>
-    ${mains.map(i=>`<div class="row2"><span style="flex:1;min-width:0">${esc(d.items[i].label)}</span><input type="number" min="0" step="1" inputmode="numeric" data-i="${i}" class="fpPartG" placeholder="${Math.round(Number(d.items[i].amount)||0)}" style="width:90px"><span class="muted">ג׳</span></div>`).join('')}
+function partsBox(d){if(d&&d._full)return `<div class="fp-parts" style="margin-top:10px"><p class="muted" style="margin:0 0 6px;font-size:12.5px">חושב לפי מה שאכלת מכל רכיב.</p><button type="button" class="btn light full" onclick="fpDishBack()">↩ חזרה לכל המתכון</button></div>`;
+  if(!d||!d.items||d.items.length<2)return '';const {mains,minors}=split(d),eat=d._eat||{},skip=d._skip||{};
+  return `<details class="fp-parts"${d._recipe||d._eat?' open':''} style="margin-top:10px"><summary><b style="display:inline">🍗 אכלתי לפי רכיבים</b> <span class="muted" style="font-size:12.5px">כמה גרם מכל אחד</span></summary>
+    <p class="muted" style="margin:6px 0;font-size:12.5px">${minors.length?`השמן, הרוטב והתבלינים (${minors.map(i=>esc(d.items[i].label)).slice(0,4).join(', ')}) מתחלקים בין הרכיבים, כך ש-100 ג׳ עוף כולל את החלק שלו.`:'כותבים כמה גרם אכלת מכל רכיב.'} לא אכלת משהו? ״דלג״.</p>
+    ${mains.map(i=>`<div class="row2"${skip[i]?' style="opacity:.5"':''}><span style="flex:1;min-width:0">${skip[i]?'<s>':''}${esc(d.items[i].label)}${skip[i]?'</s>':''}</span><input type="number" min="0" step="1" inputmode="numeric" data-i="${i}" class="fpPartG" placeholder="${Math.round(Number(d.items[i].amount)||0)}" value="${!skip[i]&&eat[i]>0?eat[i]:''}" style="width:80px"${skip[i]?' disabled':''}><span class="muted">ג׳</span><button type="button" class="chip${skip[i]?' active':''}" style="padding:4px 9px;font-size:12.5px" onclick="fpDishSkip(${i})">${skip[i]?'↩ אכלתי':'דלג'}</button></div>`).join('')}
     <button type="button" class="btn secondary full" style="margin-top:8px" onclick="fpDishParts()">חשב לפי מה שאכלתי</button></details>`}
+const readEat=()=>{const e={};document.querySelectorAll('.fpPartG').forEach(inp=>{if(inp.value!=='')e[inp.dataset.i]=Number(inp.value)});return e};
+window.fpDishSkip=i=>{const d=state.dishEstimate;if(!d)return;d._eat=Object.assign({},d._eat,readEat());d._skip=d._skip||{};d._skip[i]=!d._skip[i];renderDishEstimate()};
+window.fpDishBack=()=>{const d=state.dishEstimate;if(!d||!d._full)return;const f=d._full;d.items=f.items;d._base=f.base;d._units=f.units;d._f=f.f;d._full=null;renderDishEstimate();toast('חזרת לכל המתכון. אפשר לשנות או להוסיף')};
 window.fpDishParts=function(){const d=state.dishEstimate;if(!d)return;const {mains,minors}=split(d);
-  const eat={};document.querySelectorAll('.fpPartG').forEach(inp=>{const v=inp.value===''?NaN:Number(inp.value);eat[inp.dataset.i]=v});
+  const eat=readEat(),skip=d._skip||{};Object.keys(skip).forEach(i=>{if(skip[i])delete eat[i]});d._eat=Object.assign({},eat);
   if(!mains.some(i=>Number(eat[i])>0))return toast('כתוב כמה גרם אכלת לפחות מרכיב אחד',true);
+  const full={items:JSON.parse(JSON.stringify(d.items)),base:(d._base||[]).slice(),units:Object.assign({},d._units||{n:1,k:1}),f:d._f||1};
   const w=i=>Number(d.items[i].amount)||0,Wm=mains.reduce((n,i)=>n+w(i),0)||1,K=['calories','protein','carbs','fat'];
   const minorT={calories:0,protein:0,carbs:0,fat:0};minors.forEach(i=>{const v=dishValues(d.items[i]);K.forEach(k=>minorT[k]+=Number(v[k])||0)});
   const items=mains.filter(i=>Number(eat[i])>0).map(i=>{const x=d.items[i],v=dishValues(x),share=w(i)/Wm,per={};K.forEach(k=>per[k]=Math.round(((Number(v[k])||0)+minorT[k]*share)/Math.max(1,w(i))*1000)/10);
     return {label:x.label,amount:Number(eat[i]),measure:'גרם',choices:[],manual:per,manualOverride:true,assumption:minors.length?'כולל חלק יחסי משמן, רוטב ותבלינים':'',source:x.source||'אומדן AI'}});
-  d.items=items;d._units={n:1,k:1};d._recipe=false;setBase(d);renderDishEstimate();toast('חושב לפי מה שאכלת מכל רכיב')};
+  d.items=items;d._units={n:1,k:1};d._recipe=false;d._full=full;setBase(d);renderDishEstimate();toast('חושב לפי מה שאכלת מכל רכיב')};
 
 /* "200 גרם עוף, 150 גרם תפוחי אדמה" → those grams go to the matching items. "2 בצלים ממולאים" → 2 units. */
 const GU='(?:גרם|גרמים|גר׳|גר\'|גר|ג׳|ג\'|g|gr|מ״ל|מ"ל|מל)';

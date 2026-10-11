@@ -88,7 +88,7 @@ function apiJsonp_(p){
 function apiFunctions_(){
   return {getBootstrapData,getDayView,getDayData:getDayView,saveFood,saveMeal,saveDishEntries,updateEntry,editEntry,deleteEntry,deleteEntries,restoreEntry,deleteMealGroup,restoreMealGroup,groupEntries,ungroupEntries,renameFoodEverywhere,
     addFreeCalories,addProteinShake,addQuickAction,saveQuickAction,deleteQuickAction,saveDailyMetrics,closeDay,getNutritionJournal,deleteDay,deleteDays,restoreEntries,
-    saveCustomMeal,deleteCustomMeal,restoreCustomMeal,hideMeal,restoreMeal,saveSettings,smartFoodSearch,searchFoods,estimateDish,estimateFoodWithOpenAI,lookupBarcode,testUsdaConnection,
+    saveCustomMeal,saveMenuMeals,deleteCustomMeal,restoreCustomMeal,hideMeal,restoreMeal,saveSettings,smartFoodSearch,searchFoods,estimateDish,estimateFoodWithOpenAI,lookupBarcode,testUsdaConnection,
     importTzameret,getTzameretData,
     createWorkoutSession,finishWorkoutSession,reopenWorkoutSession,renameWorkoutSession,changeWorkoutSessionDate,deleteWorkoutSession,restoreWorkoutSession,deleteWorkoutSessions,restoreWorkoutSessions,
     saveWorkout,deleteWorkout,restoreWorkout,moveExerciseToSession,saveExercise,updateExercise,deleteExercise,restoreExercise,saveWorkoutPlan,deleteWorkoutPlan,restoreWorkoutPlan,
@@ -566,6 +566,21 @@ function saveCustomMeal(payload) {
     appendRows_(APP.sheets.entries,rows); touchDay_(date);
   }
   return getBootstrapData(date);
+}
+
+/* 2.19: the starter menu from the questionnaire (and "תבנה לי תפריט"): save many fixed meals at once,
+   optionally switch off old ones (remove: meal ids) and hide the built-in meals for a new account */
+function saveMenuMeals(payload){
+  const list=(payload&&payload.meals)||[];const sh=sheet_(APP.sheets.meals);const rows=[];
+  list.forEach(m=>{const cat=String(m.category||'');if(['בוקר','צהריים','ערב'].indexOf(cat)<0)return;const name=String(m.name||'').trim();if(!name)return;
+    const ing=(m.ingredients||[]).filter(x=>String(x.name||'').trim()&&Number(x.amount)>0);if(!ing.length)return;const mealId=Utilities.getUuid();
+    ing.forEach((x,i)=>rows.push([cat,'אישי',i+1,String(x.name).trim(),Math.max(0,Number(x.amount)||0),String(x.unit||'גרם'),round1_(Number(x.calories)||0),round1_(Number(x.protein)||0),round1_(Number(x.carbs)||0),round1_(Number(x.fat)||0),name,'אישי',true,mealId]))});
+  const remove=new Set(((payload&&payload.remove)||[]).map(String));
+  if(remove.size){const values=sh.getDataRange().getValues();for(let i=1;i<values.length;i++)if(remove.has(String(values[i][13]||''))&&values[i][12]!==false)sh.getRange(i+1,13).setValue(false);}
+  if(rows.length)appendRows_(APP.sheets.meals,rows);
+  if(payload&&payload.hideBuiltin){const hidden=getHiddenMealKeys_();Object.values(getMealOptions_(true)).flat().forEach(m=>{if(!m.isCustom&&hidden.indexOf(m.key)<0)hidden.push(m.key)});
+    PropertiesService.getScriptProperties().setProperty(userKey_('HIDDEN_MEALS'),JSON.stringify(hidden));}
+  return getBootstrapData(payload&&payload.date||getWorkingDate_());
 }
 
 function deleteCustomMeal(mealId, date) {
@@ -1557,7 +1572,7 @@ function saveSettings(payload) {
     if(v){const cur=getSettings_();if(cur.debug_since){let ds=[];try{ds=JSON.parse(String(cur.debug_dates||'[]'))||[]}catch(_){}if(ds.indexOf(v)<0){ds.push(v);setSetting_('debug_dates',JSON.stringify(ds.slice(-60)))}}}}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'calendar_kind')){const v=String(payload.calendar_kind||'');if(['apple','google','other'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('calendar_kind',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'event_cut_pct')){const v=Math.round(Number(payload.event_cut_pct)),r=goalRules_().save;if(!(v===0||(v>=Math.round(r[0]*100)&&v<=Math.round(r[1]*100))))throw new Error('אפשר בין '+Math.round(r[0]*100)+'% ל-'+Math.round(r[1]*100)+'%');setSetting_('event_cut_pct',v);}
-  if(payload&&Object.prototype.hasOwnProperty.call(payload,'oil_profile')){const v=String(payload.oil_profile||'');if(['s','r','g','v'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('oil_profile',v);}
+  if(payload&&Object.prototype.hasOwnProperty.call(payload,'oil_profile')){const v=String(payload.oil_profile||'');if(['s','k','r','g','v'].indexOf(v)<0)throw new Error('בחירה לא תקינה');setSetting_('oil_profile',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'day_rollover_hour')){const v=Number(payload.day_rollover_hour);if(!Number.isInteger(v)||v<0||v>6)throw new Error('אפשר בין חצות ל-6 בבוקר');setSetting_('day_rollover_hour',v);delete payload.day_rollover_hour;}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'shift_pct')){const v=Math.round(Number(payload.shift_pct)),mx=Math.round(goalRules_().shift*100);if(!(v>=0&&v<=mx))throw new Error('אפשר בין 0% ל-'+mx+'%');setSetting_('shift_pct',v);}
   if(payload&&Object.prototype.hasOwnProperty.call(payload,'holidays')){const v=String(payload.holidays||'').split(',').filter(x=>['jewish','muslim','christian','civil','none'].indexOf(x)>=0);setSetting_('holidays',v.join(',')||'none');}

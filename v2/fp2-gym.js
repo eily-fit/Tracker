@@ -38,8 +38,9 @@ window.fpMicMsg=e=>(e&&e.fpMsg)||'אין גישה למיקרופון';
 function out(c){const comp=c.createDynamicsCompressor();comp.threshold.value=-10;comp.ratio.value=4;comp.connect(c.destination);return comp}
 function tone(c,dst,t,f,len,type,vol,f2){const o=c.createOscillator(),g=c.createGain();o.type=type||'square';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+len);
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.02);g.gain.setValueAtTime(vol,t+len*0.7);g.gain.exponentialRampToValueAtTime(0.0001,t+len);o.connect(g);g.connect(dst);o.start(t);o.stop(t+len+0.02)}
-function playTones(kind){
-  const c=ctx();if(!c)return 0;const d=out(c),t=c.currentTime+0.03,v=Math.max(0.1,Math.min(1,cfg().vol))*0.9;
+function playTones(kind,oc){
+  if(!oc&&useEl())return playEl(kind);
+  const c=oc||ctx();if(!c)return 0;const d=out(c),t=c.currentTime+0.03,v=Math.max(0.1,Math.min(1,cfg().vol))*0.9;
   if(kind==='beeps'){for(let i=0;i<3;i++)tone(c,d,t+i*0.32,1250,0.2,'square',v);return 1.1}
   if(kind==='whistle'){tone(c,d,t,900,0.28,'sine',v,1900);tone(c,d,t+0.38,900,0.42,'sine',v,2200);return 0.9}
   if(kind==='bell'){[0,0.5].forEach(o=>{tone(c,d,t+o,880,0.9,'sine',v);tone(c,d,t+o,1760,0.6,'sine',v*0.5);tone(c,d,t+o,2640,0.4,'sine',v*0.25)});return 1.5}
@@ -50,6 +51,25 @@ function playTones(kind){
   if(kind==='softbell'){[0,0.7].forEach(o=>{tone(c,d,t+o,1046,1.2,'sine',v*0.7);tone(c,d,t+o,1568,0.8,'sine',v*0.22);tone(c,d,t+o,2093,0.5,'sine',v*0.1)});return 1.9}
   return 0;
 }
+
+/* 2.20 iPad: there the web sound often stays locked (or silenced by mute) when it starts on its own at the end of rest.
+   So on iPad (and anywhere the web sound is not running) the tone is rendered once to a small WAV and played by an <audio>
+   element that was unlocked by a tap. Such an element plays like a song, also over music. */
+const IPAD=/iPad/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function useEl(){if(IPAD)return true;const c=state.audioCtx;return !!(c&&c.state!=='running'&&elReady)}
+let toneEl=null,elReady=false;const wavs={};
+const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+function wavOf(buf){const d=buf.getChannelData(0),n=d.length,b=new ArrayBuffer(44+n*2),v=new DataView(b),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,buf.sampleRate,true);v.setUint32(28,buf.sampleRate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){const x=Math.max(-1,Math.min(1,d[i]));v.setInt16(44+i*2,x<0?x*0x8000:x*0x7FFF,true)}return URL.createObjectURL(new Blob([b],{type:'audio/wav'}))}
+async function wavFor(kind){const key=kind+'|'+cfg().vol;if(wavs[key])return wavs[key];const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!OAC)return null;
+  const sr=44100,oc=new OAC(1,Math.round(sr*2.2),sr);playTones(kind,oc);const buf=await new Promise((ok,no)=>{const r=oc.startRendering();if(r&&r.then)r.then(ok,no);else oc.oncomplete=e=>ok(e.renderedBuffer)});return (wavs[key]=wavOf(buf))}
+function unlockEl(){try{if(!toneEl){toneEl=new Audio();toneEl.preload='auto'}if(elReady)return;toneEl.src=SILENT;toneEl.muted=true;const p=toneEl.play();const done=()=>{toneEl.pause();toneEl.muted=false;elReady=true};if(p&&p.then)p.then(done).catch(()=>{toneEl.muted=false});else done()}catch(_){}
+  try{const c=ctx();if(c&&!c.__fpUnlock){c.__fpUnlock=1;const b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0)}}catch(_){}
+  const k=cfg().kind;if(k!=='voice'&&k!=='mine'&&k!=='none')wavFor(k).catch(()=>{})}
+document.addEventListener('touchend',unlockEl,{passive:true});document.addEventListener('click',unlockEl,true);
+function playEl(kind){wavFor(kind).then(u=>{if(!u||!toneEl)return;toneEl.muted=false;toneEl.volume=1;toneEl.src=u;toneEl.currentTime=0;const p=toneEl.play();if(p&&p.catch)p.catch(()=>{try{const c=ctx();if(c)playTones(kind,c)}catch(_){}})}).catch(()=>{});return {beeps:1.1,whistle:.9,bell:1.5,chime:1.7,marimba:.9,softbell:1.9}[kind]||1}
+window.fp2SoundInfo=()=>({ipad:IPAD,ctx:state.audioCtx&&state.audioCtx.state,el:elReady});
 function heVoices(){try{return speechSynthesis.getVoices().filter(v=>/^he|^iw/i.test(v.lang))}catch(_){return []}}
 function speak(text,quiet){try{if(!('speechSynthesis' in window))return false;const c=cfg(),u=new SpeechSynthesisUtterance(text);u.lang='he-IL';const vs=heVoices(),pick=vs.find(v=>v.name===c.voice)||vs[0];if(pick)u.voice=pick;
   const st=STYLES.find(s=>s[0]===c.style)||STYLES[0];u.rate=st[2];u.pitch=st[3];u.volume=quiet?0:Math.max(0.1,Math.min(1,c.vol));speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(_){return false}}
@@ -128,6 +148,11 @@ window.fpRestTest=()=>{ctx();restSound()};
 /* 2.17: every step says what failed, and a recorder is made with the first format that works */
 window.fpMakeRecorder=function(st,extra){const tries=[];['audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm','audio/ogg'].forEach(t=>{try{if(window.MediaRecorder&&(!MediaRecorder.isTypeSupported||MediaRecorder.isTypeSupported(t)))tries.push(Object.assign({mimeType:t},extra||{}))}catch(_){}});tries.push(extra||undefined);tries.push(undefined);
   let last=null;for(const o of tries){try{return new MediaRecorder(st,o)}catch(e){last=e}}throw Object.assign(new Error('ההקלטה לא נתמכת בטלפון הזה ('+((last&&last.name)||'')+')'),{fpMsg:'ההקלטה לא נתמכת בטלפון הזה. אפשר לבחור קובץ קול במקום.'})};
+/* 2.20: a progress bar while recording (fixed at the bottom, survives re-renders) */
+window.fpRecBar={t:0,start(total){this.stop();const t0=Date.now(),mm=x=>Math.floor(x/60)+':'+String(Math.floor(x%60)).padStart(2,'0');
+  document.body.insertAdjacentHTML('beforeend',`<div id="fpRecBar" role="status" style="position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:2147482000;background:#171C22;border:1px solid #E5484D;border-radius:14px;padding:10px 12px;direction:rtl;color:#F2F5F7;font:600 14px/1.3 -apple-system,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.45)"><div style="display:flex;justify-content:space-between;gap:8px"><span>🔴 מקליט…</span><span id="fpRecBarT" dir="ltr">0:00 / ${mm(total)}</span></div><div style="height:8px;background:#2C3640;border-radius:6px;overflow:hidden;margin-top:7px"><i id="fpRecBarF" style="display:block;height:100%;width:0;background:#E5484D;transition:width .2s linear"></i></div></div>`);
+  this.t=setInterval(()=>{const e=(Date.now()-t0)/1000,f=$('fpRecBarF'),tx=$('fpRecBarT');if(!f){clearInterval(this.t);return}f.style.width=Math.min(100,e/total*100)+'%';if(tx)tx.textContent=mm(Math.min(e,total))+' / '+mm(total)},200)},
+ stop(){clearInterval(this.t);const b=$('fpRecBar');if(b)b.remove()}};
 window.fpRestRec=async()=>{
   if(rec){try{rec.stop()}catch(_){}return}
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('המיקרופון לא זמין כאן. אפשר לבחור קובץ קול במקום.',true);return}
@@ -135,12 +160,12 @@ window.fpRestRec=async()=>{
   let st=null;
   try{st=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){rec=null;toast(fpMicMsg(e)+(e&&e.name&&!e.fpMsg?' ('+e.name+')':''),true);renderSet();return}
   try{const chunks=[];rec=fpMakeRecorder(st);const mt=rec.mimeType||'';rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
-    rec.onstop=()=>{st.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:mt||'audio/mp4'});rec=null;
+    rec.onstop=()=>{fpRecBar.stop();st.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:mt||'audio/mp4'});rec=null;
       if(!blob.size){toast('ההקלטה יצאה ריקה. נסה שוב, או בחר קובץ קול.',true);renderSet();return}
       if(blob.size>400000){toast('ההקלטה ארוכה מדי',true);renderSet();return}
       const fr=new FileReader();fr.onload=()=>{LS.set('fp2.restRec',fr.result);mineEl=null;toast('ההקלטה נשמרה');renderSet()};fr.readAsDataURL(blob)};
-    rec.start();renderSet();setTimeout(()=>{if(rec)try{rec.stop()}catch(_){}},4000);
-  }catch(e){try{st.getTracks().forEach(t=>t.stop())}catch(_){}rec=null;toast(e.fpMsg||('ההקלטה לא התחילה: '+(e.name||'')+' '+(e.message||'')),true);renderSet()}
+    rec.start();renderSet();fpRecBar.start(4);setTimeout(()=>{if(rec)try{rec.stop()}catch(_){}},4000);
+  }catch(e){fpRecBar.stop();try{st.getTracks().forEach(t=>t.stop())}catch(_){}rec=null;toast(e.fpMsg||('ההקלטה לא התחילה: '+(e.name||'')+' '+(e.message||'')),true);renderSet()}
 };
 window.fpRestFile=function(f){if(!f)return;if(f.size>600000)return toast('הקובץ גדול מדי. קובץ של כמה שניות',true);const fr=new FileReader();fr.onload=()=>{LS.set('fp2.restRec',fr.result);mineEl=null;toast('הקול נשמר');renderSet()};fr.readAsDataURL(f)};
 

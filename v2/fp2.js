@@ -32,6 +32,10 @@ async function postOld(fn,args,ms){
 /* 2.18: an AI request is sent once (it costs, and repeating made "טוען…" last minutes). Long wait, then a clear message. */
 const AI_ONCE=new Set(['estimateFoodWithOpenAI','estimateFoodPhoto']);
 async function remote(fn,args){
+  /* 2.20: AI works for every account through the shared server (the one that sends notifications), no old-server link needed */
+  if(AI_ONCE.has(fn)&&!oldConf()&&pushUrl()){
+    try{return fn==='estimateFoodPhoto'?await notificationAPI('aiPhoto',{payload:(args||[])[0]||{}}):await notificationAPI('aiEstimate',{title:(args||[])[0]||'',extras:(args||[])[1]||''})}
+    catch(e){if(/unknown action/.test(e.message))throw new Error('צריך לעדכן את השרת המשותף כדי שה-AI יעבוד לכולם (מנהל האפליקציה)');throw e}}
   if(!oldConf())throw new Error('לפעולה הזו צריך חיבור לשרת הישן. חבר אותו בהגדרות');
   if(AI_ONCE.has(fn)){const t0=Date.now();try{return await postOld(fn,args,100000)}catch(e){if(!/^NET:/.test(e.message))throw e;
     if(fn==='estimateFoodWithOpenAI'&&Date.now()-t0<20000){try{return await window.httpCall(fn,args||[])}catch(_){}}

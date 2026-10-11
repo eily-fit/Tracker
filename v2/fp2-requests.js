@@ -62,10 +62,10 @@ window.fpRecStart=async function(){
     rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
     rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());if(rec&&rec._cancel){rec=null;return}const blob=new Blob(chunks,{type:rec.mimeType||type||'audio/mp4'});rec=null;
       const fr=new FileReader();fr.onload=()=>{const s=String(fr.result);R.audioType=s.slice(5,s.indexOf(';'))||'audio/mp4';R.audio=s.split(',')[1]||'';if(R.audio.length>900000){R.audio='';toast('ההקלטה ארוכה מדי',true)}renderReq()};fr.readAsDataURL(blob)};
-    rec.start(1000);timer=setInterval(()=>{secs++;if(secs>=60)fpRecStop();else{const b=document.querySelector('#fpReq .btn.danger');if(b)b.textContent=`⏹ עצור (${60-secs})`}},1000);renderReq();
+    rec.start(1000);try{fpRecBar.start(60)}catch(_){}timer=setInterval(()=>{secs++;if(secs>=60)fpRecStop();else{const b=document.querySelector('#fpReq .btn.danger');if(b)b.textContent=`⏹ עצור (${60-secs})`}},1000);renderReq();
   }catch(e){toast(e&&e.fpMsg?e.fpMsg:(window.fpMicMsg?fpMicMsg(e):'אין גישה למיקרופון')+(e&&e.name&&!e.fpMsg?' ('+e.name+')':''),true)}
 };
-function stopRec(cancel){clearInterval(timer);if(rec){if(cancel)rec._cancel=true;try{rec.stop()}catch(_){}}}
+function stopRec(cancel){clearInterval(timer);try{fpRecBar.stop()}catch(_){}if(rec){if(cancel)rec._cancel=true;try{rec.stop()}catch(_){}}}
 window.fpRecStop=()=>stopRec(false);
 window.fpRecDel=()=>{R.audio='';renderReq()};
 
