@@ -86,20 +86,24 @@ document.head.insertAdjacentHTML('beforeend',`<style id="fp222md">
 #fpMedalPop{position:fixed;inset:0;z-index:2147483000;background:rgba(8,10,13,.72);display:grid;place-items:center;padding:16px}
 #fpMedalPop .in{background:var(--card,#171C22);border:1px solid var(--line,#2C3640);border-radius:22px;padding:22px 20px 16px;max-width:320px;width:100%;text-align:center;animation:fpMdIn .5s cubic-bezier(.2,1.4,.4,1)}
 #fpMedalPop .fpMd.big{animation:fpMdTurn 1.1s ease-out}
-#fpMedalPop .k{color:var(--muted,#A3ADB8);font-size:13px;margin:10px 0 2px}#fpMedalPop h3{margin:0 0 6px;font-size:20px}#fpMedalPop p{margin:0 0 14px;color:var(--muted,#A3ADB8);font-size:14px;line-height:1.5}
+#fpMedalPop .k{color:var(--brand,#D7F36B);font-weight:800;font-size:17px;margin:14px 0 2px}#fpMedalPop h3{margin:0 0 6px;font-size:20px}#fpMedalPop p{margin:0 0 14px;color:var(--muted,#A3ADB8);font-size:14px;line-height:1.5}
 @keyframes fpMdIn{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}@keyframes fpMdTurn{from{transform:rotateY(180deg)}to{transform:none}}
 @media (prefers-reduced-motion:reduce){#fpMedalPop .in,#fpMedalPop .fpMd.big{animation:none}}
 </style>`);
 function badge(id,on,size){const l=ML[id]||'';return `<div class="fpMd ${on?(MT[id]||'l'):'off'}${size?' '+size:''}${l.length>=4?' long':''}" aria-hidden="true">${l}</div>`}
 window.fpMedalBadge=badge;
+/* 2.23: "קיבלת מדליה!" — no confetti, a link to "המדליות שלי", and more than one new medal comes one after another */
+let MQ=[];
 function medalPop(m){const old=$('fpMedalPop');if(old)old.remove();
-  document.body.insertAdjacentHTML('beforeend',`<div id="fpMedalPop" role="dialog" aria-modal="true" aria-label="מדליה חדשה" onclick="if(event.target===this)this.remove()"><div class="in">${badge(m[0],1,'big')}<div class="k">מדליה חדשה</div><h3>${esc(m[2])}</h3>${m[3]?`<p>${esc(m[3])}</p>`:'<p></p>'}<button type="button" class="btn full" onclick="document.getElementById('fpMedalPop').remove()">סגור</button></div></div>`);
+  document.body.insertAdjacentHTML('beforeend',`<div id="fpMedalPop" role="dialog" aria-modal="true" aria-label="קיבלת מדליה" onclick="if(event.target===this)fpMedalNext()"><div class="in">${badge(m[0],1,'big')}<div class="k">קיבלת מדליה!</div><h3>${esc(m[2])}</h3><p>כל הכבוד, עמדת בהישג.${m[3]?' '+esc(m[3]):''}</p><button type="button" class="btn full" onclick="fpMedalMine()">המדליות שלי</button><button type="button" class="btn light full" style="margin-top:8px" onclick="fpMedalNext()">${MQ.length?'למדליה הבאה ('+MQ.length+')':'סגור'}</button></div></div>`);
   try{hapticTick()}catch(_){}}
+window.fpMedalNext=()=>{const e=$('fpMedalPop');if(e)e.remove();const n=MQ.shift();if(n)medalPop(n)};
+window.fpMedalMine=()=>{MQ=[];const e=$('fpMedalPop');if(e)e.remove();try{fpMedals()}catch(_){}};
 window.fpMedalPop=id=>{const m=MEDALS.find(x=>x[0]===id);if(m)medalPop(m)};
-/* new medals since last time → a short popup (and they wait for the weekly summary too) */
+/* new medals since last time → popups right away (and they wait for the weekly summary too) */
 function checkMedals(quiet){const have=J('MEDALS',{}),got=earned(),fresh=Object.keys(got).filter(k=>!have[k]);if(!fresh.length)return[];
   fresh.forEach(k=>have[k]=today());setProp('MEDALS',JSON.stringify(have));
-  const onb=$('onbSheet');if(!quiet&&!$('fpI')&&(!onb||onb.classList.contains('hide'))){const m=MEDALS.find(x=>x[0]===fresh[0]);if(m)try{medalPop(m)}catch(_){}}
+  const onb=$('onbSheet');if(!quiet&&!$('fpI')&&(!onb||onb.classList.contains('hide'))){const ms=fresh.map(k=>MEDALS.find(x=>x[0]===k)).filter(Boolean);if(ms.length){if($('fpMedalPop'))MQ=MQ.concat(ms);else{MQ=ms.slice(1);try{medalPop(ms[0])}catch(_){}}}}
   return fresh}
 window.fpMedalGive=k=>{const have=J('MEDALS',{});if(!have[k]){have[k]=today();setProp('MEDALS',JSON.stringify(have))}};
 window.fpMedals=function(){checkMedals(true);const have=J('MEDALS',{});

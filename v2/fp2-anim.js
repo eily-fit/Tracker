@@ -2142,22 +2142,26 @@ function render(){const x=PAT[cur];if(!x.views[view])view=0;const d=x.loop?T:dep
 function frame(n){if(!anOpen)return;const dt=Math.min(.1,(n-last)/1000);last=n;if(play)T=(T+dt/((PAT[cur]&&PAT[cur].period)||5.2))%1;try{render()}catch(e){}rafId=requestAnimationFrame(frame)}
 const norm=s=>String(s||'').replace(/^\s*\d+\s*[.)]\s*/,'').replace(/[▾◂▸›‹←→✓]/g,'').replace(/\s+/g,' ').trim();
 function openAn(name){const n=norm(name);const m=EXMAP[n];mount();exName=n;
- if(!m){requestExercise(n).then(ok=>toast0(ok?'עוד אין הדגמה לתרגיל הזה. הבקשה נשלחה למנהל.':'עוד אין הדגמה לתרגיל הזה. הבקשה תישלח למנהל כשיהיה חיבור.'));return}
+ /* 2.23: no demo → the exercise's own screen (your video, or ask the admin). Nothing is sent by just tapping. */
+ if(!m){if(window.fpExV&&fpExV.open)fpExV.open(n);else toast0('עוד אין הדגמה לתרגיל הזה.');return}
  const i=PAT.findIndex(x=>x.id===m[0]);if(i<0)return;cur=i;T=0;bad=-1;view=0;vi=Math.min(m[1]|0,(PAT[i].variants||[1]).length-1);play=true;A$('pb').textContent='עצור';
  const ov=document.getElementById('anOv');ov.classList.remove('hide');anOpen=true;ui();last=performance.now();now0=last;cancelAnimationFrame(rafId);rafId=requestAnimationFrame(frame)}
 function closeAn(){anOpen=false;cancelAnimationFrame(rafId);const ov=document.getElementById('anOv');if(ov)ov.classList.add('hide')}
 function toast0(m){try{if(typeof toast==='function')toast(m);else alert(m)}catch(_){}}
 /* ----- exercise requests to admin ----- */
 /* 2.22: the request is really sent (and checked). If it fails it waits in a queue and is sent again later. */
-const ASKED=new Set();const QK='fp2.exReqQ';
+/* 2.23: a request is sent once per exercise, ever (kept on the phone), and only from the "בקש הדגמה" button */
+const ASKED=new Set((()=>{try{return JSON.parse(localStorage.getItem('fp2.exReqSent')||'[]')}catch(_){return []}})());const QK='fp2.exReqQ';
+const askedSave=()=>{try{localStorage.setItem('fp2.exReqSent',JSON.stringify([...ASKED].slice(-300)))}catch(_){}};
 const qGet=()=>{try{return JSON.parse(localStorage.getItem(QK)||'[]')}catch(_){return []}},qSet=a=>{try{localStorage.setItem(QK,JSON.stringify(a.slice(-30)))}catch(_){}};
 async function sendReq(x){if(!window.FP2||!FP2.push)throw new Error('no push');await FP2.push('logExerciseRequest',x);return true}
 async function requestExercise(name,group,equipment){name=norm(name);if(!name||EXMAP[name])return true;if(ASKED.has(name))return true;
   const x={name,group:group||'',equipment:equipment||''};
-  try{await sendReq(x);ASKED.add(name);return true}catch(e){const q=qGet();if(!q.some(y=>y.name===name))q.push(x);qSet(q);return false}}
-async function flushReq(){const q=qGet();if(!q.length)return;const left=[];for(const x of q){try{await sendReq(x);ASKED.add(x.name)}catch(_){left.push(x)}}qSet(left)}
+  try{await sendReq(x);ASKED.add(name);askedSave();return true}catch(e){const q=qGet();if(!q.some(y=>y.name===name))q.push(x);qSet(q);return false}}
+async function flushReq(){const q=qGet();if(!q.length)return;const left=[];for(const x of q){if(ASKED.has(x.name))continue;try{await sendReq(x);ASKED.add(x.name);askedSave()}catch(_){left.push(x)}}qSet(left)}
 setTimeout(flushReq,20000);setInterval(flushReq,10*60*1000);
-function hookSave(){if(!window.FP2||!FP2.call||FP2.__anHook)return false;const orig=FP2.call;FP2.call=async function(fn,args){const r=await orig.apply(this,arguments);if(fn==='saveExercise'&&args&&args[0]&&args[0].name)requestExercise(args[0].name,args[0].muscleGroup,args[0].equipment);return r};FP2.__anHook=true;return true}
+/* 2.23: adding an exercise no longer sends a request by itself */
+function hookSave(){return true}
 /* ----- arrows ----- */
 const ROOTS='#workoutHome,#workoutLibrary,#workouts,#workoutDiary,#workoutPlans,.overlay:not(#anOv)';
 let scanT=0,mo=null;
@@ -2256,6 +2260,6 @@ stretch('st_glute','מתיחת ישבן','ישבן',stGlute,['יושבים, רג
 window.__AN={PAT,figBox};
 })();
 
-window.FP2Anim={pat:PAT,figBox,open:openAn,close:closeAn,request:requestExercise,map:EXMAP,count:PAT.length};
+window.FP2Anim={pat:PAT,figBox,open:openAn,close:closeAn,request:requestExercise,asked:n=>ASKED.has(norm(n)),norm,map:EXMAP,count:PAT.length};
 
 })();

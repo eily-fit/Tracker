@@ -40,9 +40,26 @@ const INTV_LONG=['6 × 400 מ׳, ריצה קלה 90 שנ׳ ביניהם','5 × 6
 const FART=['פרטלק: 6 × 15 שנ׳ מהיר בתוך ריצה קלה','פרטלק: 6 × 20 שנ׳','פרטלק: 6 × 30 שנ׳','פרטלק: 8 × 30 שנ׳','פרטלק: 6 × 45 שנ׳'];
 const HILL=['עליות: 4 × 10 שנ׳','עליות: 6 × 10 שנ׳','עליות: 6 × 15 שנ׳','עליות: 8 × 15 שנ׳'];
 const DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+/* 2.23: one list of run kinds, each one a different run (sprints are short intervals, so they are intervals).
+   cat = the folder: easy / long / fast (speed) / pace (pace changes). */
+const RK={easy:{n:'קלה',cat:'easy',d:'ריצה בקצב נוח שאפשר לדבר בו במשפטים שלמים. רוב הריצות בשבוע.'},
+  long:{n:'ארוכה',cat:'long',d:'הריצה הכי ארוכה בשבוע, בקצב קל. בונה סיבולת.'},
+  int:{n:'אינטרוולים',cat:'fast',d:'קטעים מהירים (100 מ׳ עד 1 ק״מ) עם הליכה או ריצה קלה ביניהם. ספרינטים הם אינטרוולים קצרים מאוד.'},
+  hill:{n:'עליות',cat:'fast',d:'עולים מהר בעלייה של 4–8%, בין 10 ל-60 שניות, ויורדים בהליכה.'},
+  tempo:{n:'טמפו',cat:'fast',d:'15–30 דקות רצופות בקצב ״קשה אבל נשלט״, אותו קצב כל הזמן. אפשר להגיד רק כמה מילים.'},
+  fart:{n:'פרטלק',cat:'pace',d:'ריצה רצופה שמחליפים בה קצב לפי ההרגשה: מהר עד עמוד, לאט עד הפינה. בלי עצירות.'},
+  prog:{n:'ריצת התקדמות',cat:'pace',d:'מתחילים קל ומאיצים בהדרגה. החלק האחרון הכי מהיר.'},
+  stride:{n:'האצות',cat:'pace',d:'בסוף ריצה קלה: 4–8 האצות של 15–20 שניות, מהר אבל לא ספרינט מלא, והליכה ביניהן.'},
+  plan:{n:'מהתוכנית',cat:null,d:''}};
+function kindOf(r){const t=String((r&&r.type)||'');if(!t||t==='plan')return 'plan';
+  if(/ספרינט|אינטרוול/.test(t))return 'int';if(/עליות/.test(t))return 'hill';if(/טמפו/.test(t))return 'tempo';if(/פרטלק/.test(t))return 'fart';if(/התקדמות/.test(t))return 'prog';if(/האצות/.test(t))return 'stride';if(/ארוכה/.test(t))return 'long';return 'easy'}
+const kindByName=n=>Object.keys(RK).find(k=>RK[k].n===n)||kindOf({type:n});
+/* 2.23: settings — skip the warm-up / the stretches */
+const skip=()=>{const s=J('RUN_SKIP',{})||{};return {w:!!s.w,s:!!s.s}};
 function plan(){const p=J('RUN_PLAN',null);if(!p)return null;p.goal=Number(p.goal)||5;p.start=Number(p.start)||0;p.runs=Math.max(1,Number(p.runs)||2);p.kind=p.start<3?'start':p.goal<=5?'k5':p.goal<=10?'k10':p.goal<=15?'k15':'half';
   p.name={start:'מתחילים לרוץ',k5:'משפרים 5 ק״מ',k10:'עד 10 ק״מ',k15:'עד 15 ק״מ',half:'עד חצי מרתון'}[p.kind];p.gp=sec(p.paceGoal);p.now=sec(p.paceNow);
-  const log=J('RUN_LOG',[]);p.best=log.filter(r=>r.ok).reduce((m,r)=>Math.max(m,Number(r.km)||0),0);p.base=Math.max(p.start,p.best);
+  /* 2.23: a new plan "from zero" counts only the runs since it started (the old runs stay in the journal) */
+  const log=J('RUN_LOG',[]).filter(r=>!p.resetAt||(r.d||'')>=p.resetAt);p.best=log.filter(r=>r.ok).reduce((m,r)=>Math.max(m,Number(r.km)||0),0);p.base=Math.max(p.start,p.best);
   /* the week moves on by itself every 7 days; "the week was hard" (weekly summary) repeats it */
   p.week=Math.max(1,Math.floor(daysBetween(p.since||today(),today())/7)+1-(Number(p.rep)||0));return p}
 function savePlan(p){const keep=Object.assign({},p);['kind','name','gp','now','best','base'].forEach(k=>delete keep[k]);setProp('RUN_PLAN',JSON.stringify(keep))}
@@ -94,57 +111,130 @@ function planHtml(p){const sch=weekSchedule(Number(p.str)||0,p.runs),runs=weekRu
    <div class="fpT-card"><h3>השבוע</h3>${sch.map((d,i)=>d?`<div class="fpT-wk"><b>${DAYS[i]}</b><span>${d.t==='str'?'כוח'+(d.legs?' · כולל רגליים לרצים':' · פלג גוף עליון'):''+(runs[d.i]?runs[d.i][0]+': '+runs[d.i][1]:'ריצה')}</span></div>`:'').join('')}
     <p class="muted" style="margin:8px 0 0">רצים עושים רגליים רק באימון כוח אחד בשבוע. ${p.m3?(p.base>=10?'רץ כבר 10 ק״מ: נפתחו קטעים ארוכים.':'הקטעים המהירים קצרים, עד 200 מ׳. ב-10 ק״מ נפתחים קטעים ארוכים.'):'עד 3 ק״מ: רק ריצות קלות.'}</p></div>
    <details class="fpT-card"><summary style="cursor:pointer;font-weight:700">החודש הראשון</summary>${[1,2,3,4].map(w=>`<div class="fpT-wk${w===p.week?' now':''}"><b>שבוע ${w}</b><span>${weekRuns(p,w).map(r=>r[0]+': '+r[1].split(',')[0]).join(' · ')}</span></div>`).join('')}<p class="muted">שבוע חדש נפתח כשמסיימים את השבוע הקודם.</p></details>`}
-function runSheet(){const p=plan();if(!p)return setupSheet();const runs=weekRuns(p,p.week),st=V.step;
-  const seg=`<div class="fpT-seg" role="group">${['בוחרים','חימום','ריצה','מתיחות'].map((t,i)=>`<button type="button" class="${i===st?'on':''}" onclick="fpT.go(${i})">${i+1}. ${t}</button>`).join('')}</div>`;
+function runSheet(){const p=plan();if(!p)return setupSheet();const runs=weekRuns(p,p.week),st=V.step,sk=skip();
+  /* 2.23: the warm-up and the stretches can be skipped in Settings */
+  const steps=[[0,'בוחרים'],[1,'חימום'],[2,'ריצה'],[3,'מתיחות']].filter(([i])=>!(i===1&&sk.w)&&!(i===3&&sk.s));
+  const seg=`<div class="fpT-seg" role="group">${steps.map(([i,t],n)=>`<button type="button" class="${i===st?'on':''}" onclick="fpT.go(${i})">${n+1}. ${t}</button>`).join('')}</div>`;
+  const toRun=sk.w?2:1;
   let b='';
-  if(st===0){const types=[['קלה',0],['ארוכה',0],['האצות קצרות',1],['פרטלק',1],['עליות',1],['אינטרוולים',1],['ספרינטים',1]];
+  if(st===0){const types=Object.keys(RK).filter(k=>RK[k].cat);const ok=kindByName(V.own.type);
     b=`<p class="muted" style="margin:6px 0">מה רצים היום?</p>${runs.map((r,i)=>`<button type="button" class="btn ${V.pick===i?'':'light '}full" style="margin-top:8px;text-align:right;display:block" onclick="fpT.pick(${i})"><b>${esc(r[0])}</b><div class="muted" style="font-size:12.5px">${esc(r[1])}</div></button>`).join('')}
-      <button type="button" class="btn ${V.pick==='own'?'':'light '}full" style="margin-top:8px;text-align:right;display:block" onclick="fpT.pick('own')"><b>ריצה משלי</b><div class="muted" style="font-size:12.5px">בוחר סוג ומרחק או זמן</div></button>
-      ${V.pick==='own'?`<div class="fpT-card" style="margin-top:10px">${types.map(([t,l])=>{const lk=l&&!p.m3;return `<button type="button" class="fpT-chip${V.own.type===t&&!lk?' on':''}${lk?' lock':''}" ${lk?'aria-disabled="true"':`onclick="fpT.own('type','${t}')"`}>${lk?'':''}${t}</button>`}).join(' ')}
+      <button type="button" class="btn ${V.pick==='own'?'':'light '}full" style="margin-top:8px;text-align:right;display:block" onclick="fpT.pick('own')"><b>${V.fixed?esc(V.fixed):'ריצה משלי'}</b><div class="muted" style="font-size:12.5px">${V.fixed?'הריצה הקבועה שלך':'בוחר סוג ומרחק או זמן'}</div></button>
+      ${V.pick==='own'?`<div class="fpT-card" style="margin-top:10px">${types.map(k=>{const t=RK[k].n,lk=(RK[k].cat==='fast'||RK[k].cat==='pace')&&!p.m3;return `<button type="button" class="fpT-chip${ok===k&&!lk?' on':''}${lk?' lock':''}" ${lk?'aria-disabled="true"':`onclick="fpT.own('type','${t}')"`}>${t}</button>`}).join(' ')}
+        ${RK[ok]&&RK[ok].d?`<p class="muted" style="margin:8px 0 0;font-size:13px">${RK[ok].d}</p>`:''}
         ${!p.m3?'<div class="fpT-warn"><b>נפתח ב-3 ק״מ.</b> אימונים מהירים לפני שיש בסיס הם הדרך הכי מהירה להיפצע.</div>':''}
-        <div class="row"><div class="field"><label>מרחק (ק״מ)</label><input inputmode="decimal" value="${esc(V.own.km)}" oninput="fpT.own('km',this.value,1)"></div><div class="field"><label>או זמן (דק׳)</label><input inputmode="numeric" value="${esc(V.own.min)}" oninput="fpT.own('min',this.value,1)"></div></div></div>`:''}
+        <div class="row"><div class="field"><label>מרחק (ק״מ)</label><input inputmode="decimal" value="${esc(V.own.km)}" oninput="fpT.own('km',this.value,1)"></div><div class="field"><label>או זמן (דק׳)</label><input inputmode="numeric" value="${esc(V.own.min)}" oninput="fpT.own('min',this.value,1)"></div></div>
+        ${V.tg&&V.tg.length?`<p class="muted" style="margin:6px 0 0">יעד: ${mmss(V.tg.reduce((a,x)=>a+x,0))} · ${V.tg.map(mmss).join(' / ')} לכל ק״מ</p>`:''}
+        ${V.rec?`<div class="fpT-good" style="margin-top:8px"><b>בפעם הקודמת</b><br>${esc(V.rec.text)}</div>`:''}</div>`:''}
       ${V.pick!=null&&V.pick!=='own'&&runs[V.pick]?`<div class="fpT-card" style="margin-top:10px"><h3>האימון של היום</h3>${wk(runSteps(runs[V.pick],p))}</div>`:''}
-      <button type="button" class="btn full" style="margin-top:12px" ${V.pick==null?'disabled':''} onclick="fpT.go(1)">לחימום ←</button>
+      <button type="button" class="btn full" style="margin-top:12px" ${V.pick==null?'disabled':''} onclick="fpT.go(${toRun})">${sk.w?'רצים ←':'לחימום ←'}</button>
       <details class="fpT-card" style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">התוכנית</summary>${planHtml(p)}</details>`}
   if(st===1)b=`<div class="fpT-good"><b>לא חייבים את כולם.</b> בוחרים 3–4 תרגילים, 5 דקות בסך הכל. לפני ריצה לא מחזיקים מתיחות במקום, רק תנועה.</div>${WARM.map((e,i)=>exCard(e,i)).join('')}<button type="button" class="btn full" onclick="fpT.go(2)">סיימתי חימום, רצים ←</button>`;
   if(st===2){const t=V.pick==='own'?[V.fixed||'ריצה משלי',(V.own.km?V.own.km+' ק״מ':V.own.min?V.own.min+' דק׳':'')+' · '+V.own.type]:runs[V.pick||0]||runs[0];
-    b=`<div class="fpT-card"><h3>האימון של היום</h3>${wk(runSteps(t,p))}<p class="muted" style="margin:6px 0 0">הקצב בדקות לקילומטר. יש שעון? תסתכל עליו. אין? לפי הדיבור.</p></div>
+    b=`<div class="fpT-card"><h3>האימון של היום</h3>${wk(runSteps(t,p))}${V.tg&&V.tg.length?`<p class="muted" style="margin:6px 0 0">היעד לכל ק״מ: ${V.tg.map((x,i)=>(i+1)+': '+mmss(x)).join(' · ')}</p>`:''}<p class="muted" style="margin:6px 0 0">הקצב בדקות לקילומטר. יש שעון? תסתכל עליו. אין? לפי הדיבור.</p></div>
       <div class="fpT-card" id="fpGps">${gpsHtml()}</div>
       <div class="fpT-card"><div class="row"><div class="field"><label>כמה רצת (ק״מ)</label><input id="fpTkm" inputmode="decimal" placeholder="3" value="${esc(V.km||'')}" oninput="fpT.km(this.value)"></div><div class="field"><label>כמה זמן (דק׳:שנ׳)</label><input id="fpTtime" inputmode="text" placeholder="20:30" value="${esc(V.tm||'')}" oninput="fpT.tm(this.value)"></div></div>
-        <details id="fpSplitsBox"${V.spOpen?' open':''} ontoggle="fpT.spOpen(this.open)"><summary class="muted" style="cursor:pointer">קצב לכל ק״מ (לא חובה)</summary><div id="fpSplits">${splitsHtml()}</div></details>
-        <p class="muted" style="margin:6px 0 0">מדדת בשעון או ב-Strava? רק תעתיק לכאן.</p></div>
+        <details id="fpSplitsBox"${V.spOpen||V.tg?' open':''} ontoggle="fpT.spOpen(this.open)"><summary class="muted" style="cursor:pointer">קצב לכל ק״מ ${V.tg?'(לטבלת תכנון מול ביצוע)':'(לא חובה)'}</summary><div id="fpSplits">${splitsHtml()}</div></details>
+        <p class="muted" style="margin:6px 0 0">מדדת בשעון? רק תעתיק לכאן.</p></div>
       <div class="row"><button type="button" class="btn light" onclick="fpT.ran(0)">עצרתי באמצע</button><button type="button" class="btn" onclick="fpT.ran(1)">רצתי בלי לעצור</button></div>`}
   if(st===3)b=`<div class="fpT-good"><b>לא חייבים את כולם.</b> 5 דקות: הליכה רגועה ו-3–4 מתיחות. מרגישים מתיחה, לא כאב. האדום מראה איפה מרגישים.</div>${COOL.map((e,i)=>exCard(e,i)).join('')}<button type="button" class="btn full" onclick="fpT.close()">סיימתי ✓</button>`;
   sheet('ריצה',seg+b);
 }
-/* ---------- 2.22: GPS while the screen is on, and per-km pace ---------- */
+/* ---------- GPS while the screen is on, per-km pace, and (2.23) the run screen ---------- */
 const STRAVA={ios:'https://apps.apple.com/app/strava/id426826309',and:'https://play.google.com/store/apps/details?id=com.strava'};
-const storeBtns=()=>`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><a class="btn light" style="flex:1;text-align:center;text-decoration:none" href="${STRAVA.ios}" target="_blank" rel="noopener">App Store</a><a class="btn light" style="flex:1;text-align:center;text-decoration:none" href="${STRAVA.and}" target="_blank" rel="noopener">Google Play</a></div>`;
-let G=null,gInt=0,gLock=null;
+const storeBtns=()=>'';
+let G=null,gInt=0,gLock=null,RUNMIN=false;
 const hav=(a,b)=>{const R=6371,r=x=>x*Math.PI/180,dl=r(b[0]-a[0]),dn=r(b[1]-a[1]);const h=Math.sin(dl/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+document.head.insertAdjacentHTML('beforeend',`<style id="fp223run">
+#fpRunScr{position:fixed;inset:0;z-index:2147482000;display:flex;flex-direction:column;direction:rtl}
+#fpRunScr .top{flex:0 0 13vh;background:rgba(0,0,0,.55)}
+#fpRunScr .pan{flex:1;background:#000;color:#F2F5F7;border-radius:22px 22px 0 0;padding:16px 18px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;overflow:auto}
+#fpRunScr .st{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#A3ADB8}
+#fpRunScr .st b{color:#7CC4FF;font-weight:700}
+#fpRunScr .km{font-size:84px;font-weight:900;line-height:1;text-align:center;font-variant-numeric:tabular-nums;margin-top:8px}
+#fpRunScr .km small{display:block;font-size:15px;font-weight:500;color:#A3ADB8;margin-top:6px}
+#fpRunScr .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center}
+#fpRunScr .two div{background:#0E1318;border:1px solid #1F262E;border-radius:16px;padding:12px 6px}
+#fpRunScr .two b{display:block;font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+#fpRunScr .two span{font-size:12.5px;color:#A3ADB8}
+#fpRunScr .tgt{text-align:center;font-size:15px;color:#A3ADB8;font-variant-numeric:tabular-nums}#fpRunScr .tgt b{color:#D7F36B}
+#fpRunScr .sps{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;font-size:12.5px;color:#A3ADB8;font-variant-numeric:tabular-nums}
+#fpRunScr .sps span{border:1px solid #1F262E;border-radius:99px;padding:3px 9px}
+#fpRunScr .acts{margin-top:auto;display:grid;gap:8px}
+#fpRunScr .acts button{font:inherit;font-weight:800;font-size:16px;border-radius:14px;padding:14px;cursor:pointer}
+#fpRunScr .acts .min{background:#11161B;border:1px solid #2C3640;color:#F2F5F7}
+#fpRunScr .acts .end{background:#D7F36B;border:0;color:#14190a}
+#fpRunFloat{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:61;background:#0E1318;border:1px solid #7CC4FF;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.45);direction:rtl}
+#fpRunFloat button{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;background:none;border:0;color:#F2F5F7;font:inherit;padding:10px 14px;cursor:pointer;text-align:right}
+#fpRunFloat small{display:block;color:#A3ADB8;font-size:12px}#fpRunFloat .t{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.fpPva{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}.fpPva th{color:#6B7682;font-weight:500;font-size:12px;text-align:right;padding:4px 2px}.fpPva td{padding:7px 2px;border-top:1px solid var(--line,#2C3640)}
+.fpPill{font-size:12px;border-radius:99px;padding:2px 8px;white-space:nowrap;display:inline-block}.fpPill.g{background:rgba(110,231,135,.13);color:#6EE787}.fpPill.r{background:rgba(255,138,128,.14);color:#FF8A80}.fpPill.n{background:#1F262E;color:#A3ADB8}
+.fpRec{background:linear-gradient(160deg,#1E2A33,#171C22);border:1px solid #2B3D4C;border-radius:14px;padding:10px 12px;margin:8px 0}.fpRec b{color:#7CC4FF}
+</style>`);
+const elapsed=()=>G&&G.t0?(Date.now()-G.t0)/1000:0;
+function curPace(){if(!G)return 0;const frac=G.km-(G.nextKm-1);return frac>0.05?(elapsed()-G.lastT)/frac:0}
 function gpsHtml(){
-  if(G&&G.no)return `<b>המדידה ב-GPS לא זמינה כאן</b><p class="muted" style="margin:4px 0 0">${esc(G.no)}. אפשר למדוד ב-Strava (חינם) או בשעון ריצה, ולהעתיק לכאן.</p>${storeBtns()}`;
+  if(G&&G.no)return `<b>המדידה ב-GPS לא זמינה כאן</b><p class="muted" style="margin:4px 0 0">${esc(G.no)}. אפשר למדוד בשעון ריצה ולהעתיק לכאן.</p>`;
   if(G&&G.on)return `<div style="display:flex;justify-content:space-between;align-items:center"><b>מודד ב-GPS</b><span class="muted" style="font-size:12.5px">${G.fix?'יש קליטה':'מחפש קליטה…'}</span></div>
-    <div style="display:flex;justify-content:space-around;text-align:center;margin:10px 0"><div><div style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums" id="fpGkm">${G.km.toFixed(2)}</div><span class="muted">ק״מ</span></div><div><div style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums" id="fpGt">${mmss((Date.now()-G.t0)/1000)}</div><span class="muted">זמן</span></div></div>
-    <p class="muted" style="margin:0 0 8px;font-size:12.5px">המסך צריך להישאר פתוח בזמן הריצה. לריצה ארוכה עדיף Strava.</p><button type="button" class="btn full" onclick="fpT.gps(0)">סיום מדידה</button>`;
-  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b>למדוד את הריצה</b><br><span class="muted" style="font-size:12.5px">ב-GPS של הטלפון, כשהמסך פתוח</span></span><button type="button" class="btn light" onclick="fpT.gps(1)">התחל מדידה</button></div>`}
+    <div style="display:flex;justify-content:space-around;text-align:center;margin:10px 0"><div><div style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums" id="fpGkm">${G.km.toFixed(2)}</div><span class="muted">ק״מ</span></div><div><div style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums" id="fpGt">${mmss(elapsed())}</div><span class="muted">זמן</span></div></div>
+    <button type="button" class="btn full" onclick="fpT.runMax()">מסך ריצה</button><button type="button" class="btn light full" style="margin-top:8px" onclick="fpT.gps(0)">סיום מדידה</button>`;
+  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b>למדוד את הריצה</b><br><span class="muted" style="font-size:12.5px">ב-GPS של הטלפון. המסך נשאר דלוק כל הריצה</span></span><button type="button" class="btn light" onclick="fpT.gps(1)">התחל מדידה</button></div>`}
 function gpsDraw(){const b=$('fpGps');if(b)b.innerHTML=gpsHtml()}
-function gpsStop(keep){if(!G)return;try{if(G.id!=null)navigator.geolocation.clearWatch(G.id)}catch(_){}clearInterval(gInt);try{gLock&&gLock.release()}catch(_){}gLock=null;
-  if(keep&&G.on&&G.km>0){V.gps=1;V.km=String(Math.round(G.km*100)/100);V.tm=mmss((Date.now()-G.t0)/1000)}const no=G.no;G=no&&!keep?{no}:null}
+/* the run screen: black, big numbers, the screen stays on. Tap the dark top (or "להקטין") → a small box; tap the box → back. */
+function scrHtml(){const ti=G.nextKm-1,tg=V.tg&&V.tg.length?V.tg[Math.min(ti,V.tg.length-1)]:0,cp=curPace();
+  return `<div class="top" onclick="fpT.runMin()" aria-label="להקטין"></div><div class="pan" role="dialog" aria-label="מסך ריצה">
+    <div class="st"><span>${esc(V.fixed||'ריצה')}</span><b>${G.fix?'יש קליטה':'מחפש קליטה…'}</b></div>
+    <div class="km" id="fpRsKm">${G.km.toFixed(2)}<small>ק״מ</small></div>
+    <div class="two"><div><b id="fpRsT">${mmss(elapsed())}</b><span>זמן</span></div><div><b id="fpRsP">${cp?mmss(cp):'—'}</b><span>קצב בק״מ ${ti+1}</span></div></div>
+    ${tg?`<div class="tgt" id="fpRsTg">יעד לק״מ ${ti+1}: <b>${mmss(tg)}</b></div>`:''}
+    <div class="sps" id="fpRsSp">${G.sp.map((x,i)=>`<span>${i+1}: ${mmss(x)}</span>`).join('')}</div>
+    <p style="margin:0;text-align:center;font-size:12.5px;color:#6B7682">המסך נשאר דלוק. אפשר להוריד בהירות. מסך נעול עוצר את המדידה.</p>
+    <div class="acts"><button type="button" class="min" onclick="fpT.runMin()">להקטין, המדידה ממשיכה</button><button type="button" class="end" onclick="fpT.gps(0)">סיום מדידה</button></div></div>`}
+function scrOpen(){if(!G||!G.on)return;let s=$('fpRunScr');if(!s){document.body.insertAdjacentHTML('beforeend','<div id="fpRunScr"></div>');s=$('fpRunScr')}s.innerHTML=scrHtml();floatOff()}
+function scrOff(){const s=$('fpRunScr');if(s)s.remove()}
+function floatHtml(){return `<button type="button" onclick="fpT.runMax()" aria-label="לפתוח את מסך הריצה"><span><b>ריצה · ${G.km.toFixed(2)} ק״מ</b><small>מודד ב-GPS. לחיצה פותחת</small></span><span class="t">${mmss(elapsed())}</span></button>`}
+function floatOn(){let f=$('fpRunFloat');if(!f){document.body.insertAdjacentHTML('beforeend','<div id="fpRunFloat" role="status"></div>');f=$('fpRunFloat')}f.innerHTML=floatHtml()}
+function floatOff(){const f=$('fpRunFloat');if(f)f.remove()}
+function tickRun(){if(!G||!G.on){clearInterval(gInt);return}const t=$('fpGt');if(t)t.textContent=mmss(elapsed());
+  if($('fpRunScr')){const a=$('fpRsT'),k=$('fpRsKm'),p=$('fpRsP');if(a)a.textContent=mmss(elapsed());if(k)k.firstChild.nodeValue=G.km.toFixed(2);if(p){const cp=curPace();p.textContent=cp?mmss(cp):'—'}}
+  if(RUNMIN)floatOn()}
+function lock(){try{if(navigator.wakeLock&&!gLock)navigator.wakeLock.request('screen').then(l=>{gLock=l;l.addEventListener('release',()=>{gLock=null})}).catch(()=>{})}catch(_){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&G&&G.on)lock()});
+function gpsStop(keep){if(!G)return;try{if(G.id!=null)navigator.geolocation.clearWatch(G.id)}catch(_){}clearInterval(gInt);try{gLock&&gLock.release()}catch(_){}gLock=null;scrOff();floatOff();RUNMIN=false;
+  if(keep&&G.on&&G.km>0){V.gps=1;V.km=String(Math.round(G.km*100)/100);V.tm=mmss(elapsed());if(G.sp.length){V.sp=G.sp.map(mmss);V.spOpen=true}}const no=G.no;G=no&&!keep?{no}:null}
 function gpsStart(){if(!navigator.geolocation||!window.isSecureContext){G={no:'הטלפון לא נותן מיקום לאפליקציה'};return gpsDraw()}
-  G={on:1,km:0,t0:Date.now(),last:null,fix:0,id:null};
+  G={on:1,km:0,t0:Date.now(),last:null,fix:0,id:null,sp:[],lastT:0,nextKm:1};
   try{G.id=navigator.geolocation.watchPosition(pos=>{if(!G||!G.on)return;const c=pos.coords;G.fix=1;if(c.accuracy>40)return;const pt=[c.latitude,c.longitude];
-      if(G.last){const d=hav(G.last,pt);if(d<0.004)return;if(d<0.25)G.km+=d}G.last=pt;const k=$('fpGkm');if(k)k.textContent=G.km.toFixed(2);else gpsDraw()},
-    err=>{const m=err&&err.code===1?'אין הרשאה למיקום. באייפון: הגדרות ← פרטיות ← שירותי מיקום':'אין קליטת GPS';try{navigator.geolocation.clearWatch(G.id)}catch(_){}clearInterval(gInt);G={no:m};gpsDraw()},{enableHighAccuracy:true,maximumAge:0,timeout:30000})}catch(e){G={no:'המיקום לא נפתח'};return gpsDraw()}
-  try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(l=>gLock=l).catch(()=>{})}catch(_){}
-  clearInterval(gInt);gInt=setInterval(()=>{const t=$('fpGt');if(!G||!G.on){clearInterval(gInt);return}if(t)t.textContent=mmss((Date.now()-G.t0)/1000)},1000);gpsDraw()}
-function splitsHtml(){const km=Math.floor(Number(String(V.km||'').replace(',','.'))||0);if(!km)return '<p class="muted" style="margin:6px 0 0">כותבים קודם כמה ק״מ.</p>';
-  V.sp=V.sp||[];return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px">${Array.from({length:Math.min(km,42)},(_,i)=>`<label style="font-size:12.5px">ק״מ ${i+1}<input inputmode="text" placeholder="6:00" value="${esc(V.sp[i]||'')}" oninput="fpT.sp(${i},this.value)"></label>`).join('')}</div>`}
+      if(G.last){const d=hav(G.last,pt);if(d<0.004)return;if(d<0.25)G.km+=d}G.last=pt;
+      /* 2.23: the time of every full km, by itself */
+      while(G.km>=G.nextKm){const t=elapsed();G.sp.push(Math.round(t-G.lastT));G.lastT=t;G.nextKm++;const sp=$('fpRsSp');if(sp)sp.innerHTML=G.sp.map((x,i)=>`<span>${i+1}: ${mmss(x)}</span>`).join('');const s=$('fpRunScr');if(s)s.innerHTML=scrHtml()}
+      const k=$('fpGkm');if(k)k.textContent=G.km.toFixed(2);else if(!RUNMIN)gpsDraw()},
+    err=>{const m=err&&err.code===1?'אין הרשאה למיקום. באייפון: הגדרות ← פרטיות ← שירותי מיקום':'אין קליטת GPS';try{navigator.geolocation.clearWatch(G.id)}catch(_){}clearInterval(gInt);scrOff();floatOff();RUNMIN=false;G={no:m};if($('fpTSheet'))gpsDraw();else{V.step=2;runSheet()}},{enableHighAccuracy:true,maximumAge:0,timeout:30000})}catch(e){G={no:'המיקום לא נפתח'};return gpsDraw()}
+  lock();clearInterval(gInt);gInt=setInterval(tickRun,1000);gpsDraw();scrOpen()}
+function splitsHtml(){const km=Math.floor(Number(String(V.km||'').replace(',','.'))||0),n=Math.max(km,V.tg?V.tg.length:0);if(!n)return '<p class="muted" style="margin:6px 0 0">כותבים קודם כמה ק״מ.</p>';
+  V.sp=V.sp||[];return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px">${Array.from({length:Math.min(n,42)},(_,i)=>`<label style="font-size:12.5px">ק״מ ${i+1}${V.tg&&V.tg[i]?` <span class="muted">(יעד ${mmss(V.tg[i])})</span>`:''}<input inputmode="text" placeholder="${V.tg&&V.tg[i]?mmss(V.tg[i]):'6:00'}" value="${esc(V.sp[i]||'')}" oninput="fpT.sp(${i},this.value)"></label>`).join('')}</div>`}
+/* 2.23: plan vs actual per km (the run summary, and the same table in the journal) */
+const tgAt=(tg,i)=>tg[Math.min(i,tg.length-1)];
+function recFor(r){if(!r||!Array.isArray(r.tg)||!r.tg.length||!Array.isArray(r.sp)||!r.sp.length)return null;
+  const n=Math.min(r.sp.length,r.tg.length),df=Array.from({length:n},(_,i)=>r.sp[i]-tgAt(r.tg,i)),hit=df.filter(d=>d<=3).length,avg=Math.round(df.reduce((a,x)=>a+x,0)/n);
+  if(hit===n&&r.ok)return {k:'up',hit,n,text:`עמדת ביעד בכל ${n} הק״מ. בפעם הבאה: 5 שנ׳ מהר יותר לכל ק״מ.`,tg:r.tg.map(v=>Math.max(150,v-5))};
+  if(avg>15||!r.ok)return {k:'down',hit,n,text:`${r.ok?'היית איטי ב-'+avg+' שנ׳ לק״מ בממוצע':'עצרת באמצע'}. בפעם הבאה: יעד קל יותר ב-5 שנ׳ לק״מ, ובונים משם.`,tg:r.tg.map(v=>v+5)};
+  let w=0;df.forEach((d,i)=>{if(d>df[w])w=i});
+  return {k:'keep',hit,n,text:`${hit} מתוך ${n} ק״מ ביעד. ק״מ ${w+1} היה הכי איטי (+${mmss(Math.max(0,df[w]))}). בפעם הבאה אותו יעד, ולהתחיל רגוע יותר.`,tg:null}}
+function pvaHtml(r,opt){opt=opt||{};if(!r||!Array.isArray(r.tg)||!r.tg.length)return '';const sp=Array.isArray(r.sp)?r.sp:[],n=Math.max(sp.length,0);
+  const tot=r.s||sp.reduce((a,x)=>a+x,0),ttg=r.tg.slice(0,Math.max(1,Math.ceil(Number(r.km)||r.tg.length))).reduce((a,x)=>a+x,0),dt=tot&&ttg?tot-ttg:null;
+  const pill=d=>d==null?'':d<0?`<span class="fpPill g" dir="ltr">−${mmss(-d)}</span>`:d>0?`<span class="fpPill r" dir="ltr">+${mmss(d)}</span>`:'<span class="fpPill n" dir="ltr">0:00</span>';
+  const rec=recFor(r);
+  return `<div class="fpT-card"><span class="muted">${r.d?r.d.split('-').reverse().slice(0,2).join('.')+' · ':''}${r.km?(Math.round(r.km*100)/100)+' ק״מ':''}</span>
+    <div style="display:flex;justify-content:space-between;align-items:end;margin-top:4px"><span style="font-size:34px;font-weight:900;font-variant-numeric:tabular-nums">${tot?mmss(tot):'—'}</span>${dt==null?'':dt<=0?`<span class="fpPill g">${dt===0?'בדיוק ביעד':mmss(-dt)+' מתחת ליעד'}</span>`:`<span class="fpPill r">${mmss(dt)} מעל היעד</span>`}</div>
+    <span class="muted" style="font-size:12.5px">יעד ${mmss(ttg)}${tot&&r.km?' · קצב '+mmss(tot/r.km):''}</span></div>
+    ${n?`<div class="fpT-card"><table class="fpPva"><tr><th>ק״מ</th><th>יעד</th><th>בפועל</th><th>הפרש</th></tr>${sp.map((a,i)=>`<tr><td>${i+1}</td><td>${mmss(tgAt(r.tg,i))}</td><td>${mmss(a)}</td><td>${pill(a-tgAt(r.tg,i))}</td></tr>`).join('')}</table></div>`:'<p class="muted">לא נרשם קצב לכל ק״מ, אז אין השוואה לכל קילומטר.</p>'}
+    ${rec?`<div class="fpRec"><span class="muted">בפעם הבאה</span><p style="margin:3px 0 0;font-size:13.5px">${esc(rec.text)}</p></div>${rec.tg&&r.fid&&opt.apply!==false?`<button type="button" class="btn full" onclick="fpT.recApply('${esc(r.fid)}',${JSON.stringify(rec.tg)})">שמור יעדים לפעם הבאה</button>`:''}`:''}`}
 /* 2.22: the run questionnaire on one organized screen: where you are today, where you want to get, your plan */
 function planWeeks(start,goal){const base=Math.max(1.5,Number(start)||0),g=Number(goal)||5;let w=base>=g?4:Math.ceil(Math.log(g/base)/Math.log(1.1));w+=Math.floor(w/3);return Math.max(4,Math.min(30,w))}
 function setupSheet(){const s=V.setup||(V.setup=Object.assign({mode:'zero',now:'3',runsNow:2,paceNow:'',goal:'5',runs:2,paceGoal:'',done:0},(()=>{const p=J('RUN_PLAN',null);return p?{mode:p.mode==='runs'?'runs':'zero',now:String(p.start||3),runsNow:Number(p.runsNow)||2,paceNow:p.paceNow||'',goal:String(p.goal||5),runs:Number(p.runs)||2,paceGoal:p.paceGoal||''}:{}})()));
   if(s.done)return sheet('תוכנית ריצה',`<h2 style="margin:4px 0 10px">התוכנית שלך מוכנה</h2>${planSum(s)}
-    <div class="fpT-card"><b>למדוד את הריצה</b><p class="muted" style="margin:4px 0 0">האפליקציה יכולה למדוד ב-GPS כשהמסך פתוח. לריצות ארוכות, או עם מסך כבוי: Strava (חינם) או שעון ריצה. אחרי הריצה מעתיקים לכאן.</p>${storeBtns()}</div>
+    <div class="fpT-card"><b>למדוד את הריצה</b><p class="muted" style="margin:4px 0 0">האפליקציה מודדת ב-GPS במסך ריצה שנשאר דלוק, ורושמת לבד את הזמן של כל ק״מ. רצת עם שעון? אחרי הריצה מעתיקים לכאן.</p></div>
     <button type="button" class="btn full" style="margin-top:6px" onclick="fpT.run()">יאללה, מתחילים</button>`);
   const g=Number(s.goal)||5,start=s.mode==='zero'?0:Number(String(s.now).replace(',','.'))||0;
   const usual=s.mode==='zero'?0:Number(s.runsNow)||0,load=(s.mode==='zero'&&s.runs>=4)||(s.mode==='runs'&&s.runs>=Math.max(3,usual+2));
@@ -167,27 +257,35 @@ function planSum(s){const start=s.mode==='zero'?0:Number(String(s.now).replace('
     <div class="fpT-wk"><b>מתחילים מ</b><span>${start<3&&s.mode==='zero'?'ריצה והליכה':first+' ק״מ קל'}</span></div><div class="fpT-wk"><b>קצב קל</b><span>${mmss(Math.round(ez/15)*15)}</span></div><div class="fpT-wk"><b>שבוע קל</b><span>כל 4 שבועות</span></div></div>`}
 async function logRun(ok){
   const km=Number(String(($('fpTkm')||{}).value||'').replace(',','.'))||0,tm=sec(($('fpTtime')||{}).value)||null;
-  const p=plan();const log=J('RUN_LOG',[]);const sp=[...document.querySelectorAll('#fpSplits input')].map(i=>sec(i.value)).filter(x=>x!=null);gpsStop(true);V.km='';V.tm='';
-  const row={d:today(),km,s:tm,ok:!!ok,type:V.pick==='own'?V.own.type:'plan'};if(V.fixed)row.name=V.fixed;if(sp.length)row.sp=sp;if(V.gps)row.gps=1;V.gps=0;log.push(row);setProp('RUN_LOG',JSON.stringify(log.slice(-400)));
+  const p=plan();const log=J('RUN_LOG',[]);const sp=[...document.querySelectorAll('#fpSplits input')].map(i=>sec(i.value)).filter(x=>x!=null);gpsStop(true);V.km='';V.tm='';V.sp=[];
+  const row={d:today(),km,s:tm,ok:!!ok,type:V.pick==='own'?V.own.type:'plan'};if(V.fixed)row.name=V.fixed;if(V.fid)row.fid=V.fid;if(V.tg&&V.tg.length)row.tg=V.tg.slice();if(sp.length)row.sp=sp;if(V.gps)row.gps=1;V.gps=0;log.push(row);setProp('RUN_LOG',JSON.stringify(log.slice(-400)));
   const note=(km?km+' ק״מ':'')+(tm?' · '+mmss(tm):'')+(ok?'':' · עצרתי באמצע');
   try{const r=await call('createWorkoutSession',{date:state.date,name:'ריצה',type:'אירובי'});state.data.workout=await call('saveWorkout',{date:state.date,muscleGroup:'אירובי',exercise:'ריצה',sets:[{weight:'',reps:1,note}],notes:note,sessionName:'ריצה',sessionId:r.id});
     try{state.data.workout=(await call('finishWorkoutSession',{id:r.id,minutes:tm?Math.round(tm/60):''})).workout||state.data.workout}catch(_){}try{renderWorkouts(false)}catch(_){}}catch(e){console.warn(e)}
   const total=log.reduce((s,r)=>s+(Number(r.km)||0),0);shoes(total);
-  if(ok&&km>=3&&p&&!p.m3){p.m3=true;savePlan(p);try{fpMedalGive&&fpMedalGive('run3')}catch(_){}try{fpMedalPop&&fpMedalPop('run3')}catch(_){}
-    return sheet('',`<div style="text-align:center">${window.fpMedalBadge?fpMedalBadge('run3',1,'big'):''}<h2>3 ק״מ בלי לעצור!</h2><p>עלית שלב. נפתחו לך: האצות קצרות, פרטלק, עליות ואינטרוולים. מתחילים קטן, פעם בשבוע.</p><button type="button" class="btn full" onclick="fpT.go(3)">למתיחות ←</button></div>`)}
+  const sk=skip(),next=sk.s?`<button type="button" class="btn full" onclick="fpT.close()">סיום ✓</button>`:`<button type="button" class="btn full" onclick="fpT.go(3)">למתיחות ←</button>`;
+  /* 2.23: a new medal pops up right away, over the summary */
+  const medals=()=>setTimeout(()=>{try{fp219Week.checkMedals(false)}catch(_){}},350);
+  if(ok&&km>=3&&p&&!p.m3){p.m3=true;savePlan(p);
+    sheet('',`<div style="text-align:center"><h2>3 ק״מ בלי לעצור!</h2><p>עלית שלב. נפתחו לך ריצות מהירות ושינויי קצב: אינטרוולים, עליות, טמפו, פרטלק, התקדמות והאצות. מתחילים קטן, פעם בשבוע.</p>${next}</div>`);medals();return}
   if(!ok){const c=(Number(prop('RUN_STOPS'))||0)+1;setProp('RUN_STOPS',String(c))}else setProp('RUN_STOPS','0');
-  sheet('',`<div style="text-align:center"><h2>${ok?'יפה, נרשם ✓':'זה בסדר גמור'}</h2><p>${ok?'עכשיו מתיחות.':Number(prop('RUN_STOPS'))>=2?'פעמיים ברצף עצרת. בפעם הבאה נכניס הפסקות הליכה קצרות באמצע, וזה בסדר.':'בפעם הבאה אותה ריצה שוב. ככה בונים בלי להיפצע.'}</p><button type="button" class="btn full" onclick="fpT.go(3)">למתיחות ←</button></div>`);
+  /* a fixed run with a target per km: the plan vs actual table */
+  if(row.tg)sheet(esc(row.name||'הריצה'),pvaHtml(row)+next);
+  else sheet('',`<div style="text-align:center"><h2>${ok?'יפה, נרשם ✓':'זה בסדר גמור'}</h2><p>${ok?(sk.s?'':'עכשיו מתיחות.'):Number(prop('RUN_STOPS'))>=2?'פעמיים ברצף עצרת. בפעם הבאה נכניס הפסקות הליכה קצרות באמצע, וזה בסדר.':'בפעם הבאה אותה ריצה שוב. ככה בונים בלי להיפצע.'}</p>${next}</div>`);
+  medals();
 }
 function shoes(total){total=Math.max(0,total-(Number(prop('SHOE_START'))||0));const warned=J('SHOE_WARN',[]);for(const at of [550,700,800]){if(total>=at&&!warned.includes(at)){warned.push(at);setProp('SHOE_WARN',JSON.stringify(warned));try{toast(`הנעליים עברו ${at} ק״מ. כדאי לחשוב על זוג חדש`)}catch(_){}break}}}
 
 /* ---------- cardio ---------- */
-const MACH={walk:{n:'הליכה מהירה',fig:['walk',{mode:'brisk'}],easy:'5.5–6.5 קמ״ש, צעדים מהירים, ידיים זזות',hard:'הכי מהר שאפשר בלי לרוץ, או בעלייה'},
-  tread:{n:'הליכון',fig:['jog',{tm:1}],easy:'הליכה 5.5–6.5 קמ״ש, שיפוע 6–10%',hard:'שיפוע 12–15% באותה מהירות, או ריצה קלה'},
-  bike:{n:'אופני כושר',fig:['bike',{}],easy:'70–90 סיבובים לדקה, התנגדות בינונית (6–8)',hard:'התנגדות גבוהה (12–14), 80–95 סיבובים לדקה'},
-  ell:{n:'אליפטיקל',fig:['elliptical',{}],easy:'רמה 6–8, קצב קבוע',hard:'רמה 12–14, או אותה רמה בקצב מהיר'},
-  row:{n:'חתירה',fig:['rower',{}],easy:'22–26 משיכות לדקה, משיכה רגועה',hard:'28–32 משיכות לדקה, כוח מלא בכל משיכה'},
+/* 2.23: checked against sources. Machine levels (״רמה 6–8״) differ between machines, so they were removed: the talk test decides.
+   Rowing: Concept2 — steady 18–26 strokes a minute, intervals 27+. Brisk walking: 5 km/h and up. */
+const MACH={walk:{n:'הליכה מהירה',fig:['walk',{mode:'brisk'}],easy:'5 קמ״ש ומעלה, צעדים מהירים, ידיים זזות. אפשר לדבר',hard:'הכי מהר שאפשר בלי לרוץ, או בעלייה'},
+  tread:{n:'הליכון',fig:['jog',{tm:1}],easy:'הליכה מהירה, עם שיפוע שבו עדיין אפשר לדבר',hard:'מעלים שיפוע או מהירות עד שאפשר להגיד רק כמה מילים, או ריצה קלה'},
+  bike:{n:'אופני כושר',fig:['bike',{}],easy:'סיבוב רגליים קליל, התנגדות שבה אפשר לדבר',hard:'מעלים התנגדות עד שאפשר להגיד רק כמה מילים'},
+  ell:{n:'אליפטיקל',fig:['elliptical',{}],easy:'קצב קבוע, התנגדות שבה אפשר לדבר',hard:'מעלים התנגדות או קצב עד שאפשר להגיד רק כמה מילים'},
+  row:{n:'חתירה',fig:['rower',{}],easy:'18–26 משיכות לדקה, משיכה רגועה',hard:'28 משיכות לדקה ומעלה, כוח מלא בכל משיכה'},
   swim:{n:'שחייה',fig:['swim',{}],easy:'שחייה רצופה בקצב נוח. מותר לעצור 15 שנ׳ בסוף בריכה',hard:'שחייה מהירה. בקטע הקל: שחייה איטית או עמידה'},
-  stairs:{n:'מדרגות',fig:['stairs',{}],easy:'רמה 5–7, אוחזים קלות במעקה',hard:'רמה 9–11'}};
+  stairs:{n:'מדרגות',fig:['stairs',{}],easy:'קצב שבו אפשר לדבר, בלי להישען על המעקה',hard:'מעלים רמה עד שאפשר להגיד רק כמה מילים'}};
 function cplan(){const t=J('TRAIN_PLAN',null);if(!t||!(t.car>0))return null;return Object.assign({lvl:(Number(t.carNow)||0)<2?'beg':'adv',kinds:Array.isArray(t.carKinds)&&t.carKinds.length?t.carKinds:['ell'],week:Math.max(1,Math.floor(daysBetween(t.set||today(),today())/7)+1)},t)}
 let C={mach:null,day:'easy',run:null};
 function carSteps(lvl,day,m){return day==='easy'?[['חימום','3 דק׳ איטי מאוד'],['העיקר',(lvl==='beg'?'15':'40')+' דק׳ קל · '+m.easy],['סיום','2 דק׳ איטי']]:[['חימום','10 דק׳ קל · '+m.easy],['העיקר',(lvl==='beg'?'3 × 3':'4 × 4')+' דק׳ חזק · '+m.hard+'. בין כל אחד 3 דק׳ קל'],['סיום','5 דק׳ קל']]}
@@ -203,7 +301,7 @@ function cardioSheet(){const t=cplan()||{lvl:'beg',kinds:['ell'],carGoal:2,week:
     <div class="fpT-wk"><b>קל</b><span>${m.easy}</span></div><div class="fpT-wk"><b>חזק</b><span>${m.hard}</span></div><p class="muted" style="margin:6px 0 0">המספרים משתנים בין מכונות. הכלל: קל = אפשר לדבר, לא לשיר. חזק = רק כמה מילים.</p></div>
    <div class="fpT-card"><h3>האימון של היום</h3><div class="fpT-seg" role="group"><button type="button" class="${C.day==='easy'?'on':''}" onclick="fpT.c('day','easy')">יום קל</button><button type="button" class="${C.day==='hard'?'on':''}" onclick="fpT.c('day','hard')">יום 4×4</button></div>
     ${wk(carSteps(lvl,C.day,m))}<p class="muted" style="margin:6px 0 0">סה״כ ${Math.round(tot/60)} דקות.</p>${timer||`<button type="button" class="btn full" style="margin-top:8px" onclick="fpT.cStart()">▶ התחל, הטיימר מוביל אותך</button>`}</div>
-   <details class="fpT-card"><summary style="cursor:pointer;font-weight:700">${lvl==='beg'?'תוכנית למתחילים':'תוכנית למתקדמים'}</summary>${(lvl==='beg'?beg:adv).map((x,i)=>`<div class="fpT-wk${i===Math.min(5,t.week-1)?' now':''}"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('')}<p class="muted">${lvl==='beg'?'מוסיפים 5 דקות כל שבוע. האימון החזק נכנס רק כשמרגישים שמתאוששים טוב.':'בין שני אימוני 4×4 לפחות 3 ימים.'} שבוע שהיה קשה מדי? חוזרים עליו.</p></details>`)}
+   <details class="fpT-card"><summary style="cursor:pointer;font-weight:700">${lvl==='beg'?'תוכנית למתחילים':'תוכנית למתקדמים'}</summary>${(lvl==='beg'?beg:adv).map((x,i)=>`<div class="fpT-wk${i===Math.min(5,t.week-1)?' now':''}"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('')}<p class="muted">${lvl==='beg'?'מוסיפים 5 דקות כל שבוע. האימון החזק נכנס רק כשמרגישים שמתאוששים טוב.':'בין שני אימוני 4×4 לפחות 48 שעות.'} שבוע שהיה קשה מדי? חוזרים עליו.</p></details>`)}
 let cInt=0;
 function cTick(){const lvl=C.lvl||(cplan()||{lvl:'beg'}).lvl,ph=carPhases(lvl,C.day);if(!C.run)return;C.run.t++;if(C.run.t>=ph[C.run.i][1]){C.run.i++;C.run.t=0;try{fpRestSound&&fpRestSound()}catch(_){}if(C.run.i>=ph.length){clearInterval(cInt);return fpT.cStop(1)}}
   const big=document.querySelector('#fpTSheet .fpT-timer .big');if(big){const cur=ph[C.run.i];big.textContent=mmss(Math.max(0,cur[1]-C.run.t))}}
@@ -222,11 +320,22 @@ if(typeof renderWorkoutHome==='function'){const o=renderWorkoutHome;renderWorkou
 
 window.fpT={
   run(){V={step:0,pick:null,own:{type:'קלה',km:'',min:''}};runSheet()},
-  runFixed(x){V={step:0,pick:'own',own:{type:x.type||'קלה',km:x.km?String(x.km):'',min:x.min?String(x.min):''},fixed:x.name};runSheet()},
+  runFixed(x){const last=J('RUN_LOG',[]).filter(r=>(r.fid?r.fid===x.id:r.name===x.name)&&Array.isArray(r.tg)&&Array.isArray(r.sp)&&r.sp.length).pop();
+    V={step:0,pick:'own',own:{type:x.type||'קלה',km:x.km?String(x.km):'',min:x.min?String(x.min):''},fixed:x.name,fid:x.id,tg:Array.isArray(x.tg)&&x.tg.length?x.tg.slice():null,rec:recFor(last)};runSheet()},
+  recApply(fid,tg){const a=J('RUN_MY',[]),x=a.find(r=>r.id===fid);if(!x||!Array.isArray(tg))return;x.tg=tg.map(Number);const tot=x.tg.slice(0,Math.ceil(Number(x.km)||x.tg.length)).reduce((s,v)=>s+v,0);x.tm=mmss(tot);x.tmode='total';x.per=new Set(x.tg).size>1;setProp('RUN_MY',JSON.stringify(a));try{toast('היעדים לפעם הבאה נשמרו')}catch(_){}
+    document.querySelectorAll('#fpTSheet button').forEach(b=>{if(/שמור יעדים לפעם הבאה/.test(b.textContent)){b.disabled=true;b.textContent='✓ נשמר'}})},
+  gpsOn(){return !!(G&&G.on)},
+  runMin(){if(!G||!G.on)return;RUNMIN=true;scrOff();const s=$('fpTSheet');if(s)s.remove();cancelAnimationFrame(raf);floatOn()},
+  runMax(){if(!G||!G.on)return;RUNMIN=false;floatOff();V.step=2;if(!$('fpTSheet')||!$('fpGps'))runSheet();scrOpen()},
   setupOpen(){V.setup=null;setupSheet()},
   setup(k,v,quiet){V.setup[k]=v;if(!quiet)setupSheet()},
-  makePlan(){const s=V.setup;const start=s.mode==='zero'?0:Number(String(s.now).replace(',','.'))||0;const old=J('RUN_PLAN',null)||{};
-    setProp('RUN_PLAN',JSON.stringify({mode:s.mode,start,runsNow:s.mode==='zero'?0:Number(s.runsNow)||0,paceNow:s.paceNow||'',goal:Number(s.goal)||5,paceGoal:s.paceGoal||'',runs:s.runs,str:Number((J('TRAIN_PLAN',{})||{}).str)||0,since:today(),week:1,m3:start>=3}));
+  makePlan(choice){const s=V.setup;const start=s.mode==='zero'?0:Number(String(s.now).replace(',','.'))||0;const old=J('RUN_PLAN',null)||{};
+    /* 2.23: a new plan over an old one asks what to do with the progress. The runs always stay in the journal. */
+    if(old.since&&!choice)return sheet('תוכנית חדשה',`<div class="fpT-card"><b>מה לעשות עם ההתקדמות שלך?</b><p class="muted" style="margin:6px 0 0">כל הריצות נשארות ביומן בכל מקרה. אם תרצה, אפשר למחוק ריצה מהיומן בעצמך.</p></div>
+      <button type="button" class="btn full" onclick="fpT.makePlan('zero')">להתחיל מאפס</button><p class="muted" style="margin:4px 2px 12px;font-size:12.5px">התוכנית החדשה מתחשבת רק בריצות מהיום. טוב למי שמקטין מרחק או חוזר אחרי הפסקה.</p>
+      <button type="button" class="btn light full" onclick="fpT.makePlan('keep')">להמשיך ממה שכבר רצתי</button><p class="muted" style="margin:4px 2px 0;font-size:12.5px">הריצה הכי ארוכה שעשית בלי לעצור נשארת נקודת ההתחלה. טוב למי שמגדיל יעד.</p>`);
+    const keep=choice==='keep';
+    setProp('RUN_PLAN',JSON.stringify({mode:s.mode,start,runsNow:s.mode==='zero'?0:Number(s.runsNow)||0,paceNow:s.paceNow||'',goal:Number(s.goal)||5,paceGoal:s.paceGoal||'',runs:s.runs,str:Number((J('TRAIN_PLAN',{})||{}).str)||0,since:today(),week:1,m3:start>=3||(keep&&!!old.m3),resetAt:choice==='zero'?today():(old.resetAt||'')}));
     try{const t=J('TRAIN_PLAN',null)||{};t.want=Array.isArray(t.want)?t.want:[];if(!t.want.includes('run'))t.want.push('run');t.run=s.runs;setProp('TRAIN_PLAN',JSON.stringify(t))}catch(_){}
     try{renderWorkoutHome()}catch(_){}try{window.fp222&&fp222.planChanged&&fp222.planChanged()}catch(_){}s.done=1;V={step:0,pick:null,own:{type:'קלה',km:'',min:''},setup:s};setupSheet()},
   go(i){V.step=i;runSheet();const s=document.querySelector('#fpTSheet .sheet');if(s)s.scrollTop=0},
@@ -242,8 +351,8 @@ window.fpT={
   cStart(){C.run={i:0,t:0,at:Date.now()};clearInterval(cInt);cInt=setInterval(cTick,1000);try{fpRestSound&&0}catch(_){}cardioSheet()},
   async cStop(save){clearInterval(cInt);const r=C.run;C.run=null;const t=cplan()||{kinds:['ell']};const k=C.mach||t.kinds.find(x=>MACH[x])||'ell';
     if(save&&r){const min=Math.max(1,Math.round((Date.now()-r.at)/60000));await saveCardio(min,k);try{toast('נשמר: '+min+' דקות אירובי')}catch(_){}}cardioSheet()},
-  close(){gpsStop(false);clearInterval(cInt);C.run=null;cancelAnimationFrame(raf);const s=$('fpTSheet');if(s)s.remove()},
-  _:{planWeeks,storeBtns,STRAVA,exCard,animate,sheet,MACH,runSteps,wk,weekSchedule,pat,anBox,easyPace,fastPace,stop(){cancelAnimationFrame(raf)}},
+  close(){if(G&&G.on){fpT.runMin();return}gpsStop(false);clearInterval(cInt);C.run=null;cancelAnimationFrame(raf);const s=$('fpTSheet');if(s)s.remove()},
+  _:{RK,kindOf,kindByName,recFor,pvaHtml,skip,planWeeks,storeBtns,STRAVA,exCard,animate,sheet,MACH,runSteps,wk,weekSchedule,pat,anBox,easyPace,fastPace,stop(){cancelAnimationFrame(raf)}},
   plan,weekRuns,cplan,repeatWeek(){const p=J('RUN_PLAN',null);if(!p)return;p.rep=(Number(p.rep)||0)+1;setProp('RUN_PLAN',JSON.stringify(p))}
 };
 })();

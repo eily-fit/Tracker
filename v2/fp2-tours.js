@@ -14,6 +14,8 @@ const nEntries=()=>((state.data&&state.data.entries)||[]).length;
 const nEvents=()=>((state.data&&state.data.bank&&state.data.bank.events)||[]).length;
 const nHist=()=>((state.data&&state.data.workout&&state.data.workout.history)||[]).length;
 const B={};
+/* 2.23: the "when it is relevant" tour is gone (2.19 has one tour). A mode left over from it started a tour on the next screen you opened. */
+LS.del('fp2.tourMode');
 
 /* ---------- the tasks ---------- */
 const TASKS=[

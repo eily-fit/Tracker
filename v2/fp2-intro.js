@@ -62,36 +62,50 @@ const css=`#fpI{position:fixed;inset:0;z-index:2147482400;pointer-events:none}
 .fpI-mock{margin:10px 0 2px;padding:12px;border-radius:12px;background:#11161b;border:1px solid rgba(182,147,255,.45);font-size:14.5px;line-height:1.5}
 .fpI-oil{margin-top:4px;color:#C9B2FF;font-size:13px}
 .fpI-btn{display:inline-block;background:var(--brand,#D7F36B);color:#14190a;border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
+#fpI .fpI-nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));pointer-events:auto;background:linear-gradient(rgba(5,8,11,0),rgba(5,8,11,.92) 35%)}
+#fpI .fpI-nav button{font:inherit;font-weight:800;font-size:15.5px;border-radius:14px;padding:13px 20px;min-width:104px;cursor:pointer}
+#fpI .fpI-nav .bk{border:1px solid var(--line,#2A333C);background:var(--card,#171C22);color:inherit}#fpI .fpI-nav .bk[disabled]{visibility:hidden}
+#fpI .fpI-nav .nx{border:0;background:var(--brand,#D7F36B);color:#14190a}#fpI .fpI-nav .nx.s{background:#B693FF;color:#170f2b}
+#fpI .fpI-dots{display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted,#93A09A);font-variant-numeric:tabular-nums}
+#fpI .fpI-end{position:fixed;top:calc(10px + env(safe-area-inset-top));left:12px;pointer-events:auto;font:inherit;font-size:13px;border:1px solid var(--line,#2A333C);background:var(--card,#171C22);color:var(--muted,#93A09A);border-radius:99px;padding:7px 12px;cursor:pointer}
+#fpI .fpI-fold{background:none;border:0;color:var(--muted,#93A09A);font:inherit;font-size:12.5px;cursor:pointer;padding:2px 4px}
+#fpI .fpI-card.min{padding:10px 14px}#fpI .fpI-card.min p,#fpI .fpI-card.min .fpI-mock,#fpI .fpI-card.min .fpI-hint,#fpI .fpI-card.min .fpI-bar{display:none}#fpI .fpI-card.min h3{font-size:15px;margin:0}#fpI .fpI-card.min .fpI-tap{margin-top:4px}
 @media (prefers-reduced-motion:reduce){#fpI .fpI-card.swap{animation:none}#fpI .fpI-ring{animation:none}#fpI .fpI-blk,#fpI .fpI-ring,#fpI .fpI-card{transition:none}}`;
-let I=-1,root=null,timer=null,tgt=null,clickHook=null,ST=STEPS,OPT={},doneAt=-1,scrolled=-1,lastRect='';
+let I=-1,root=null,timer=null,tgt=null,clickHook=null,ST=STEPS,OPT={},doneAt=-1,scrolled=-1,lastRect='',FOLD=false;
+const NAVH=()=>{const n=root&&root.querySelector('.fpI-nav');return n?n.offsetHeight:76};
 function el(){return document.getElementById('fpI')}
 function place(){
   if(!root)return;const s=ST[I];let r=null;
   if(tgt&&vis(tgt)){const b=tgt.getBoundingClientRect(),p=6;r={l:Math.max(0,b.left-p),t:Math.max(0,b.top-p),r:Math.min(innerWidth,b.right+p),b:Math.min(innerHeight,b.bottom+p)}}
   const [b0,b1,b2,b3]=root.querySelectorAll('.fpI-blk'),ring=root.querySelector('.fpI-ring'),card=root.querySelector('.fpI-card');
   const set=(e,l,t,w,h)=>{e.style.left=l+'px';e.style.top=t+'px';e.style.width=Math.max(0,w)+'px';e.style.height=Math.max(0,h)+'px'};
-  const ch=card.offsetHeight;
-  if(!r){set(b0,0,0,innerWidth,innerHeight);[b1,b2,b3].forEach(x=>set(x,0,0,0,0));ring.style.display='none';card.style.top=Math.max(12,(innerHeight-ch)/2)+'px';return}
+  const ch=card.offsetHeight,bot=innerHeight-NAVH()-8;
+  if(!r){set(b0,0,0,innerWidth,innerHeight);[b1,b2,b3].forEach(x=>set(x,0,0,0,0));ring.style.display='none';card.style.top=Math.max(12,(bot-ch)/2)+'px';return}
   set(b0,0,0,innerWidth,r.t);set(b1,0,r.b,innerWidth,innerHeight-r.b);set(b2,0,r.t,r.l,r.b-r.t);set(b3,r.r,r.t,innerWidth-r.r,r.b-r.t);
   ring.style.display='block';ring.className='fpI-ring '+(s.kind==='s'?'s':'b');set(ring,r.l,r.t,r.r-r.l,r.b-r.t);
   /* the glowing thing is clickable only when the step says so; otherwise a clear layer covers it */
   const cover=root.querySelector('.fpI-cover');if(s.tap||s.free){set(cover,0,0,0,0)}else set(cover,r.l,r.t,r.r-r.l,r.b-r.t);
-  const below=innerHeight-r.b,above=r.t,gap=12;let top;
-  if(below>=ch+gap+10)top=r.b+gap;else if(above>=ch+gap+10)top=r.t-ch-gap;else top=below>above?innerHeight-ch-12:12;
-  card.style.top=Math.max(8,Math.min(innerHeight-ch-8,top))+'px';
+  /* 2.23: the card never covers the buttons at the bottom; a folded card sits just above them */
+  const below=bot-r.b,above=r.t-56,gap=12;let top;
+  if(FOLD)top=bot-ch;else if(below>=ch+gap)top=r.b+gap;else if(above>=ch+gap)top=r.t-ch-gap;else top=below>above?bot-ch:56;
+  card.style.top=Math.max(52,Math.min(bot-ch,top))+'px';
 }
 function draw(){
   const s=ST[I],kind=s.kind==='s'?'s':'b',card=root.querySelector('.fpI-card'),n=ST.length,text=typeof s.text==='function'?s.text():s.text;
   card.className='fpI-card '+kind;
   card.innerHTML=`<div class="fpI-bar" style="color:${kind==='s'?'#B693FF':'#D7F36B'}"><i style="width:${Math.round((I+1)/n*100)}%"></i></div><div class="fpI-top"><span class="fpI-tag ${kind}">${kind==='s'?'רק אצלנו':'הבסיס'}</span><span>${I+1} / ${n}</span></div>
     <h3>${esc(s.title)}</h3><p>${esc(text)}</p>${s.mock||''}${s.tap||s.free?`<div class="fpI-tap ${kind}">${esc(s.tapText||'לחץ על מה שזוהר')}</div>`:''}${s.hint?'<p class="fpI-hint">ניתן לשינוי בהגדרות</p>':''}
-    <div style="display:flex;gap:8px;margin-top:12px">${I>0?'<button type="button" class="fpI-back">‹ חזרה</button>':''}<button type="button" class="fpI-next" style="margin-top:0;flex:1">${s.kind==='end'?(OPT.endLabel||'יאללה, לרשום ארוחה ראשונה'):s.done?'דלג על זה':'הבא'}</button></div>`;
-  card.querySelector('.fpI-next').onclick=()=>go(I+1);const bk=card.querySelector('.fpI-back');if(bk)bk.onclick=()=>go(I-1);
+`;
+  card.classList.toggle('min',FOLD);
+  const top=card.querySelector('.fpI-top');if(top&&s.kind!=='end')top.insertAdjacentHTML('beforeend',`<button type="button" class="fpI-fold" aria-expanded="${!FOLD}">${FOLD?'להציג ▴':'להסתיר ▾'}</button>`);
+  const fb=card.querySelector('.fpI-fold');if(fb)fb.onclick=()=>{FOLD=!FOLD;draw();place()};if(FOLD)card.onclick=e=>{if(!e.target.closest('.fpI-fold')){FOLD=false;draw();place()}};else card.onclick=null;
+  const nav=root.querySelector('.fpI-nav');nav.innerHTML=`<button type="button" class="bk" ${I>0?'':'disabled'}>‹ חזרה</button><span class="fpI-dots">${I+1} / ${n}</span><button type="button" class="nx ${kind}">${s.kind==='end'?(OPT.endLabel||'יאללה, לרשום ארוחה ראשונה'):s.done?'דלג ›':'הבא ›'}</button>`;
+  nav.querySelector('.nx').onclick=()=>go(I+1);nav.querySelector('.bk').onclick=()=>{if(I>0)go(I-1)};
 }
 function go(n){
   const prev=ST[I];if(prev&&prev.after)try{prev.after()}catch(_){}
   if(n>=ST.length)return finish(true);
-  I=n;const s=ST[I];tgt=null;
+  I=n;const s=ST[I];tgt=null;FOLD=!!s.free; /* 2.23: on a 'try it' step (the demo) the card starts folded, so it does not hide what you try */
   try{if(s.view&&!(q('#'+s.view)||{}).classList?.contains('active'))showView(s.view)}catch(_){}
   try{window.scrollTo(0,0)}catch(_){}
   if(s.before)try{s.before()}catch(_){}
@@ -112,8 +126,12 @@ function finish(toAdd){
 window.fpIntro=function(start,steps,opt){
   if(el())return;ST=Array.isArray(steps)&&steps.length?steps:STEPS;OPT=opt||{};
   if(!document.getElementById('fpICss'))document.head.insertAdjacentHTML('beforeend',`<style id="fpICss">${css}</style>`);
-  document.body.insertAdjacentHTML('beforeend','<div id="fpI" role="dialog" aria-label="היכרות עם האפליקציה" dir="rtl"><div class="fpI-blk"></div><div class="fpI-blk"></div><div class="fpI-blk"></div><div class="fpI-blk"></div><div class="fpI-blk fpI-cover" style="background:transparent"></div><div class="fpI-ring b"></div><div class="fpI-card"></div><i id="fpTour" hidden></i></div>');
-  root=el();
+  /* 2.23: "סיים סיור" for someone who already knows the app (the tour after the first one, and the short tours) */
+  let can=OPT.canEnd;if(can==null){try{can=FP2.getProp('TOUR_DONE')==='1'}catch(_){can=false}}
+  document.body.insertAdjacentHTML('beforeend','<div id="fpI" role="dialog" aria-label="היכרות עם האפליקציה" dir="rtl"><div class="fpI-blk"></div><div class="fpI-blk"></div><div class="fpI-blk"></div><div class="fpI-blk"></div><div class="fpI-blk fpI-cover" style="background:transparent"></div><div class="fpI-ring b"></div><div class="fpI-card"></div><div class="fpI-nav"></div>'+(can?'<button type="button" class="fpI-end">סיים סיור ✕</button>':'')+'<i id="fpTour" hidden></i></div>');
+  root=el();const eb=root.querySelector('.fpI-end');if(eb)eb.onclick=()=>finish(false);
+  /* 2.23: the old "tour when it is relevant" mode is off for good: it started a tour on the next screen you opened */
+  try{localStorage.removeItem('fp2.tourMode')}catch(_){}
   try{document.querySelectorAll('.overlay:not(.hide)').forEach(o=>{if(o.id!=='onbSheet')o.classList.add('hide')})}catch(_){}
   /* a tap on what glows does its real job, then the tour moves on */
   clickHook=e=>{if(!root||I<0)return;const s=ST[I];if(!s||!s.tap||!tgt||s.done)return;if(tgt.contains(e.target)){const at=I;setTimeout(()=>{if(I===at)go(I+1)},450)}};

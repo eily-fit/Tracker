@@ -63,6 +63,10 @@ svg.ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;str
 #fpHdr .seg{flex:1;min-width:0;display:flex;background:#1F262E;border:1px solid var(--line,#2C3640);border-radius:13px;padding:3px;gap:2px}
 #fpHdr .seg button{flex:1;min-width:0;font:inherit;font-weight:700;font-size:14px;border:0;background:none;color:var(--muted,#A3ADB8);border-radius:10px;padding:8px 2px;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;cursor:pointer}
 #fpHdr .seg button.on{background:var(--brand,#D7F36B);color:#14190a}#fpHdr .seg button.on .fpDot{background:#14190a}
+#fpHdr .seg.one .lone{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-weight:800;font-size:15px;padding:8px 2px;color:var(--ink,#F2F5F7)}
+#fpStrip[hidden]{display:none!important}
+.fpWhy{background:rgba(0,0,0,.18);border-radius:10px;padding:7px 10px;font-size:12.5px;color:var(--muted,#A3ADB8);margin:0 0 8px;line-height:1.5}
+.fpWhy b{color:var(--ink,#F2F5F7);font-weight:700}
 .fpIb{width:42px;height:42px;border-radius:12px;background:#1F262E;border:1px solid var(--line,#2C3640);color:var(--ink,#F2F5F7);display:grid;place-items:center;flex:none;position:relative;cursor:pointer;padding:0}
 .fpIb small{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted,#A3ADB8);white-space:nowrap}
 .fpIb.on{border-color:var(--brand,#D7F36B);color:var(--brand,#D7F36B)}
@@ -87,7 +91,7 @@ svg.ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;str
 .f21 .gb .here{position:absolute;top:16px;transform:translateX(50%);width:2px;height:12px;background:var(--cR)}.f21 .gb .here span{position:absolute;top:13px;left:50%;transform:translateX(-50%);font-size:10.5px;color:var(--cR);white-space:nowrap;font-weight:700}
 .f21 .gb{margin-bottom:22px}
 .tprog{height:8px;background:#2C3640;border-radius:6px;overflow:hidden;margin:6px 0}.tprog i{display:block;height:100%;background:var(--brand,#D7F36B);transition:width .4s linear}
-.btn.stopb{background:none;border:1.5px solid #F09595;color:#F09595}
+.btn.stopb,#fpTSheet .btn.stopb{background:rgba(240,149,149,.16)!important;border:1.5px solid #F09595!important;color:#FFFFFF!important;font-weight:800}
 #fpCarFloat{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:60;background:#1F262E;border:1px solid var(--cC);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.45);overflow:hidden;direction:rtl}
 #fpCarFloat .fl{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;background:none;border:0;color:inherit;font:inherit;padding:10px 14px;cursor:pointer;text-align:right}
 #fpCarFloat .fl small{display:block;color:var(--muted,#A3ADB8);font-size:12px}#fpCarFloat .t{font-size:22px;font-variant-numeric:tabular-nums}
@@ -113,6 +117,8 @@ svg.ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;str
 /* journal */
 #fpJ .jhd{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin:0 0 10px}#fpJ .jhd b{text-align:center;font-size:17px}#fpJ .jhd button{font:inherit;background:none;border:0;color:var(--muted,#A3ADB8);cursor:pointer;padding:6px 0;display:inline-flex;align-items:center;gap:4px}
 #fpJ .jhd button.on{color:var(--brand,#D7F36B)}
+#fpJ .jhd button.jback{color:var(--ink,#F2F5F7);background:#1F262E;border:1px solid var(--line,#2C3640);border-radius:10px;padding:6px 10px}
+#fpJ .jall{display:flex;width:100%;justify-content:center;align-items:center;gap:7px;font:inherit;font-weight:800;font-size:14.5px;color:var(--brand,#D7F36B);background:#26301A;border:1px solid #4B5A2A;border-radius:13px;padding:11px;margin:0 0 12px;cursor:pointer}
 #fpJ .flt{background:var(--card,#171C22);border:1px solid var(--line,#2C3640);border-radius:14px;padding:10px 12px;margin:0 0 10px}
 #fpJ .wc{display:block;width:100%;font:inherit;color:inherit;text-align:right;background:var(--card,#171C22);border:1px solid var(--line,#2C3640);border-radius:16px;margin:0 0 10px;overflow:hidden;padding:0;cursor:pointer}
 #fpJ .wc .hd{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#1F262E}#fpJ .wc .hd b{font-size:14.5px;display:block}#fpJ .wc .hd small{color:var(--muted,#A3ADB8);font-size:12px}
@@ -138,6 +144,13 @@ const sessions=()=>((state.data&&state.data.workout&&state.data.workout.sessions
 const isCardioS=s=>s.type==='אירובי'||/^ריצה$|^אירובי$/.test(s.name||'');
 const strSessions=()=>sessions().filter(s=>!isCardioS(s)&&(s.items||[]).length);
 const RECO=()=>{const r=J('RECO',null)||{};return {s:r.s!==0,r:r.r!==0,c:r.c!==0}};
+/* 2.23: which types are shown (Settings). Hiding deletes nothing; the last one shown stays locked. */
+const ON=()=>{const o=J('TYPES_ON',null)||{};const r={s:o.s!==0,r:o.r!==0,c:o.c!==0};if(!r.s&&!r.r&&!r.c)r.s=true;return r};
+const VT=()=>{const o=ON();return TYPES.filter(t=>o[t])};
+const vis=d=>(d||[]).filter(t=>ON()[t]);
+window.fpTypesOn=ON;
+/* 2.23: the week strip without a weekly plan only when asked for in Settings */
+const stripFree=()=>prop('STRIP_FREE')==='1';
 const ciDay=()=>{try{return typeof checkinDay==='function'?checkinDay():5}catch(_){return 5}};
 function doneWeek(ws){const we=addDays(ws,6),inW=d=>d&&d>=ws&&d<=we,out=W.map(()=>[]);
   strSessions().forEach(s=>{if(inW(s.date))out[dow(s.date)].push('s')});runLog().forEach(r=>{if(inW(r.d))out[dow(r.d)].push('r')});carLog().forEach(r=>{if(inW(r.d))out[dow(r.d)].push('c')});return out}
@@ -163,36 +176,40 @@ function syncCounts(days){const n={s:0,r:0,c:0};days.forEach(d=>d.forEach(t=>n[t
 /* ---------- the week editor (Settings, the strip, the reminder) ---------- */
 let ED=null;
 function hardMaxes(){let r=0,c=1;try{const p=fpT.plan();r=p&&p.m3?1:0}catch(_){}try{const cw=fpW._.carWeek();c=cw.sessions.filter(x=>x.k==='h').length}catch(_){}return [r,c]}
-function daysHtml(days,fn){const [hr,hc]=hardMaxes(),L=FPW.label(days,hr,hc);
-  return `<div>${days.map((d,i)=>`<div class="fpWd"><i>${W[i]}</i><div class="fpChips">${TYPES.map(t=>`<button type="button" class="${d.includes(t)?'on':''}" aria-pressed="${d.includes(t)}" onclick="${fn}(${i},'${t}')">${dot(t)}${TN[t]}${t==='s'&&i===L.legs?' · רגליים':''}</button>`).join('')}</div>${!d.length?'<span class="mu" style="font-size:12px">מנוחה</span>':d.some(t=>t!=='s')?(L.hard[i]?'<span class="fpK h">חזק</span>':'<span class="fpK e">קל</span>'):'<span></span>'}</div>`).join('')}</div>
+function daysHtml(days0,fn){const [hr,hc]=hardMaxes(),days=days0.map(vis),L=FPW.label(days,hr,hc),vt=VT();
+  return `<div>${days.map((d,i)=>`<div class="fpWd"><i>${W[i]}</i><div class="fpChips">${vt.map(t=>`<button type="button" class="${d.includes(t)?'on':''}" aria-pressed="${d.includes(t)}" onclick="${fn}(${i},'${t}')">${dot(t)}${TN[t]}${t==='s'&&i===L.legs?' · רגליים':''}</button>`).join('')}</div>${!d.length?'<span class="mu" style="font-size:12px">מנוחה</span>':d.some(t=>t!=='s')?(L.hard[i]?'<span class="fpK h">חזק</span>':'<span class="fpK e">קל</span>'):'<span></span>'}</div>`).join('')}</div>
     ${L.warn.length?L.warn.map(w=>`<div class="fpNote">${w}</div>`).join(''):''}<p class="mu" style="margin:8px 0 0;font-size:12.5px">${[L.cnt.s?L.cnt.s+' כוח':'',L.cnt.r?L.cnt.r+' ריצה':'',L.cnt.c?L.cnt.c+' אירובי':''].filter(Boolean).join(' · ')||'עוד לא בחרת'}. רגליים = יום הכוח הראשון. קל או חזק נקבע לפי הכללים.</p>`}
-function autoBuild(){const t=TP(),p=J('RUN_PLAN',null),want=Array.isArray(t.want)?t.want:[];const S=want.includes('str')?Number(t.str)||3:0,R=(want.includes('run')||p)?Number((p&&p.runs)||t.run)||2:0,C=want.includes('car')?Number(t.car)||2:0;const [hr,hc]=hardMaxes();return FPW.build(S,R,C,hr&&R>=2?1:0,hc)}
+function autoBuild(){const t=TP(),p=J('RUN_PLAN',null),want=Array.isArray(t.want)?t.want:[],o=ON();const S=o.s&&want.includes('str')?Number(t.str)||3:0,R=o.r&&(want.includes('run')||p)?Number((p&&p.runs)||t.run)||2:0,C=o.c&&want.includes('car')?Number(t.car)||2:0;const [hr,hc]=hardMaxes();return FPW.build(S,R,C,hr&&R>=2?1:0,hc)}
+/* keep the days of hidden types when the visible ones are rebuilt */
+function keepHidden(prev,next){const o=ON();return next.map((d,i)=>d.concat(((prev&&prev[i])||[]).filter(t=>!o[t]&&!d.includes(t))))}
 function weekSheet(){const T=fpT._,w=ED;const tw=needsPlan()||targetWeek(w)||weekStart(today());
   let b=`<div class="fpCard"><div class="fpRow" style="padding-top:0"><span><b>תוכנית שבועית</b><br><span class="mu">בוחרים מראש איזה יום מה</span></span><label class="fpSw"><input type="checkbox" ${w.plan!=='none'?'checked':''} onchange="fp222.ed.set('plan',this.checked?'fixed':'none')" aria-label="תוכנית שבועית"><span></span></label></div>`;
-  if(w.plan==='none')b+=`<p class="mu" style="margin:6px 0 0">בלי תוכנית. כל יום עושים מה שבא לך, ו״מומלץ להיום״ מציע לפי מה שכבר עשית השבוע.</p></div>`;
+  if(w.plan==='none')b+=`<p class="mu" style="margin:6px 0 0">בלי תוכנית. כל יום עושים מה שבא לך, ו״מומלץ להיום״ מציע לפי מה שכבר עשית השבוע.</p></div>
+    <div class="fpCard"><div class="fpRow" style="padding:0"><span><b>פס השבוע בכל זאת</b><br><span class="mu">רק מה שעשית בפועל, בלי תכנון</span></span>${sw(stripFree(),"fp222.stripFree(this.checked)",'פס שבוע בלי תוכנית')}</div></div>`;
   else{b+=`<div class="fpSeg" role="group" style="margin-top:8px"><button type="button" class="${w.plan==='fixed'?'on':''}" onclick="fp222.ed.set('plan','fixed')">קבועה</button><button type="button" class="${w.plan==='weekly'?'on':''}" onclick="fp222.ed.set('plan','weekly')">משתנה כל שבוע</button></div>
       <p class="mu" style="margin:0">${w.plan==='fixed'?'אותם ימים כל שבוע.':'כל שבוע בוחרים מחדש. האפליקציה תזכיר לך ביום שתבחר.'}</p></div>`;
     if(w.plan==='weekly')b+=`<div class="fpCard"><h3>באיזה יום לשאול אותך?</h3><div class="fpChips"><button type="button" class="${w.askDay==='ci'?'on':''}" onclick="fp222.ed.set('askDay','ci')">ביום הצ׳ק-אין (${DN[ciDay()]})</button>${W.map((n,i)=>`<button type="button" class="${w.askDay!=='ci'&&Number(w.askDay)===i?'on':''}" onclick="fp222.ed.set('askDay',${i})">${DN[i]}</button>`).join('')}</div>
       <p class="mu" style="margin:8px 0 0">${askIdx(w)===0?'ביום ראשון בוחרים את השבוע הזה.':'ביום '+DN[askIdx(w)]+' בוחרים את השבוע הבא.'}</p></div>`;
     b+=`<div class="fpCard"><h3>${w.plan==='fixed'?'מה עושים בכל יום':'השבוע '+(tw===weekStart(today())?'הזה':'הבא')+' ('+dd(tw)+')'}</h3><p class="mu" style="margin:0 0 6px">לוחצים על מה שעושים באותו יום. אפשר יותר מאחד. בלי כלום = מנוחה.</p>${daysHtml(w.days,'fp222.ed.tog')}
-      <button type="button" class="btn light full" style="margin-top:10px" onclick="fp222.ed.auto()">סדר לי לפי המטרה</button></div>`}
+      <button type="button" class="btn light full" style="margin-top:10px" onclick="fp222.ed.auto()">תציע לי (אחר כך אפשר להזיז)</button></div>`}
   b+=`<button type="button" class="btn full" onclick="fp222.ed.save()">שמור</button>`;
   T.sheet('תוכנית שבועית',b)}
 const ed={
   open(){const w=wpGet();ED=w;if(w.plan==='weekly'){const tw=needsPlan()||weekStart(today());if(w.weeks[tw])ED.days=w.weeks[tw].map(d=>d.slice())}weekSheet()},
-  set(k,v){ED[k]=v;if(k==='plan'&&v!=='none'&&!ED.days.some(d=>d.length))ED.days=autoBuild();weekSheet()},
-  tog(i,t){const a=ED.days[i],j=a.indexOf(t);if(j>=0)a.splice(j,1);else{if(a.length>=3)a.shift();a.push(t)}weekSheet()},
-  auto(){ED.days=autoBuild();weekSheet()},
+  set(k,v){ED[k]=v;if(k==='plan'&&v!=='none'&&!ED.days.some(d=>vis(d).length))ED.days=keepHidden(ED.days,autoBuild());weekSheet()},
+  tog(i,t){if(!ON()[t])return;const a=ED.days[i],j=a.indexOf(t);if(j>=0)a.splice(j,1);else{if(vis(a).length>=3){const k=a.findIndex(x=>ON()[x]);if(k>=0)a.splice(k,1)}a.push(t)}weekSheet()},
+  auto(){ED.days=keepHidden(ED.days,autoBuild());weekSheet()},
   save(){const w=ED,ws=weekStart(today());if(w.plan==='weekly'){const tw=needsPlan()||targetWeek(w)||ws;w.weeks=w.weeks||{};const dz=w.days.map(d=>d.slice());w.weeks[tw]=dz;if(!w.weeks[ws])w.weeks[ws]=dz.map(d=>d.slice());w.days=w.weeks[ws].map(d=>d.slice())}
     wpSave(w);if(w.plan!=='none')syncCounts(w.days);ED=null;fpT.close();try{toast('התוכנית עודכנה')}catch(_){}refreshAll()}
 };
 
 /* ---------- the top of the workout screen ---------- */
-function hdrHtml(){const t=(window.fpW&&fpW.cur)||'s',mine=t!=='s'&&fpW.isMine&&fpW.isMine(t);
-  return `<div class="seg" role="tablist" aria-label="סוג אימון">${TYPES.map(k=>`<button type="button" role="tab" aria-selected="${k===t}" class="${k===t?'on':''}" onclick="fp222.tab('${k}')">${dot(k)}${TN[k]}</button>`).join('')}</div>
+function hdrHtml(){const vt=VT();let t=(window.fpW&&fpW.cur)||'s';if(!vt.includes(t))t=vt[0];const mine=t!=='s'&&fpW.isMine&&fpW.isMine(t);
+  return `${vt.length>1?`<div class="seg" role="tablist" aria-label="סוג אימון">${vt.map(k=>`<button type="button" role="tab" aria-selected="${k===t}" class="${k===t?'on':''}" onclick="fp222.tab('${k}')">${dot(k)}${TN[k]}</button>`).join('')}</div>`:`<div class="seg one"><span class="lone">${dot(t)}${TN[t]}</span></div>`}
     <button type="button" class="fpIb${mine?' on':''}" aria-pressed="${!!mine}" onclick="fp222.mine()" aria-label="שלי">${ic('star')}<small>שלי</small></button>
     <button type="button" class="fpIb" onclick="fp222.journal()" aria-label="יומן">${ic('book')}<small>יומן</small></button>`}
-function stripHtml(){const ws=weekStart(today()),done=doneWeek(ws),w=syncWeek(),plan=w.plan!=='none',td=dow(today());
+const stripOn=()=>wpGet().plan!=='none'||stripFree();
+function stripHtml(){const ws=weekStart(today()),done=doneWeek(ws).map(vis),w=syncWeek(),plan=w.plan!=='none',td=dow(today());w.days=w.days.map(vis);
   const cnt=done.reduce((n,d)=>n+d.length,0);let nxt='';if(plan){for(let k=0;k<7;k++){const i=(td+k)%7;if(i<td)continue;const left=w.days[i].filter(t=>!done[i].includes(t));if(left.length&&(k>0||!done[i].length)){nxt=(k===0?'היום':'יום '+W[i])+': '+left.map(t=>TN[t]).join(' + ');break}}}
   return `<div class="days">${W.map((n,i)=>{const dn=done[i],pl=plan?w.days[i].filter(t=>!dn.includes(t)):[];const ds=dn.map(t=>dot(t)).concat(pl.map(t=>dot(t,1))).join('');
     return `<button type="button" class="${i===td?'now':''}" onclick="fp222.day(${i})" aria-label="יום ${DN[i]}${dn.length?', עשית '+dn.map(t=>TN[t]).join(' ו'):''}${pl.length?', מתוכנן '+pl.map(t=>TN[t]).join(' ו'):''}"><span>${n}</span><div class="dts">${ds||'<em>·</em>'}</div></button>`}).join('')}</div>
@@ -203,25 +220,44 @@ function promptHtml(){const tw=needsPlan();if(!tw)return '';
 function catLast(){const cats=['רגליים','משיכה','דחיפה'],last={};const S=strSessions();
   S.forEach(s=>{const n=String(s.type||'')+' '+String(s.name||'');(typeof LIBRARY_CATEGORIES!=='undefined'?LIBRARY_CATEGORIES:cats).forEach(c=>{if(n.includes(c)){if(!last[c]||s.date>last[c])last[c]=s.date;if(!cats.includes(c)&&daysBetween(s.date,today())<=30)cats.push(c)}})});
   return cats.map(c=>[c,last[c]||'']).sort((a,b)=>(a[1]||'0').localeCompare(b[1]||'0'))}
-function strRecoHtml(){if(!RECO().s)return '';const w=wpGet(),td=dow(today()),plan=w.plan!=='none',dn=doneWeek(weekStart(today()))[td];
-  if(dn.includes('s'))return `<div class="fpCard fpReco"><span class="mu">מומלץ להיום</span><div class="big">${dot('s')}עשית כוח היום</div><p class="mu" style="margin:0">יפה. מחר ממשיכים.</p></div>`;
-  const [c,l]=catLast()[0],ago=l?daysBetween(l,today()):-1;
-  if(plan&&!w.days[td].includes('s')){let n=-1;for(let k=1;k<=7;k++){const i=(td+k)%7;if(w.days[i].includes('s')){n=i;break}}
-    return `<div class="fpCard fpReco"><span class="mu">מומלץ להיום</span><div class="big">${dot('s')}היום מנוחה מכוח</div><p class="mu" style="margin:0 0 8px">${n>=0?'אימון הכוח הבא: יום '+DN[n]+', '+c+'.':''}</p><button type="button" class="btn light full" onclick="fp222.cat('${c}')">בכל זאת: ${c}</button></div>`}
-  return `<div class="fpCard fpReco"><span class="mu">מומלץ להיום</span><div class="big">${dot('s')}${c}</div><p class="mu" style="margin:0 0 8px">${ago<0?'עוד לא עשית '+c+'.':ago===0?'עשית היום.':ago===1?'פעם אחרונה אתמול.':'לא עשית '+ago+' ימים.'} בוחרים אימון מהתיקייה.</p><button type="button" class="btn full" onclick="fp222.cat('${c}')">לתיקיית ${c}</button></div>`}
+/* 2.23: the recommendation follows the number of strength workouts a week you chose, and says why */
+function strReco(){const w=wpGet(),td=dow(today()),ws=weekStart(today()),plan=w.plan!=='none',done=doneWeek(ws),T=TP();
+  const N=plan?w.days.filter(d=>d.includes('s')).length:(Number(T.str)||0),D=done.filter(d=>d.includes('s')).length,R=Math.max(0,N-D),L=7-td;
+  const yS=td>0?done[td-1].includes('s'):strSessions().some(s=>s.date===addDays(today(),-1));
+  const [c,l]=catLast()[0],ago=l?daysBetween(l,today()):-1,cat=ago<0?'עוד לא עשית '+c+'.':ago===0?'':ago===1?c+': פעם אחרונה אתמול.':c+': לא עשית '+ago+' ימים.';
+  const wk=N?`השבוע: <b>${D} מתוך ${N}</b>`:'';
+  if(done[td].includes('s'))return {k:'done',c,why:wk?wk+'. מחר ממשיכים.':'מחר ממשיכים.'};
+  if(!N)return {k:'go',c,why:`לא בחרת כמה אימוני כוח בשבוע, אז ההמלצה לפי מה שלא עשית הכי הרבה זמן. ${cat}`};
+  if(!R)return {k:'rest',c,why:`השבוע עשית <b>${D} מתוך ${N}</b>, כל מה שתכננת. היום מנוחה, או אימון נוסף אם בא לך.`};
+  if(plan){const left=[];for(let i=td+1;i<7;i++)if(w.days[i].includes('s'))left.push(i);
+    if(w.days[td].includes('s'))return {k:'go',c,why:`היום יום כוח בתוכנית. ${wk}. ${cat}`};
+    if(R>left.length)return {k:'go',c,why:`${wk}, ונשארו השבוע רק ${left.length} ${left.length===1?'יום כוח':'ימי כוח'} בתוכנית. כדי להגיע ל-${N} כדאי להשלים היום.`};
+    return {k:'rest',c,why:`היום לא יום כוח בתוכנית. ${wk}. ${left.length?'האימון הבא: יום '+DN[left[0]]+'.':''}`}}
+  /* no plan: spread what is left over the days that are left, one day apart when possible */
+  if(R>=L)return {k:'go',c,why:`${wk}. נשארו ${R} אימונים ו-${L} ${L===1?'יום':'ימים'} עד סוף השבוע, אז היום אימון.`};
+  if(yS&&R<=Math.ceil((L-1)/2))return {k:'rest',c,why:`אתמול עשית כוח. ${wk}, ונשארו ${R} אימונים ב-${L-1} הימים שאחרי היום. יש מספיק זמן, אז היום אפשר לנוח.`};
+  return {k:'go',c,why:`${wk}. נשארו ${R} אימונים ו-${L} ימים${yS?'. אתמול עשית כוח, אבל כדי להספיק כדאי גם היום':''}. ${cat}`}}
+function strRecoHtml(){if(!RECO().s||!ON().s)return '';const r=strReco(),c=r.c;
+  const why=`<div class="fpWhy">${r.why}</div>`;
+  if(r.k==='done')return `<div class="fpCard fpReco"><span class="mu">מומלץ להיום</span><div class="big">${dot('s')}עשית כוח היום</div>${why}</div>`;
+  if(r.k==='rest')return `<div class="fpCard fpReco"><span class="mu">מומלץ להיום</span><div class="big">${dot('s')}היום מנוחה מכוח</div>${why}<button type="button" class="btn light full" onclick="fp222.cat('${c}')">בכל זאת: ${c}</button></div>`;
+  return `<div class="fpCard fpReco"><span class="mu">מומלץ להיום</span><div class="big">${dot('s')}${c}</div>${why}<button type="button" class="btn full" onclick="fp222.cat('${c}')">לתיקיית ${c}</button></div>`}
 function mount(){const home=$('workoutHome');if(!home||!window.fpW)return;
+  const vt=VT();if(!vt.includes(fpW.cur))fpW.tab(vt[0]);
   let h=$('fpHdr');if(!h){home.insertAdjacentHTML('afterbegin','<div id="fpHdr" class="fp221keep"></div><div id="fpStrip" class="fp221keep"></div><div id="fpPrompt" class="fp221keep"></div>');h=$('fpHdr')}
-  h.innerHTML=hdrHtml();$('fpStrip').innerHTML=stripHtml();$('fpPrompt').innerHTML=promptHtml();
+  h.innerHTML=hdrHtml();const st=$('fpStrip'),son=stripOn();st.hidden=!son;st.innerHTML=son?stripHtml():'';st.dataset.sig='';$('fpPrompt').innerHTML=promptHtml();
   let r=$('fpReco');if(!r){const a=$('homeActiveWorkout');(a||h).insertAdjacentHTML('afterend','<div id="fpReco"></div>');r=$('fpReco')}
   r.innerHTML=fpW.cur==='s'?strRecoHtml():'';
 }
 function libHeader(){const lib=$('workoutLibrary');if(!lib)return;let h=$('fpLibHd');if(!h){lib.insertAdjacentHTML('afterbegin','<div id="fpLibHd"></div>');h=$('fpLibHd')}
-  h.innerHTML=`<div class="mhd"><button type="button" onclick="showView('workoutHome')">→ חזרה</button><b>האימונים שלי</b><span></span></div>${planRow()}${strRecoHtml()}`}
+  h.innerHTML=`<div class="mhd"><button type="button" onclick="showView('workoutHome')">→ חזרה</button><b>האימונים שלי</b><span></span></div>`;
+  /* 2.23: search and the plans first; the weekly plan and today's recommendation under the list */
+  const wp=$('workoutPlans');let f=$('fpLibFoot');if(!f&&wp){wp.insertAdjacentHTML('afterend','<div id="fpLibFoot" style="margin-top:14px"></div>');f=$('fpLibFoot')}if(f){f.innerHTML='<div id="fpLibDate"></div>'+planRow()+strRecoHtml();const dt=$('libraryStartDate'),fl=dt&&dt.closest('.field');if(fl)$('fpLibDate').appendChild(fl)}}
 function planRow(){const S=setSummary();return `<div class="fpCard" style="padding:4px 14px"><button type="button" class="fpRowBtn" onclick="fp222.ed.open()"><span><b>${ic('cal')} התוכנית השבועית</b><small>${S.plan}</small></span>${ic('chev')}</button></div>`}
 function refreshAll(){try{mount()}catch(e){console.error(e)}try{if(window.fpW&&fpW.tab)fpW.tab(fpW.cur)}catch(_){}try{refreshPage()}catch(_){}try{if($('workoutDiary')&&$('workoutDiary').classList.contains('active'))jRender()}catch(_){}}
 
 /* a day in the strip */
-function daySheet(i){const T=fpT._,ws=weekStart(today()),date=addDays(ws,i),dn=doneWeek(ws)[i],w=wpGet(),plan=w.plan!=='none';
+function daySheet(i){const T=fpT._,ws=weekStart(today()),date=addDays(ws,i),dn=vis(doneWeek(ws)[i]),w=wpGet(),plan=w.plan!=='none',TYPES=VT();
   let b=`<div class="fpCard"><h3>${DN[i]} ${dd(date)}</h3>${dn.length?`<p style="margin:0">עשית: ${dn.map(t=>dot(t)+' '+TN[t]).join(' · ')}</p>`:'<p class="mu" style="margin:0">לא נרשם אימון ביום הזה.</p>'}</div>`;
   if(plan){ED=w;b+=`<div class="fpCard"><h3>מתוכנן</h3><div class="fpChips">${TYPES.map(t=>`<button type="button" class="${w.days[i].includes(t)?'on':''}" onclick="fp222.dayTog(${i},'${t}')">${dot(t)}${TN[t]}</button>`).join('')}</div><p class="mu" style="margin:8px 0 0">${w.plan==='fixed'?'משנה את היום הזה בתוכנית הקבועה.':'משנה רק את השבוע הזה.'}</p></div>
     <button type="button" class="btn light full" onclick="fp222.ed.open()">כל התוכנית השבועית</button>`}
@@ -231,36 +267,56 @@ function daySheet(i){const T=fpT._,ws=weekStart(today()),date=addDays(ws,i),dn=d
 /* =========================================================
    journal
    ========================================================= */
-let JS={week:'',more:8,flt:false,type:'',from:'',to:'',old:false};
-function entries(){const out=[],M=(fpT._&&fpT._.MACH)||{};
-  strSessions().forEach(s=>out.push({t:'s',d:s.date,id:s.id,name:s.name||'אימון',sub:(s.items||[]).length+' תרגילים · '+(s.items||[]).reduce((n,x)=>n+(x.sets||[]).length,0)+' סטים',v:s.durationMinutes?s.durationMinutes+' דק׳':'',min:Number(s.durationMinutes)||0}));
-  runLog().forEach((r,i)=>out.push({t:'r',d:r.d,i,name:r.name||(r.type&&r.type!=='plan'?'ריצה '+r.type:'ריצה'),sub:[r.s?mmss(r.s):'',r.s&&r.km?'קצב '+mmss(r.s/r.km):'',r.ok?'בלי לעצור':'עצרתי'].filter(Boolean).join(' · '),v:r.km?kmTxt(r.km)+' ק״מ':'',km:Number(r.km)||0}));
-  carLog().forEach((r,i)=>out.push({t:'c',d:r.d,i,name:r.name||((M[r.k]||{}).n||'אירובי'),sub:r.hard?'חזק':'קל',v:(r.min||0)+' דק׳',min:Number(r.min)||0}));
-  return out.filter(e=>e.d&&(!JS.type||e.t===JS.type)&&(!JS.from||e.d>=JS.from)&&(!JS.to||e.d<=JS.to)).sort((a,b)=>b.d.localeCompare(a.d))}
+/* 2.23: the filter is a sheet from the bottom: type, then that type's own options (strength: category, run: kind, cardio: machine), and dates */
+let JS={week:'',more:8,type:'',sub:'',range:'',from:'',to:''},JF=null;
+const SCATS=()=>(typeof LIBRARY_CATEGORIES!=='undefined'?LIBRARY_CATEGORIES:['רגליים','משיכה','דחיפה','גב','חזה','ידיים']);
+const sCats=s=>{const n=String(s.type||'')+' '+String(s.name||'');return SCATS().filter(c=>n.includes(c))};
+const rKind=r=>{try{return fpW.kindOf(r)}catch(_){return 'easy'}};
+const RKN=()=>{try{return fpW.RK}catch(_){return {}}};
+function rangeOf(f){const t=today();if(f.range==='m1')return [t.slice(0,8)+'01',''];if(f.range==='m3')return [addDays(t,-91),''];if(f.range==='c')return [f.from||'',f.to||''];return ['','']}
+function entries(f){f=f||JS;const out=[],M=(fpT._&&fpT._.MACH)||{},K=RKN();
+  strSessions().forEach(s=>out.push({t:'s',d:s.date,id:s.id,k:sCats(s),name:s.name||'אימון',sub:(s.items||[]).length+' תרגילים · '+(s.items||[]).reduce((n,x)=>n+(x.sets||[]).length,0)+' סטים',v:s.durationMinutes?s.durationMinutes+' דק׳':'',min:Number(s.durationMinutes)||0}));
+  runLog().forEach((r,i)=>{const k=rKind(r);out.push({t:'r',d:r.d,i,k:[k],name:r.name||(k!=='plan'&&K[k]?'ריצה '+K[k].n:'ריצה'),sub:[r.s?mmss(r.s):'',r.s&&r.km?'קצב '+mmss(r.s/r.km):'',r.ok?'בלי לעצור':'עצרתי'].filter(Boolean).join(' · '),v:r.km?kmTxt(r.km)+' ק״מ':'',km:Number(r.km)||0})});
+  carLog().forEach((r,i)=>out.push({t:'c',d:r.d,i,k:[r.k],name:r.name||((M[r.k]||{}).n||'אירובי'),sub:r.hard?'חזק':'קל',v:(r.min||0)+' דק׳',min:Number(r.min)||0}));
+  const [a,b]=rangeOf(f);
+  return out.filter(e=>e.d&&(!f.type||e.t===f.type)&&(!f.sub||e.k.includes(f.sub))&&(!a||e.d>=a)&&(!b||e.d<=b)).sort((x,y)=>y.d.localeCompare(x.d))}
 function weekTitle(ws){const cur=weekStart(today());return ws===cur?'השבוע':ws===addDays(cur,-7)?'שבוע שעבר':dd(ws)+'–'+dd(addDays(ws,6))}
 function sumLine(es){const n={s:0,r:0,c:0};let km=0,cm=0;es.forEach(e=>{n[e.t]++;if(e.t==='r')km+=e.km;if(e.t==='c')cm+=e.min});
   return [n.s?n.s+' כוח':'',n.r?n.r+' ריצה'+(km?' ('+kmTxt(km)+' ק״מ)':''):'',n.c?n.c+' אירובי'+(cm?' ('+cm+' דק׳)':''):''].filter(Boolean).join(' · ')}
-function fltHtml(){if(!JS.flt)return '';return `<div class="flt"><div class="fpChips" style="margin-bottom:8px">${[['','הכל'],['s','כוח'],['r','ריצה'],['c','אירובי']].map(([k,l])=>`<button type="button" class="${JS.type===k?'on':''}" onclick="fp222.j('type','${k}')">${k?dot(k):''}${l}</button>`).join('')}</div>
-  <div class="row"><div class="field" style="margin:0"><label>מתאריך</label><input type="date" value="${JS.from}" onchange="fp222.j('from',this.value)"></div><div class="field" style="margin:0"><label>עד תאריך</label><input type="date" value="${JS.to}" onchange="fp222.j('to',this.value)"></div></div>
-  ${JS.type||JS.from||JS.to?`<button type="button" class="linkb" style="margin-top:6px" onclick="fp222.j('clear')">ניקוי הסינון</button>`:''}</div>`}
+const nFilters=f=>(f.type?1:0)+(f.sub?1:0)+(f.range?1:0);
+/* the options of one type: only what exists in your log, so there are no empty choices */
+function subOpts(t){const M=(fpT._&&fpT._.MACH)||{},K=RKN(),seen=new Set();
+  if(t==='s'){strSessions().forEach(s=>sCats(s).forEach(c=>seen.add(c)));return SCATS().filter(c=>seen.has(c)).map(c=>[c,c])}
+  if(t==='r'){runLog().forEach(r=>seen.add(rKind(r)));return Object.keys(K).filter(k=>seen.has(k)).map(k=>[k,K[k].n])}
+  if(t==='c'){carLog().forEach(r=>seen.add(r.k));return Object.keys(M).filter(k=>seen.has(k)).map(k=>[k,M[k].n])}
+  return []}
+function filterSheet(){const f=JF,n=entries(f).length,subs=f.type?subOpts(f.type):[];
+  const SL={s:'קטגוריה',r:'סוג ריצה',c:'מכשיר'};
+  fpT._.sheet('סינון',`<div class="fpSeg" role="group" aria-label="סוג">${[['','הכל'],...VT().map(t=>[t,TN[t]])].map(([k,l])=>`<button type="button" class="${f.type===k?'on':''}" onclick="fp222.jf('type','${k}')">${l}</button>`).join('')}</div>
+    ${f.type?`<p class="mu" style="margin:4px 0 6px">${SL[f.type]}</p>${subs.length?`<div class="fpChips" style="margin:0 0 12px"><button type="button" class="${!f.sub?'on':''}" onclick="fp222.jf('sub','')">הכל</button>${subs.map(([k,l])=>`<button type="button" class="${f.sub===k?'on':''}" onclick="fp222.jf('sub','${esc(k)}')">${esc(l)}</button>`).join('')}</div>`:'<p class="fpHint" style="margin:0 0 12px">עוד אין אימונים מהסוג הזה.</p>'}`:''}
+    <p class="mu" style="margin:4px 0 6px">תאריכים</p><div class="fpChips" style="margin:0 0 8px">${[['','הכל'],['m1','החודש'],['m3','3 חודשים'],['c','בחירה']].map(([k,l])=>`<button type="button" class="${f.range===k?'on':''}" onclick="fp222.jf('range','${k}')">${l}</button>`).join('')}</div>
+    ${f.range==='c'?`<div class="row"><div class="field" style="margin:0"><label>מתאריך</label><input type="date" value="${esc(f.from)}" onchange="fp222.jf('from',this.value)"></div><div class="field" style="margin:0"><label>עד תאריך</label><input type="date" value="${esc(f.to)}" onchange="fp222.jf('to',this.value)"></div></div>`:''}
+    <button type="button" class="btn full" style="margin-top:12px" onclick="fp222.jf('apply')">${n?'הצג '+n+(n===1?' אימון':' אימונים'):'אין אימונים בסינון הזה'}</button>
+    ${nFilters(f)?`<button type="button" class="btn light full" style="margin-top:8px" onclick="fp222.jf('clear')">ניקוי הסינון</button>`:''}`)}
+function fltLabel(){const K=RKN(),M=(fpT._&&fpT._.MACH)||{};const p=[];if(JS.type)p.push(TN[JS.type]);if(JS.sub)p.push(JS.type==='r'?(K[JS.sub]||{}).n||JS.sub:JS.type==='c'?(M[JS.sub]||{}).n||JS.sub:JS.sub);if(JS.range)p.push({m1:'החודש',m3:'3 חודשים',c:(JS.from?dd(JS.from):'')+'–'+(JS.to?dd(JS.to):'')}[JS.range]);return p.join(' · ')}
 function jRender(){const sec=$('workoutDiary');if(!sec)return;let box=$('fpJ');if(!box){sec.insertAdjacentHTML('afterbegin','<div id="fpJ"></div>');box=$('fpJ')}
-  sec.classList.toggle('fpJon',!JS.old);
-  if(JS.old){box.innerHTML=`<div class="jhd"><button type="button" onclick="fp222.j('old',false)">→ חזרה ליומן</button><b>אימוני כוח, כל הפרטים</b><span></span></div>`;return}
-  const es=entries(),filtered=JS.type||JS.from||JS.to;
-  const hd=(back,title)=>`<div class="jhd">${back}<b>${title}</b><button type="button" class="${JS.flt||filtered?'on':''}" aria-expanded="${JS.flt}" onclick="fp222.j('flt')">${ic('filter')}סינון</button></div>`;
-  if(JS.week){const ws=JS.week,we=addDays(ws,6),list=es.filter(e=>e.d>=ws&&e.d<=we);let h=hd(`<button type="button" onclick="fp222.j('week','')">→ כל השבועות</button>`,weekTitle(ws))+fltHtml();
+  sec.classList.add('fpJon');
+  const es=entries(),nf=nFilters(JS),filtered=nf>0;
+  const hd=(back,title)=>`<div class="jhd">${back}<b>${title}</b><button type="button" class="${filtered?'on':''}" onclick="fp222.j('flt')">${ic('filter')}סינון${nf?' ('+nf+')':''}</button></div>`
+    +(filtered?`<div class="fpChips" style="margin:0 0 10px"><button type="button" class="on" onclick="fp222.j('flt')">${esc(fltLabel())}</button><button type="button" onclick="fp222.j('clear')">ניקוי ✕</button></div>`:'');
+  if(JS.week){const ws=JS.week,we=addDays(ws,6),list=es.filter(e=>e.d>=ws&&e.d<=we);let h=hd(`<button type="button" class="jback" onclick="fp222.j('week','')">${ic('back')}חזרה</button>`,weekTitle(ws));
+    h+=`<button type="button" class="jall" onclick="fp222.j('week','')">${ic('cal')}כל השבועות</button>`;
     h+=`<p class="mu" style="margin:0 0 6px">${sumLine(list)||'אין אימונים בשבוע הזה.'}</p><div class="tl">`;let last='';
     list.forEach(e=>{if(e.d!==last){last=e.d;const k=daysBetween(e.d,today());h+=`<div class="dlab">${k===0?'היום · ':k===1?'אתמול · ':''}יום ${W[dow(e.d)]} ${dd(e.d)}</div>`}
       h+=`<button type="button" class="e ${e.t}" onclick="fp222.jOpen('${e.t}','${e.t==='s'?e.id:e.i}')"><span><b>${esc(e.name)}</b><small>${esc(e.sub)}</small></span><span class="n">${esc(e.v)}</span></button>`});
     box.innerHTML=h+'</div>';return}
   const by={};es.forEach(e=>{const ws=weekStart(e.d);(by[ws]=by[ws]||[]).push(e)});const ws0=weekStart(today());if(!filtered&&!by[ws0])by[ws0]=[];
-  const keys=Object.keys(by).sort().reverse();let h=hd('<span></span>','יומן אימונים')+fltHtml();
+  const keys=Object.keys(by).sort().reverse();let h=hd(`<button type="button" class="jback" onclick="showView('workoutHome')">${ic('back')}חזרה</button>`,'יומן אימונים');
   if(!keys.length)h+=`<div class="fpCard"><p class="mu" style="margin:0">${filtered?'אין אימונים שמתאימים לסינון.':'עוד אין אימונים. אחרי האימון הראשון הוא יופיע כאן.'}</p></div>`;
   keys.slice(0,JS.more).forEach(ws=>{const list=by[ws],n={s:0,r:0,c:0};list.forEach(e=>n[e.t]++);const mx=Math.max(1,n.s,n.r,n.c);
     h+=`<button type="button" class="wc" onclick="fp222.j('week','${ws}')"><div class="hd"><span><b>${weekTitle(ws)}</b><small>${sumLine(list)||'עוד אין אימונים'}</small></span><span class="bars" aria-hidden="true">${TYPES.map(t=>`<i style="height:${3+n[t]/mx*17}px;background:var(--c${t.toUpperCase()})"></i>`).join('')}</span></div>
       ${list.slice(0,6).map(e=>`<div class="ln"><span class="dn">${W[dow(e.d)]}</span>${dot(e.t)}<span>${esc(e.name)}${e.sub?' · '+esc(e.sub.split(' · ')[0]):''}</span><span class="v">${esc(e.v)}</span></div>`).join('')}${list.length>6?`<div class="ln"><span></span><span></span><span class="mu">ועוד ${list.length-6}</span><span></span></div>`:''}</button>`});
   if(keys.length>JS.more)h+=`<button type="button" class="btn light full" onclick="fp222.j('more')">עוד שבועות</button>`;
-  h+=`<button type="button" class="linkb" style="display:block;margin:10px auto 0" onclick="fp222.j('old',true)">אימוני כוח עם כל הסינונים (התצוגה הקודמת)</button>`;
   box.innerHTML=h}
 /* open one workout */
 function jStrength(id){const T=fpT._,s=sessions().find(x=>x.id===id);if(!s)return;
@@ -272,7 +328,8 @@ function jStrength(id){const T=fpT._,s=sessions().find(x=>x.id===id);if(!s)retur
     <button type="button" class="btn light full" style="margin-top:8px;color:#F09595" onclick="fp222.jDelS('${esc(id)}')">מחיקת האימון</button>`)}
 let JE=null;
 function jRun(i){const T=fpT._,r=runLog()[i];if(!r)return;JE=JE&&JE.t==='r'&&JE.i===i?JE:{t:'r',i,x:Object.assign({},r,{tm:r.s?mmss(r.s):'',sp:(r.sp||[]).map(mmss)})};const x=JE.x,km=Math.floor(Number(String(x.km).replace(',','.'))||0);
-  T.sheet('עריכת ריצה',`<div class="field"><label>תאריך</label><input type="date" value="${esc(x.d)}" onchange="fp222.je('d',this.value)"></div>
+  const pva=Array.isArray(r.tg)&&r.tg.length?`<p class="mu" style="margin:0 0 6px">תכנון מול ביצוע</p>${fpT._.pvaHtml(r)}<p class="mu" style="margin:14px 0 6px">עריכה</p>`:'';
+  T.sheet(r.tg?esc(r.name||'ריצה'):'עריכת ריצה',pva+`<div class="field"><label>תאריך</label><input type="date" value="${esc(x.d)}" onchange="fp222.je('d',this.value)"></div>
     <div class="row"><div class="field"><label>ק״מ</label><input inputmode="decimal" value="${esc(x.km)}" oninput="fp222.je('km',this.value)" onchange="fp222.je('km',this.value,1)"></div><div class="field"><label>זמן (דק׳:שנ׳)</label><input inputmode="text" value="${esc(x.tm)}" oninput="fp222.je('tm',this.value)"></div></div>
     <div class="fpSeg" role="group"><button type="button" class="${x.ok?'on':''}" onclick="fp222.je('ok',1,1)">בלי לעצור</button><button type="button" class="${x.ok?'':'on'}" onclick="fp222.je('ok',0,1)">עצרתי באמצע</button></div>
     <div class="fpCard"><h3>קצב לכל ק״מ</h3>${km?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${Array.from({length:Math.min(km,42)},(_,k)=>`<label style="font-size:12.5px">ק״מ ${k+1}<input inputmode="text" placeholder="6:00" value="${esc(x.sp[k]||'')}" oninput="fp222.jsp(${k},this.value)"></label>`).join('')}</div>`:'<p class="mu" style="margin:0">כותבים קודם כמה ק״מ.</p>'}</div>
@@ -305,9 +362,13 @@ function setSummary(){const w=wpGet(),n={s:0,r:0,c:0};w.days.forEach(d=>d.forEac
 function renderSet(){const sec=$('settings');if(!sec||!state.data||!window.fpW)return;let box=$('fpTrainSet');
   if(!box){box=document.createElement('details');box.className='settings-section';box.id='fpTrainSet';const a=$('fpMedalSet');if(a)a.insertAdjacentElement('afterend',box);else sec.appendChild(box)}
   const open=box.open,S=setSummary();
+  const o=ON(),n=VT().length;
   box.innerHTML=`<summary>אימונים: כוח, ריצה, אירובי</summary><div class="settings-body">
+    <p class="mu" style="margin:0 0 4px">מה מופיע באימונים</p>
+    ${TYPES.map(t=>`<div class="fpRow" style="padding:8px 0"><span>${dot(t)} ${TN[t]}${o[t]&&n===1?'<br><small class="mu">צריך לפחות סוג אחד</small>':''}</span><label class="fpSw"><input type="checkbox" ${o[t]?'checked':''} ${o[t]&&n===1?'disabled':''} onchange="fp222.typeOn('${t}',this.checked)" aria-label="להציג ${TN[t]}"><span></span></label></div>`).join('')}
+    <p class="fpHint" style="margin:0 0 8px">סוג שמכבים נעלם מהמסך. שום דבר לא נמחק, ואפשר להחזיר מתי שרוצים.</p>
     <button type="button" class="fpRowBtn" onclick="fp222.ed.open()"><span><b>תוכנית שבועית</b><small>${S.plan}</small></span>${ic('chev')}</button>
-    ${TYPES.map(t=>`<button type="button" class="fpRowBtn" onclick="fp222.page('${t}')"><span><b>${dot(t)} ${TN[t]}</b><small>${S[t]}</small></span>${ic('chev')}</button>`).join('')}</div>`;box.open=open}
+    ${VT().map(t=>`<button type="button" class="fpRowBtn" onclick="fp222.page('${t}')"><span><b>${dot(t)} ${TN[t]}</b><small>${S[t]}</small></span>${ic('chev')}</button>`).join('')}</div>`;box.open=open}
 
 /* =========================================================
    hooks and actions
@@ -319,7 +380,7 @@ if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=fun
 /* the check-in summary: a button to plan the week, when it is time */
 if(typeof renderCheckin==='function'){const o=renderCheckin;renderCheckin=function(){const r=o.apply(this,arguments);try{if(state.ci&&state.ci.step===3&&needsPlan()){const b=$('ciBody');if(b&&!$('fpCiPlan'))b.insertAdjacentHTML('beforeend',`<div class="fpCard" id="fpCiPlan" style="margin-top:12px"><b>ועכשיו: התוכנית לשבוע הבא</b><p class="mu" style="margin:4px 0 8px">איזה יום כוח, ריצה או אירובי.</p><button type="button" class="btn full" onclick="fp222.ed.open()">לתכנן</button></div>`)}}catch(_){}return r}}
 /* a run or cardio saved / a plan changed elsewhere → refresh */
-setInterval(()=>{try{if($('workoutHome')&&$('workoutHome').classList.contains('active')){const s=$('fpStrip');if(s){const h=stripHtml();if(s.dataset.sig!==h){s.innerHTML=h;s.dataset.sig=h}}}}catch(_){}},4000);
+setInterval(()=>{try{if($('workoutHome')&&$('workoutHome').classList.contains('active')){const s=$('fpStrip');if(s){const on=stripOn();s.hidden=!on;const h=on?stripHtml():'';if(s.dataset.sig!==h){s.innerHTML=h;s.dataset.sig=h}}}}catch(_){}},4000);
 
 window.fp222={
   ed,refreshPage,planChanged:refreshAll,planRow,
@@ -331,9 +392,14 @@ window.fp222={
   dayTog(i,t){const w=ED||wpGet(),a=w.days[i],j=a.indexOf(t);if(j>=0)a.splice(j,1);else a.push(t);if(w.plan==='weekly'){w.weeks=w.weeks||{};w.weeks[weekStart(today())]=w.days.map(d=>d.slice())}wpSave(w);syncCounts(w.days);ED=null;daySheet(i);refreshAll()},
   cat(c){showView('workoutLibrary');try{chooseLibraryCategory(c)}catch(_){}setTimeout(()=>{const g=$('workoutPlans');if(g)g.scrollIntoView({behavior:'smooth',block:'start'})},60)},
   page:openPage,
+  typeOn(t,on){const o=J('TYPES_ON',null)||{};const cur=ON();if(!on&&VT().length===1&&cur[t]){try{toast('צריך לפחות סוג אחד')}catch(_){}renderSet();return}
+    o[t]=on?1:0;setProp('TYPES_ON',JSON.stringify(o));try{toast(on?TN[t]+' חזר':TN[t]+' הוסתר. שום דבר לא נמחק')}catch(_){}renderSet();refreshAll()},
+  stripFree(on){setProp('STRIP_FREE',on?'1':'');refreshAll()},
   reco(t,on){const r=J('RECO',null)||{};r[t]=on?1:0;setProp('RECO',JSON.stringify(r));refreshAll()},
   str(dl){const t=TP();t.str=Math.max(0,Math.min(6,(Number(t.str)||0)+dl));if(t.str&&Array.isArray(t.want)&&!t.want.includes('str'))t.want.push('str');setProp('TRAIN_PLAN',JSON.stringify(t));refreshPage();try{toast('נשמר')}catch(_){}},
-  j(k,v){if(k==='flt')JS.flt=!JS.flt;else if(k==='more')JS.more+=8;else if(k==='clear'){JS.type='';JS.from='';JS.to=''}else if(k==='old'){JS.old=v;if(v){try{renderWorkoutHistory()}catch(_){}}}else JS[k]=v;jRender();if(k==='week')window.scrollTo(0,0)},
+  j(k,v){if(k==='flt'){JF=Object.assign({},JS);filterSheet();return}if(k==='more')JS.more+=8;else if(k==='clear'){JS.type='';JS.sub='';JS.range='';JS.from='';JS.to=''}else JS[k]=v;jRender();if(k==='week')window.scrollTo(0,0)},
+  jf(k,v){if(!JF)return;if(k==='apply'){['type','sub','range','from','to'].forEach(x=>JS[x]=JF[x]);JF=null;fpT.close();jRender();window.scrollTo(0,0);return}
+    if(k==='clear'){JF.type='';JF.sub='';JF.range='';JF.from='';JF.to=''}else{JF[k]=v;if(k==='type')JF.sub='';if(k==='range'&&v!=='c'){JF.from='';JF.to=''}}filterSheet()},
   jOpen(t,id){JE=null;if(t==='s')jStrength(id);else if(t==='r')jRun(Number(id));else jCar(Number(id))},
   je(k,v,re){if(!JE)return;JE.x[k]=v;if(re)(JE.t==='r'?jRun:jCar)(JE.i)},
   jsp(k,v){if(JE)JE.x.sp[k]=v},

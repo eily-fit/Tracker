@@ -85,7 +85,7 @@ openOnboarding=function(first){
     d:{name:personalName(),sex:p.sex||'',age:p.age||'',height:p.height||'',weight:p.weight||'',goal:p.goal||'recomp',rate:p.rate||'normal',steps:p.steps||'mid',
       job:p.job||'desk',want:Array.isArray(p.want)?p.want.slice():['str'],strNow:p.strNow!=null?p.strNow:0,strGoal:p.strGoal||p.days||3,durS:[30,40,50].includes(Number(p.duration))?Number(p.duration):40,
       carNow:p.carNow||0,carGoal:p.carGoal||2,carDur:p.carDur||30,carKinds:Array.isArray(p.carKinds)?p.carKinds.slice():['ell'],
-      runMode:p.runMode||'',runNow:p.runNow||'',runsNow:p.runsNow||0,paceNow:p.paceNow||'',runGoalKm:p.runGoalKm||5,tw:p.targetWeight||'',paceGoal:p.paceGoal||'',runsGoal:p.runsPW||2,wplan:(()=>{try{const w=JSON.parse(prop('WEEK_PLAN')||'null');return w?(w.plan||(w.mode==='F'?'none':'fixed')):'fixed'}catch(_){return 'fixed'}})(),ask:'ci',
+      runMode:p.runMode||'',runNow:p.runNow||'',runsNow:p.runsNow||0,paceNow:p.paceNow||'',runGoalKm:p.runGoalKm||5,tw:p.targetWeight||'',paceGoal:p.paceGoal||'',runsGoal:p.runsPW||2,wplan:(()=>{try{const w=JSON.parse(prop('WEEK_PLAN')||'null');return w?(w.plan||(w.mode==='F'?'none':'fixed')):'fixed'}catch(_){return 'fixed'}})(),ask:'ci',dpick:'app',edited:0,days:(()=>{try{const w=JSON.parse(prop('WEEK_PLAN')||'null');return w&&Array.isArray(w.days)&&w.days.length===7&&w.days.some(x=>x.length)?w.days.map(x=>x.slice()):null}catch(_){return null}})(),
       diet:p.diet||'all',no:Array.isArray(p.no)?p.no.slice():[],prod:null,bread:['whole','crisp'],milk:'reg',meals:p.meals||'3f',free:250,
       cook:String(s.oil_profile||'')||'k',cal:cals.length?cals:[/iPhone|iPad|Mac/.test(navigator.userAgent)?'apple':'google'],hol,shab:null,shabPick:['fri','satB']}};
   /* keep the old state.onb alive for code that still reads it */
@@ -112,18 +112,38 @@ function runLive(){
   const d=Q.d;if(!guided(d))return'';let h='';
   const gp=sec(d.paceGoal),now=sec(d.paceNow);
   if(gp!=null&&gp<150)return h+`<div class="fpq-warn"><b>הקצב לא אפשרי.</b> אף אחד לא רץ קילומטר מהר מ-2:30. תכתוב יעד אחר.</div>`;
-  const usual=d.runMode==='zero'?0:Number(d.runsNow)||0,r=runsPW(d);
-  /* only a real jump: 2+ runs more than today, 4+ runs from zero, or a goal pace 20% faster */
-  const load=(d.runMode==='zero'&&r>=4)||(d.runMode==='runs'&&r>=Math.max(3,usual+2))||(gp&&now&&(now-gp)/now>.2);
-  if(load)h+=`<div class="fpq-warn"><b>שים לב:</b> זה הרבה יותר ממה שאתה רגיל. הסיבה הכי גדולה לפציעות היא יותר מדי, מהר מדי. אפשר, רק תתחיל בעדינות.</div>`;
+  /* 2.23: the number of runs is checked with everything else (loadWarn); here only a goal pace 20% faster */
+  if(gp&&now&&(now-gp)/now>.2)h+=`<div class="fpq-warn"><b>שים לב:</b> קצב היעד מהיר ב-20% ומעלה מהקצב שלך היום. זה לוקח חודשים. אפשר, רק בהדרגה.</div>`;
   return h;
 }
+/* 2.23: the days of the weekly plan, inside the questionnaire: "אני בוחר" (an empty week) or "תציע לי" (the app fills it), and every day can be changed */
+const TT={s:'כוח',r:'ריצה',c:'אירובי'},TC={s:'#D7F36B',r:'#7CC4FF',c:'#FFB86B'};
+const wantT=d=>[['s','str'],['r','run'],['c','car']].filter(([,k])=>d.want.includes(k)).map(([t])=>t);
+function planDays(d){if(!Array.isArray(d.days)||d.days.length!==7){d.days=d.dpick==='me'?[[],[],[],[],[],[],[]]:weekDays(d)}const wt=wantT(d);d.days=d.days.map(x=>x.filter(t=>wt.includes(t)));return d.days}
+function daysPicker(d){const days=planDays(d),wt=wantT(d),L=window.FPW?FPW.label(days,(Number(d.runNow)||0)>=3&&runsPW(d)>=2?1:0,carPW(d)>=2?1:0):{hard:[]};
+  const cnt={s:0,r:0,c:0};days.forEach(x=>x.forEach(t=>cnt[t]++));const goal={s:strPW(d),r:runsPW(d),c:carPW(d)};
+  const diff=wt.filter(t=>cnt[t]!==goal[t]);
+  return `<label style="margin-top:12px;display:block">${d.wplan==='weekly'?'הימים של השבוע הזה':'הימים הקבועים'}</label>
+    <div class="fpq-seg" role="group"><button type="button" class="${d.dpick!=='me'?'on':''}" onclick="fpQ.dpick('app')">תציע לי</button><button type="button" class="${d.dpick==='me'?'on':''}" onclick="fpQ.dpick('me')">אני בוחר</button></div>
+    <div style="display:grid;gap:6px">${days.map((x,i)=>`<div style="display:grid;grid-template-columns:30px 1fr 40px;gap:8px;align-items:center"><b style="color:var(--muted,#A3ADB8);font-size:13px">${['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'][i]}</b><div class="onb-options" style="margin:0;gap:6px;flex-wrap:wrap">${wt.map(t=>`<button type="button" class="onb-choice chip${x.includes(t)?' selected':''}" aria-pressed="${x.includes(t)}" onclick="fpQ.day(${i},'${t}')" style="min-height:34px;padding:5px 11px"><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${TC[t]};margin-inline-end:5px"></i>${TT[t]}</button>`).join('')}</div><span style="font-size:11px;color:${L.hard[i]?'#FF8A80':'#6B7682'}">${!x.length?'מנוחה':L.hard[i]?'חזק':''}</span></div>`).join('')}</div>
+    <p class="muted" style="margin:8px 0 0;font-size:12.5px">${diff.length?'בחרת '+wt.map(t=>cnt[t]+' '+TT[t]).join(' · ')+'. בשמירה, מספר האימונים בשבוע יתעדכן לפי הימים שבחרת.':'לחיצה על יום מוסיפה או מורידה. אפשר יותר מאחד ביום.'}</p>`}
+/* 2.23: one warning for the whole week together: strength + runs + cardio, and what you do today */
+function loadWarn(d){const wt=wantT(d),S=strPW(d),R=runsPW(d),C=carPW(d),tot=S+R+C;
+  const now={s:wt.includes('s')?Number(d.strNow)||0:0,r:wt.includes('r')?(d.runMode==='zero'?0:Number(d.runsNow)||0):0,c:wt.includes('c')?Number(d.carNow)||0:0},goal={s:S,r:R,c:C},tot0=now.s+now.r+now.c;
+  const fresh=wt.filter(t=>!now[t]),out=[];
+  const days=d.wplan!=='none'&&Array.isArray(d.days)?d.days:null,noRest=days&&days.every(x=>x.length);
+  if(tot>=7)out.push(`<b>${tot} אימונים בשבוע.</b> זה הרבה. הגוף מתחזק בזמן המנוחה, ובלי ימי מנוחה גדל הסיכון לפציעה. כדאי לפחות יום מנוחה אחד, עדיף שניים.`);
+  else if(noRest)out.push(`<b>אין יום מנוחה בשבוע.</b> כדאי לפחות יום אחד בלי אימון.`);
+  if(fresh.length>=2&&fresh.some(t=>goal[t]>1))out.push(`<b>אתה מתחיל מאפס ${fresh.map(t=>TT[t]).join(' וגם ')}.</b> לגוף לוקח זמן להתרגל, והמאמצים מצטברים גם כשהם שונים. ההמלצה: להתחיל באחד מכל סוג בשבוע, ולהוסיף אחרי 3–4 שבועות.<button type="button" class="btn light full" style="margin-top:8px" onclick="fpQ.easy()">לקחת את ההצעה: אחד מכל סוג</button>`);
+  else if(fresh.length===1){const t=fresh[0];if(goal[t]>=3)out.push(`<b>${goal[t]} ${TT[t]} בשבוע, מאפס.</b> זה הרבה להתחלה. עדיף 1–2 בשבוע בחודש הראשון.`)}
+  if(!out.length&&tot>=tot0+3)out.push(`<b>שים לב:</b> זה ${tot-tot0} אימונים בשבוע יותר ממה שאתה עושה היום. אפשר, רק להתחיל בעדינות.`);
+  return out.length?`<div class="fpq-warn">${out.join('<br><br>')}<p style="margin:8px 0 0;font-size:12.5px;color:#A3ADB8">אפשר להמשיך בכל זאת. זו רק המלצה.</p></div>`:''}
 function trainHtml(){
   const d=Q.d,w=d.want;let h=`<h2>איך אתה רוצה להתאמן?</h2><p class="onb-intro">בחר מה מעניין אותך. אפשר כמה. מה שתבחר ייפתח למטה.</p>
     <div class="onb-options">${tg('want','str','כוח')}${tg('want','car','אירובי')}${tg('want','run','ריצה')}</div>`;
   if(!w.length)return h+`<div class="fpq-good">לא בחרת אימונים, וזה בסדר. נתמקד באוכל, ואפשר להוסיף אימונים מתי שרוצים.</div>`;
   if(w.includes('str')){const rec=d.goal==='gain'?50:40;const T={30:'גוף מלא, 4–5 תרגילים. טוב לימים עמוסים.',40:'5–6 תרגילים, עם מנוחות נוחות.',50:'6–7 תרגילים, הכי טוב לבניית שריר.'};
-    h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">כוח</b>${stp('strNow',0,7,'כמה אתה מתאמן היום?','בשבוע')}${stp('strGoal',1,6,'כמה תרצה להתאמן?','היעד שלך בשבוע')}${d.strGoal>=d.strNow+3?'<div class="fpq-warn"><b>שים לב:</b> זה הרבה יותר ממה שאתה רגיל. אפשר, רק תתחיל בעדינות.</div>':''}
+    h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">כוח</b>${stp('strNow',0,7,'כמה אתה מתאמן היום?','בשבוע')}${stp('strGoal',1,6,'כמה תרצה להתאמן?','היעד שלך בשבוע')}
       <div class="field" style="margin-top:12px"><label>כמה זמן כל אימון?</label><div class="onb-options">${[30,40,50].map(v=>ch('durS',v,v+' דק׳'+(v===rec?' · מומלץ':''))).join('')}</div><p class="muted" style="margin:4px 0 0">${T[d.durS]} מומלץ לך: ${rec} דק׳</p></div></div>`}
   if(w.includes('car'))h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">אירובי</b>${stp('carNow',0,7,'כמה אתה עושה היום?','בשבוע')}${stp('carGoal',1,6,'כמה תרצה?','בשבוע')}
       <div class="field" style="margin-top:12px"><label>מה אתה אוהב? (אפשר כמה)</label><div class="onb-options">${CARK.map(([k,l])=>tg('carKinds',k,l,'chip')).join('')}</div></div>
@@ -138,15 +158,15 @@ function trainHtml(){
       <div class="onb-fields">${inp('runGoalKm','או כתוב (ק״מ)','')}${inp('paceGoal','קצב יעד לק״מ (לא חובה)','למשל 5:00','text')}</div>${stp('runsGoal',1,5,'כמה ריצות בשבוע תרצה?','2 זה הכי נכון להתחלה')}<div id="fpqLive">${runLive()}</div>`;
     if(d.runMode==='self')h+=`<p class="muted" style="margin:8px 0 0">אין תוכנית. רושמים ריצות מתי שרוצים.</p>`;
     h+=`</div>`}
-  if(w.length&&window.FPW){const S=strPW(d),R=runsPW(d),Cc=carPW(d),tot=S+R+Cc;const days=weekDays(d),L=FPW.label(days,(Number(d.runNow)||0)>=3&&R>=2?1:0,Cc>=2?1:0),DT=t=>`<i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${{s:'#D7F36B',r:'#7CC4FF',c:'#FFB86B'}[t]}"></i>`;
+  if(w.length&&window.FPW){const S=strPW(d),R=runsPW(d),Cc=carPW(d);
     const DN=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'],ci=(()=>{try{return checkinDay()}catch(_){return 5}})();
     h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">תוכנית שבועית</b><div class="fpq-row"><span>בשבוע</span><b>${[S?S+' כוח':'',R?R+' ריצה':'',Cc?Cc+' אירובי':''].filter(Boolean).join(' · ')}</b></div>
       <p class="muted" style="margin:6px 0">לקבוע מראש איזה יום מה? זה עוזר להתמיד.</p>
-      <div class="fpq-grid">${chc('wplan','fixed','קבועה · מומלץ','אותם ימים כל שבוע')}${chc('wplan','weekly','משתנה כל שבוע','כל שבוע בוחרים מחדש, עם תזכורת')}${chc('wplan','none','בלי תוכנית','כל יום מה שבא, והאפליקציה מציעה')}</div>
-      ${d.wplan==='weekly'?`<label style="margin-top:12px">באיזה יום לשאול אותך?</label><div class="onb-options">${[['ci','ביום הצ׳ק-אין ('+DN[ci]+')']].concat(DN.map((n,i)=>[i,n])).map(([k,l])=>`<button type="button" class="onb-choice chip${String(d.ask)===String(k)?' selected':''}" onclick="fpQ.set('ask',${typeof k==='number'?k:"'ci'"})">${l}</button>`).join('')}</div>`:''}
-      ${d.wplan==='none'?'':`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:12px;margin-top:10px">${FPW.W.map((n,i)=>`<div style="background:#1F262E;border-radius:10px;padding:6px 0">${n}<div style="display:flex;gap:3px;justify-content:center;min-height:12px;margin-top:4px">${days[i].map(DT).join('')||'<span style="color:#46525F">·</span>'}</div>${L.hard[i]?'<div style="font-size:10.5px;color:#FF8A80">חזק</div>':''}</div>`).join('')}</div>
-      <p class="muted" style="margin:6px 0 0">הצעה לפי הכללים: הכי הרבה 2 אימונים חזקים בשבוע, לא לפני יום רגליים.</p><p class="muted" style="margin:2px 0 0;font-size:12px;color:#6B7682">ניתן לשינוי בהגדרות</p>`}
-      ${tot>7?'<div class="fpq-warn"><b>יותר מ-7 אימונים בשבוע.</b> חלק יהיו באותו יום. למתחילים עדיף פחות.</div>':''}</div>`}
+      <div class="fpq-grid">${chc('wplan','none','בלי תוכנית','כל יום מה שמתאים לך')}${chc('wplan','weekly','משתנה','כל שבוע בוחרים את הימים מחדש, עם תזכורת')}${chc('wplan','fixed','קבועה','אותם ימים כל שבוע')}</div>
+      ${d.wplan==='weekly'?`<label style="margin-top:12px">באיזה יום לשאול אותך על השבוע הבא?</label><div class="onb-options">${[['ci','ביום הצ׳ק-אין ('+DN[ci]+')']].concat(DN.map((n,i)=>[i,n])).map(([k,l])=>`<button type="button" class="onb-choice chip${String(d.ask)===String(k)?' selected':''}" onclick="fpQ.set('ask',${typeof k==='number'?k:"'ci'"})">${l}</button>`).join('')}</div>`:''}
+      ${d.wplan==='none'?'':daysPicker(d)}
+      <p class="muted" style="margin:6px 0 0;font-size:12px;color:#6B7682">ניתן לשינוי בהגדרות</p></div>`;
+    h+=loadWarn(d)}
   const t=targets(d);if(t)h+=`<div class="onb-info"><b>יעד יומי לפי האימונים: ${t.cal.toLocaleString('he-IL')} קלוריות</b><p>קבוע כל יום. האימונים מחולקים על כל השבוע.</p></div>`;
   return h;
 }
@@ -227,9 +247,12 @@ function buildMenu(prev){const t=targets(Q.d)||{cal:2000};FPM.use(Object.assign(
 function goStep(i){Q.loadT.forEach(clearTimeout);Q.loadT=[];Q.step=i;render();try{$('onbBody').scrollTop=0}catch(_){}}
 
 window.fpQ={
-  set(k,v){if(!Q||Q.saving)return;Q.d[k]=v;if(k==='diet'){Q.d.prod=null;Q.d.milk=v==='vegan'?'soy':'reg'}if(k==='runMode'&&v==='zero'){Q.d.runNow=0;Q.d.runsNow=0}render(true)},
-  tog(k,v){const a=Q.d[k];const i=a.indexOf(v);if(i>=0){if(a.length>1||['no','hol','want','carKinds'].includes(k))a.splice(i,1)}else a.push(v);if(k==='no')Q.d.prod=null;render(true)},
-  inc(k,dl,mn,mx){Q.d[k]=Math.max(mn,Math.min(mx,(Number(Q.d[k])||0)+dl));render(true)},
+  set(k,v){if(!Q||Q.saving)return;Q.d[k]=v;if(k==='diet'){Q.d.prod=null;Q.d.milk=v==='vegan'?'soy':'reg'}if(k==='runMode'&&v==='zero'){Q.d.runNow=0;Q.d.runsNow=0}if(['runMode','runsGoal','runNow'].includes(k)&&Q.d.dpick!=='me'&&!Q.d.edited)Q.d.days=null;render(true)},
+  dpick(v){Q.d.dpick=v;Q.d.edited=0;Q.d.days=v==='me'?[[],[],[],[],[],[],[]]:null;render(true)},
+  day(i,t){const d=Q.d;planDays(d);const a=d.days[i],j=a.indexOf(t);if(j>=0)a.splice(j,1);else a.push(t);d.edited=1;render(true)},
+  easy(){const d=Q.d;if(d.want.includes('str')&&!Number(d.strNow))d.strGoal=1;if(d.want.includes('car')&&!Number(d.carNow))d.carGoal=1;if(d.want.includes('run')&&d.runMode==='zero')d.runsGoal=1;if(d.dpick!=='me'){d.days=null;d.edited=0}render(true)},
+  tog(k,v){const a=Q.d[k];const i=a.indexOf(v);if(i>=0){if(a.length>1||['no','hol','want','carKinds'].includes(k))a.splice(i,1)}else a.push(v);if(k==='no')Q.d.prod=null;if(k==='want'&&Q.d.dpick!=='me'&&!Q.d.edited)Q.d.days=null;render(true)},
+  inc(k,dl,mn,mx){Q.d[k]=Math.max(mn,Math.min(mx,(Number(Q.d[k])||0)+dl));if(['strGoal','carGoal','runsGoal'].includes(k)&&Q.d.dpick!=='me'&&!Q.d.edited)Q.d.days=null;render(true)},
   type(k,v){Q.d[k]=v;const b=$('fpqBmi');if(b)b.innerHTML=bmiHtml();const l=$('fpqLive');if(l)l.innerHTML=runLive()},
   prod(id){FPM.use(Q.d);const s=FPM.prodSet();const i=s.indexOf(id);if(i>=0)s.splice(i,1);else s.push(id);Q.d.prod=s;render(true)},
   milk(k){if(k){Q.d.milk=k;Q.milkOpen=false}else Q.milkOpen=!Q.milkOpen;render(true)},
@@ -264,9 +287,11 @@ async function finish(){
     LS.set('fp2.calKinds',JSON.stringify(d.cal));if(d.cal[0])LS.set('fp2.calKind',d.cal[0]);
     setProp('MEAL_MODE',d.meals);
     setProp('MENU_PREFS',JSON.stringify({prod:FPM.prodSet(),bread:d.bread,milk:d.milk}));
+    /* 2.23: with a weekly plan, the days you set decide how many of each a week */
+    if(d.wplan!=='none'&&d.want.length){const dz=planDays(d),n={s:0,r:0,c:0};dz.forEach(x=>x.forEach(t=>n[t]++));if(d.want.includes('str')&&n.s)d.strGoal=n.s;if(d.want.includes('car')&&n.c)d.carGoal=n.c;if(d.want.includes('run')&&n.r&&guided(d))d.runsGoal=n.r}
     setProp('TRAIN_PLAN',JSON.stringify({want:d.want,str:strPW(d),car:carPW(d),run:runsPW(d),durS:d.durS,carDur:d.carDur,carKinds:d.carKinds,carNow:d.carNow,set:new Date().toISOString().slice(0,10)}));
     if(d.want.includes('run'))setProp('RUN_PLAN',JSON.stringify({mode:d.runMode,start:d.runMode==='zero'?0:Number(d.runNow)||0,runsNow:d.runsNow,paceNow:d.paceNow,goal:Number(d.runGoalKm)||5,paceGoal:d.paceGoal,runs:runsPW(d),str:strPW(d),since:state.todayDate||state.date||'',week:1,m3:(Number(d.runNow)||0)>=3}));
-    if(d.want.length){const ws=(()=>{const x=new Date((state.todayDate||state.date||new Date().toISOString().slice(0,10))+'T12:00:00');x.setDate(x.getDate()-x.getDay());return x.toISOString().slice(0,10)})(),dz=weekDays(d);setProp('WEEK_PLAN',JSON.stringify({plan:d.wplan,mode:d.wplan==='none'?'F':'P',days:dz,askDay:d.ask,weeks:d.wplan==='weekly'?{[ws]:dz}:{}}))}
+    if(d.want.length){const ws=(()=>{const x=new Date((state.todayDate||state.date||new Date().toISOString().slice(0,10))+'T12:00:00');x.setDate(x.getDate()-x.getDay());return x.toISOString().slice(0,10)})(),dz=d.wplan==='none'?weekDays(d):planDays(d);setProp('WEEK_PLAN',JSON.stringify({plan:d.wplan,mode:d.wplan==='none'?'F':'P',days:dz,askDay:d.ask,weeks:d.wplan==='weekly'?{[ws]:dz}:{}}))}
     if(d.want.includes('car')){const n=Number(d.carNow)||0;const td=state.todayDate||state.date||new Date().toISOString().slice(0,10);const ws=new Date(td+'T12:00:00');ws.setDate(ws.getDate()-ws.getDay());setProp('CARDIO_LVL',JSON.stringify({lvl:n>=4?'adv':n>=2?'mid':'beg',since:ws.toISOString().slice(0,10)}))}
     LS.set('fp2.firstDay',state.todayDate||state.date||'');
     saveCachedState();Q.saving=false;const wasFirst=Q.first;Q=null;closeOnboarding();try{applyRole()}catch(_){}renderAll();

@@ -138,6 +138,11 @@ const restOnSet=e=>{try{const t=e.target;if(!t||!t.classList||!(t.classList.cont
   const ex=(document.getElementById('exerciseSelect')||{}).value||'',key=ex+'|'+[...card.parentElement.children].indexOf(card);
   if(!state.fpRested||state.fpRestedEx!==ex){state.fpRested=new Set();state.fpRestedEx=ex}if(state.fpRested.has(key))return;state.fpRested.add(key);startRestTimer()}catch(_){}};
 document.addEventListener('input',restOnSet,true);document.addEventListener('change',restOnSet,true);
+/* 2.23: the rest starts on whichever comes first — writing a set's results, or adding a set (then it counts for the set you just did) */
+function restOnAdd(){try{if(state.editingWorkoutId||state.muscleGroup==='אירובי')return;const root=document.getElementById('setRows');if(!root)return;
+  const cards=[...root.children],i=cards.length-1;if(i<0)return;const ex=(document.getElementById('exerciseSelect')||{}).value||'',key=ex+'|'+i;
+  if(!state.fpRested||state.fpRestedEx!==ex){state.fpRested=new Set();state.fpRestedEx=ex}if(state.fpRested.has(key))return;state.fpRested.add(key);startRestTimer()}catch(_){}}
+['addSetRow','addSetRowSameWeight'].forEach(fn=>{if(typeof window[fn]==='function'){const o=window[fn];window[fn]=function(){restOnAdd();return o.apply(this,arguments)}}});
 window.fpRestingNow=restingNow;
 function restLabels(){const c=$('restCtl');if(!c||c.dataset.fp)return;c.dataset.fp='1';const b=c.querySelectorAll('button');if(b[0])b[0].textContent='+30 שנ׳';if(b[1])b[1].textContent='עצור';
   const t=$('restText');if(t&&!t.title)t.title='לחץ: לעצור או להוסיף חצי דקה'}

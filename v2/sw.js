@@ -1,5 +1,5 @@
-const CACHE='fitpro2-2.22.0';
-const ASSETS=['./','index.html','server.js','fp2-core.js','fp2.js','fp2-nutrition.js','fp2-improvements.js','fp2-foods.js','fp2-meals.js','fp2-days.js','fp2-goal.js','fp2-photos.js','fp2-requests.js','fp2-fixes.js','fp2-progress.js','fp2-tour.js','fp2-week.js','fp2-gym.js','fp2-recipe.js','fp2-train.js','fp2-intro.js','fp2-add.js','fp2-units.js','fp2-setup.js','fp2-more.js','fp2-216.js','fp2-tours.js','fp2-218.js','fp2-anim.js','fp2-exlib.js','fp2-219-menu.js','fp2-219-onb.js','fp2-219-train.js','fp2-219-week.js','fp2-219-food.js','fp2-219-tour.js','fp2-220.js','fp2-221.js','fp2-222.js','manifest.webmanifest','../icon-180.png','../icon-192.png','../icon-512.png'];
+const CACHE='fitpro2-2.23.0';
+const ASSETS=['./','index.html','server.js','fp2-core.js','fp2.js','fp2-nutrition.js','fp2-improvements.js','fp2-foods.js','fp2-meals.js','fp2-days.js','fp2-goal.js','fp2-photos.js','fp2-requests.js','fp2-fixes.js','fp2-progress.js','fp2-tour.js','fp2-week.js','fp2-gym.js','fp2-recipe.js','fp2-train.js','fp2-intro.js','fp2-add.js','fp2-units.js','fp2-setup.js','fp2-more.js','fp2-216.js','fp2-tours.js','fp2-218.js','fp2-anim.js','fp2-exlib.js','fp2-219-menu.js','fp2-219-onb.js','fp2-219-train.js','fp2-219-week.js','fp2-219-food.js','fp2-219-tour.js','fp2-220.js','fp2-221.js','fp2-222.js','fp2-223.js','manifest.webmanifest','../icon-180.png','../icon-192.png','../icon-512.png'];
 const FB='https://www.gstatic.com/firebasejs/';
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>Promise.all(ASSETS.map(async u=>{try{const r=await fetch(new Request(u,{cache:'reload'}));if(r.ok)await c.put(u,r)}catch(_){}}))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('fitpro2-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
@@ -26,18 +26,19 @@ async function bumpBadge(){try{const c=await caches.open('fitpro-badge');const r
 self.addEventListener('message',e=>{if(e.data&&e.data.type==='FITPRO_BADGE'){const n=Number(e.data.n)||0;e.waitUntil((async()=>{try{const c=await caches.open('fitpro-badge');await c.put('n',new Response(String(n)));if(n&&self.navigator.setAppBadge)await self.navigator.setAppBadge(n);else if(self.navigator.clearAppBadge)await self.navigator.clearAppBadge()}catch(_){}})())}});
 /* Data-only FCM payloads: exactly one notification, using the existing worker. */
 self.addEventListener('push',event=>{
-  let payload;try{payload=event.data.json()}catch(_){return}
-  const data=payload.data;if(!data||data.kind!=='fitpro-weekly')return;
+  /* 2.23: every push shows a notification. iPhone stops sending to a page that receives a push and shows nothing. */
+  let payload=null;try{payload=event.data?event.data.json():null}catch(_){payload=null}
+  const data=(payload&&(payload.data||payload.notification))||{title:'FitPro',body:'יש עדכון באפליקציה'};
   /* 2.11.0: a new request → a number on the app icon (home screen), like other apps */
   if(data.tag==='fitpro-request')event.waitUntil(bumpBadge());
   event.waitUntil(self.registration.showNotification(data.title||'FitPro',{
     body:data.body||'יש אירוע השבוע. פתח את האפליקציה לתכנון.',tag:data.tag||'fitpro-weekly',
-    data:{url:new URL('./',self.registration.scope).href,week:data.week},icon:'../icon-192.png'
+    data:{url:new URL('./',self.registration.scope).href,week:data.week,tag:data.tag||''},icon:'../icon-192.png'
   }));
 });
 self.addEventListener('notificationclick',event=>{
   event.notification.close();const url=new URL('./',self.registration.scope).href;
   event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async clients=>{
-    const client=clients.find(c=>c.url.startsWith(self.registration.scope));if(client){await client.focus();client.postMessage({type:'FITPRO_OPEN_WEEKLY'});return}return self.clients.openWindow(url);
+    const client=clients.find(c=>c.url.startsWith(self.registration.scope));if(client){await client.focus();const t=(event.notification.data||{}).tag||'';client.postMessage({type:/request|test/.test(t)?'FITPRO_OPEN':'FITPRO_OPEN_WEEKLY',tag:t});return}return self.clients.openWindow(url);
   }));
 });

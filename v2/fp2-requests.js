@@ -107,7 +107,11 @@ function renderAdmin(){
 }
 window.fpAdmSet=async function(id,status){const f=fb(),note=(($('fpAdmNote_'+id)||{}).value||'').trim();try{await f.reqUpdate(id,{status,note});const x=A.list.find(r=>r.id===id);if(x){x.status=status;x.note=note}
   /* 2.12.0: the person who asked gets a push: "הבקשה שלך ׳X׳ אושרה" */
-  if(x&&x.uid&&(status==='progress'||status==='done')){try{f.push&&f.push('notifyRequestStatus',{to:x.uid,status,text:String(x.text||'').slice(0,60),note:note.slice(0,80)}).catch(()=>{})}catch(_){}}markSeen(id);renderAdmin();badge();toast('עודכן')}catch(e){toast(e.message,true)}};
+  markSeen(id);renderAdmin();badge();
+  /* 2.23: say what really happened with the push. The person also sees it inside the app the next time it opens. */
+  if(x&&x.uid&&(status==='progress'||status==='done')){let msg='עודכן.';try{const r=f.push?await f.push('notifyRequestStatus',{to:x.uid,status,text:String(x.text||'').slice(0,60),note:note.slice(0,80)}):null;
+      msg=!r?'עודכן. ההתראה לא נשלחה (אין חיבור לשרת).':r.sent?`עודכן. ההתראה נשלחה ל-${r.sent} ${r.sent===1?'מכשיר':'מכשירים'}.`:r.devices?`עודכן, אבל ההתראה לא יצאה${r.lastError?': '+r.lastError:''}. הוא יראה את זה כשיפתח את האפליקציה.`:'עודכן. למשתמש אין התראות פעילות בטלפון, אז הוא יראה את זה כשיפתח את האפליקציה.'}
+    catch(e){msg='עודכן, אבל ההתראה לא נשלחה: '+(e.message||e)+'. הוא יראה את זה כשיפתח את האפליקציה.'}toast(msg)}else toast('עודכן')}catch(e){toast(e.message,true)}};
 window.fpAdmFlag=async function(id,uid){const key=(($('fpAdmFlag_'+id)||{}).value||'').trim();if(!key)return toast('כתוב שם לשדרוג',true);try{await fb().flagSet(uid,key,true);toast(`השדרוג "${key}" הופעל אצלו`)}catch(e){toast(e.message,true)}};
 window.fpAdmDel=async function(id){if(!confirm('למחוק את הבקשה?'))return;try{await fb().reqDelete(id);A.list=A.list.filter(r=>r.id!==id);renderAdmin();badge()}catch(e){toast(e.message,true)}};
 
