@@ -62,6 +62,7 @@ const guided=d=>d.want.includes('run')&&d.runMode&&d.runMode!=='self';
 function runsPW(d){if(!d.want.includes('run'))return 0;if(!guided(d))return 2;return d.combo==='own'?d.ownR:(COMBO[d.combo]||{r:2}).r}
 function strPW(d){if(!d.want.includes('str'))return 0;if(guided(d))return d.combo==='own'?d.ownS:(COMBO[d.combo]||{s:2}).s;return d.strGoal}
 function carPW(d){return d.want.includes('car')?d.carGoal:0}
+function weekDays(d){const R=runsPW(d),C=carPW(d);return window.FPW?FPW.build(strPW(d),R,C,(Number(d.runNow)||0)>=3&&R>=2?1:0,C>=2?1:0):[[],[],[],[],[],[],[]]}
 function profileOf(d){
   const days=Math.min(6,strPW(d)+carPW(d)+runsPW(d));const dur=d.want.includes('str')?d.durS:d.want.includes('car')?d.carDur:40;
   const stepsAdj={low:-100,mid:0,high:150}[d.steps]||0;
@@ -85,7 +86,7 @@ openOnboarding=function(first){
     d:{name:personalName(),sex:p.sex||'',age:p.age||'',height:p.height||'',weight:p.weight||'',goal:p.goal||'recomp',rate:p.rate||'normal',steps:p.steps||'mid',
       job:p.job||'desk',want:Array.isArray(p.want)?p.want.slice():['str'],strNow:p.strNow!=null?p.strNow:0,strGoal:p.strGoal||p.days||3,durS:[30,40,50].includes(Number(p.duration))?Number(p.duration):40,
       carNow:p.carNow||0,carGoal:p.carGoal||2,carDur:p.carDur||30,carKinds:Array.isArray(p.carKinds)?p.carKinds.slice():['ell'],
-      runMode:p.runMode||'',runNow:p.runNow||'',runsNow:p.runsNow||0,paceNow:p.paceNow||'',runGoalKm:p.runGoalKm||5,tw:p.targetWeight||'',paceGoal:p.paceGoal||'',combo:'',ownS:2,ownR:2,
+      runMode:p.runMode||'',runNow:p.runNow||'',runsNow:p.runsNow||0,paceNow:p.paceNow||'',runGoalKm:p.runGoalKm||5,tw:p.targetWeight||'',paceGoal:p.paceGoal||'',combo:'',ownS:2,ownR:2,wmode:'P',
       diet:p.diet||'all',no:Array.isArray(p.no)?p.no.slice():[],prod:null,bread:['whole','crisp'],milk:'reg',meals:p.meals||'3f',free:250,
       cook:String(s.oil_profile||'')||'k',cal:cals.length?cals:[/iPhone|iPad|Mac/.test(navigator.userAgent)?'apple':'google'],hol,shab:null,shabPick:['fri','satB']}};
   /* keep the old state.onb alive for code that still reads it */
@@ -131,7 +132,7 @@ function trainHtml(){
   if(w.includes('car'))h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">🚴 אירובי</b>${stp('carNow',0,7,'כמה אתה עושה היום?','בשבוע')}${stp('carGoal',1,6,'כמה תרצה?','בשבוע')}
       <div class="field" style="margin-top:12px"><label>מה אתה אוהב? (אפשר כמה)</label><div class="onb-options">${CARK.map(([k,l])=>tg('carKinds',k,l,'chip')).join('')}</div></div>
       <div class="field"><label>כמה זמן כל אימון?</label><div class="onb-options">${[30,40,50].map(v=>ch('carDur',v,v+' דק׳'+(v===30?' ⭐':''))).join('')}</div></div>
-      <p class="muted" style="margin:0">${d.carNow<2?'תקבל תוכנית למתחילים: אימונים קלים שמתארכים כל שבוע, ואחר כך אימון 4×4 עדין.':'תקבל תוכנית למתקדמים: 2 אימוני 4×4 ו-1–2 אימונים קלים ארוכים בשבוע.'}</p></div>`;
+      <p class="muted" style="margin:0">${d.carNow<2?'תקבל תוכנית למתחילים: קודם מאריכים את הזמן, ומשבוע 5 מוסיפים קטעים חזקים קצרים.':d.carNow<4?'תקבל תוכנית ממשיכים: אימון קטעים אחד בשבוע, והשאר קל.':'תקבל תוכנית 4×4: פעמיים בשבוע, ו-1–2 אימונים קלים ארוכים.'}</p></div>`;
   if(w.includes('run')){
     h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">🏃 ריצה</b><label>איך אתה רוצה לרוץ?</label><div class="fpq-grid">${chc('runMode','zero','מתחיל מ-0')}${chc('runMode','runs','כבר רץ, תדריך אותי')}${chc('runMode','self','אני בונה לבד')}</div>`;
     if(d.runMode==='runs')h+=`<label style="margin-top:14px">כמה אתה רץ היום, הכי הרבה?</label><div class="onb-options">${[3,5,7,10,12,15,20].map(k=>`<button type="button" class="onb-choice chip${String(d.runNow)===String(k)?' selected':''}" onclick="fpQ.set('runNow','${k}')">${k} ק״מ</button>`).join('')}</div>
@@ -141,6 +142,12 @@ function trainHtml(){
       <div class="onb-fields">${inp('runGoalKm','או כתוב (ק״מ)','')}${inp('paceGoal','קצב יעד לק״מ (לא חובה)','למשל 5:00','text')}</div><div id="fpqLive">${runLive()}</div>`;
     if(d.runMode==='self')h+=`<p class="muted" style="margin:8px 0 0">אין תוכנית. רושמים ריצות מתי שרוצים.</p>`;
     h+=`</div>`}
+  if(w.length>=2&&window.FPW){const S=strPW(d),R=runsPW(d),Cc=carPW(d),tot=S+R+Cc;const days=weekDays(d),L=FPW.label(days,(Number(d.runNow)||0)>=3&&R>=2?1:0,Cc>=2?1:0),TN={s:'💪',r:'🏃',c:'🚴'};
+    h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">📅 השבוע שלך ביחד</b><div class="fpq-row"><span>בשבוע</span><b>${[S?S+' כוח':'',R?R+' ריצה':'',Cc?Cc+' אירובי':''].filter(Boolean).join(' · ')}</b></div>
+      <div class="onb-options" style="margin:8px 0">${ch('wmode','P','📅 תוכנית שבועית ⭐')}${ch('wmode','F','🕊 חופשי')}</div>
+      ${d.wmode==='F'?'<p class="muted" style="margin:0">בלי לוח קבוע. כל יום עושים מה שבא, והאפליקציה מציעה מה מתאים.</p>':`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:12px">${FPW.W.map((n,i)=>`<div style="background:#1F262E;border-radius:10px;padding:6px 0">${n}<div style="font-size:15px">${days[i].map(t=>TN[t]).join('')||'·'}</div>${L.hard[i]?'<div style="font-size:10.5px;color:#FF8A80">חזק</div>':''}</div>`).join('')}</div>
+      <p class="muted" style="margin:6px 0 0">הצעה לפי הכללים: הכי הרבה 2 אימונים חזקים בשבוע, לא לפני יום רגליים. את הימים משנים אחר כך ב״📅 השבוע שלי״, בלשונית אימון.</p>`}
+      ${tot>7?'<div class="fpq-warn"><b>⚠️ יותר מ-7 אימונים בשבוע.</b> חלק יהיו באותו יום. למתחילים עדיף פחות.</div>':''}</div>`}
   const t=targets(d);if(t)h+=`<div class="onb-info"><b>יעד יומי לפי האימונים: ${t.cal.toLocaleString('he-IL')} קלוריות</b><p>קבוע כל יום. האימונים מחולקים על כל השבוע.</p></div>`;
   return h;
 }
@@ -260,6 +267,8 @@ async function finish(){
     setProp('MENU_PREFS',JSON.stringify({prod:FPM.prodSet(),bread:d.bread,milk:d.milk}));
     setProp('TRAIN_PLAN',JSON.stringify({want:d.want,str:strPW(d),car:carPW(d),run:runsPW(d),durS:d.durS,carDur:d.carDur,carKinds:d.carKinds,carNow:d.carNow,set:new Date().toISOString().slice(0,10)}));
     if(d.want.includes('run'))setProp('RUN_PLAN',JSON.stringify({mode:d.runMode,start:d.runMode==='zero'?0:Number(d.runNow)||0,runsNow:d.runsNow,paceNow:d.paceNow,goal:Number(d.runGoalKm)||5,paceGoal:d.paceGoal,runs:runsPW(d),str:strPW(d),since:state.todayDate||state.date||'',week:1,m3:(Number(d.runNow)||0)>=3}));
+    if(d.want.length){setProp('WEEK_PLAN',JSON.stringify({mode:d.wmode==='F'?'F':'P',days:weekDays(d)}))}
+    if(d.want.includes('car')){const n=Number(d.carNow)||0;const td=state.todayDate||state.date||new Date().toISOString().slice(0,10);const ws=new Date(td+'T12:00:00');ws.setDate(ws.getDate()-ws.getDay());setProp('CARDIO_LVL',JSON.stringify({lvl:n>=4?'adv':n>=2?'mid':'beg',since:ws.toISOString().slice(0,10)}))}
     LS.set('fp2.firstDay',state.todayDate||state.date||'');
     saveCachedState();Q.saving=false;const wasFirst=Q.first;Q=null;closeOnboarding();try{applyRole()}catch(_){}renderAll();
     toast(`נשמר: ${t.cal} קלוריות · ${t.prot} ג׳ חלבון`);

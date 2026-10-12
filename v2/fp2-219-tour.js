@@ -35,7 +35,7 @@ const STEPS=[
  {kind:'b',view:'workoutHome',before:()=>{try{FP2Anim.open('שכיבות סמיכה')}catch(_){}},t:()=>q('#anOv:not(.hide) .an-sheet'),title:'סרטון לכל תרגיל',text:'איך עושים, איזה שריר עובד (באדום), ומה לא לעשות: ״טעויות נפוצות״ מראה את הטעות בדמות עצמה.',after:()=>{try{FP2Anim.close()}catch(_){}}},
  {kind:'s',view:'workoutHome',t:null,mock:MOCK_LAST,title:'✨ מה עשית בפעם הקודמת',text:'רואים את הסטים מהפעם הקודמת, כולל תת־סטים, כדי לדעת כמה להרים.'},
  {kind:'b',view:'workoutHome',t:null,mock:MOCK_REST,title:'מנוחה של דקה וחצי',text:'מתחילה לבד כשממלאים סט, מוסיפים סט או שומרים. לחיצה על השעון: לעצור או +30 שניות. בסוף צליל, קול שאומר משפט שלך, או הקלטה שלך. ⚙️ זמן המנוחה והצליל, בהגדרות.'},
- {kind:'b',view:'workoutHome',t:()=>q('#fpTCards .fpT-card')||q('#fpTCards'),title:'ריצה ואירובי',text:'תוכנית ריצה ואירובי, אם בחרת. ״לריצה״: בוחרים אימון, חימום, ריצה ומתיחות, עם הדמיות. 3 ק״מ בלי לעצור = מדליה, ונפתחים פרטלק ואינטרוולים.'},
+ {kind:'b',view:'workoutHome',t:()=>q('#fp221Tabs'),title:'כוח, ריצה ואירובי',text:'למעלה 3 לשוניות. בריצה ובאירובי: האימון של היום, התוכנית, הדמויות, הטיימר וההיסטוריה. ״📅 השבוע שלי״: קובעים איזה יום מה, או מתאמנים חופשי.'},
  {kind:'b',view:'workoutHome',t:()=>q('nav button[data-tab="progress"]'),title:'התהליך',text:'עוברים להתקדמות.',tap:true,tapText:'לחץ על ״התקדמות״'},
  {kind:'b',view:'process',t:()=>q('#fpWeekCard')||q('#photoCard'),title:'פעם בשבוע',text:'משקל, היקף טבור ותמונות. רואים את הקו לאורך זמן ולא נלחצים מיום אחד. במוצאי שבת מגיע סיכום שבוע: עמדת ביעדים או לא, ובמה השתפרת.'},
  {kind:'b',view:'process',t:()=>vis(q('#photoCompare'))?q('#photoCompare'):(q('#photoCard')||q('#photoProgress')),title:'השוואת תמונות',text:'לפני ואחרי, מאותה זווית. השינוי שהמשקל לא מראה.'},

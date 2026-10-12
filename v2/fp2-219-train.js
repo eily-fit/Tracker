@@ -133,7 +133,7 @@ async function logRun(ok){
   if(!ok){const c=(Number(prop('RUN_STOPS'))||0)+1;setProp('RUN_STOPS',String(c))}else setProp('RUN_STOPS','0');
   sheet('🏃',`<div style="text-align:center"><h2>${ok?'יפה, נרשם ✓':'זה בסדר גמור'}</h2><p>${ok?'עכשיו מתיחות.':Number(prop('RUN_STOPS'))>=2?'פעמיים ברצף עצרת. בפעם הבאה נכניס הפסקות הליכה קצרות באמצע, וזה בסדר.':'בפעם הבאה אותה ריצה שוב. ככה בונים בלי להיפצע.'}</p><button type="button" class="btn full" onclick="fpT.go(3)">למתיחות ←</button></div>`);
 }
-function shoes(total){const warned=J('SHOE_WARN',[]);for(const at of [550,700,800]){if(total>=at&&!warned.includes(at)){warned.push(at);setProp('SHOE_WARN',JSON.stringify(warned));try{toast(`👟 הנעליים עברו ${at} ק״מ. כדאי לחשוב על זוג חדש`)}catch(_){}break}}}
+function shoes(total){total=Math.max(0,total-(Number(prop('SHOE_START'))||0));const warned=J('SHOE_WARN',[]);for(const at of [550,700,800]){if(total>=at&&!warned.includes(at)){warned.push(at);setProp('SHOE_WARN',JSON.stringify(warned));try{toast(`👟 הנעליים עברו ${at} ק״מ. כדאי לחשוב על זוג חדש`)}catch(_){}break}}}
 
 /* ---------- cardio ---------- */
 const MACH={walk:{n:'הליכה מהירה',fig:['walk',{mode:'brisk'}],easy:'5.5–6.5 קמ״ש, צעדים מהירים, ידיים זזות',hard:'הכי מהר שאפשר בלי לרוץ, או בעלייה'},
@@ -193,6 +193,7 @@ window.fpT={
   async cStop(save){clearInterval(cInt);const r=C.run;C.run=null;const t=cplan()||{kinds:['ell']};const k=C.mach||t.kinds.find(x=>MACH[x])||'ell';
     if(save&&r){const min=Math.max(1,Math.round((Date.now()-r.at)/60000));await saveCardio(min,k);try{toast('נשמר: '+min+' דקות אירובי')}catch(_){}}cardioSheet()},
   close(){clearInterval(cInt);C.run=null;cancelAnimationFrame(raf);const s=$('fpTSheet');if(s)s.remove()},
+  _:{exCard,animate,sheet,MACH,runSteps,wk,weekSchedule,pat,anBox,easyPace,fastPace,stop(){cancelAnimationFrame(raf)}},
   plan,weekRuns,cplan,repeatWeek(){const p=J('RUN_PLAN',null);if(!p)return;p.rep=(Number(p.rep)||0)+1;setProp('RUN_PLAN',JSON.stringify(p))}
 };
 })();
