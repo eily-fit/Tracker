@@ -42,25 +42,24 @@ document.head.insertAdjacentHTML('beforeend',`<style id="fpQcss">
 
 /* ---------- the goals: same texts and paces as the goal sheet ---------- */
 const GOALS={
-  lose:{icon:'🔥',title:'חיטוב',short:'להוריד שומן',what:'אוכלים פחות ממה שהגוף שורף, כדי שהגוף ישתמש בשומן.',how:'חלבון גבוה ואימוני כוח שומרים על השריר בזמן שהשומן יורד.',expect:'ירידה במשקל ובהיקף הטבור. המשקל קופץ מיום ליום, אז מסתכלים על הממוצע.',must:'לא לרדת מהר מדי. אפשר להיות קצת רעב, אבל לא להרעיב את עצמך.'},
-  gain:{icon:'💪',title:'מסה נקייה',short:'לעלות במשקל, בעיקר שריר',what:'אוכלים קצת יותר ממה שהגוף שורף, כדי שיהיה לגוף חומר לבנות שריר.',how:'עודף קטן = רוב העלייה היא שריר. עודף גדול לא בונה יותר שריר, רק מוסיף שומן.',expect:'עלייה איטית במשקל. כדאי למדוד היקף טבור פעם בשבוע.',must:'אימוני כוח עם התקדמות, וחלבון כל יום.'},
-  recomp:{icon:'⚖️',title:'שריר + ירידה בשומן',short:'לבנות שריר ולהוריד שומן, בלי שהמשקל יזוז הרבה',what:'אוכלים טיפה מתחת למה שהגוף שורף. המשקל כמעט לא זז, אבל הגוף משתנה.',how:'מתאים במיוחד למי שמתחיל להתאמן או חוזר אחרי הפסקה.',expect:'תהליך איטי. מסתכלים על היקף טבור, כוח באימונים ומראה, לא רק על המשקל.',must:'אימוני כוח קבועים וחלבון גבוה.'},
-  maintain:{icon:'🧘',title:'שמירה',short:'להישאר באותו משקל',what:'אוכלים בערך מה שהגוף שורף.',how:'המשקל נשאר יציב, ושומרים על הכושר.',expect:'משקל יציב, עם תנודות קטנות.',must:'להמשיך להתאמן ולאכול מספיק חלבון.'}};
+  lose:{icon:'',title:'חיטוב',short:'להוריד שומן',what:'אוכלים פחות ממה שהגוף שורף, כדי שהגוף ישתמש בשומן.',how:'חלבון גבוה ואימוני כוח שומרים על השריר בזמן שהשומן יורד.',expect:'ירידה במשקל ובהיקף הטבור. המשקל קופץ מיום ליום, אז מסתכלים על הממוצע.',must:'לא לרדת מהר מדי. אפשר להיות קצת רעב, אבל לא להרעיב את עצמך.'},
+  gain:{icon:'',title:'מסה נקייה',short:'לעלות במשקל, בעיקר שריר',what:'אוכלים קצת יותר ממה שהגוף שורף, כדי שיהיה לגוף חומר לבנות שריר.',how:'עודף קטן = רוב העלייה היא שריר. עודף גדול לא בונה יותר שריר, רק מוסיף שומן.',expect:'עלייה איטית במשקל. כדאי למדוד היקף טבור פעם בשבוע.',must:'אימוני כוח עם התקדמות, וחלבון כל יום.'},
+  recomp:{icon:'',title:'שריר + ירידה בשומן',short:'לבנות שריר ולהוריד שומן, בלי שהמשקל יזוז הרבה',what:'אוכלים טיפה מתחת למה שהגוף שורף. המשקל כמעט לא זז, אבל הגוף משתנה.',how:'מתאים במיוחד למי שמתחיל להתאמן או חוזר אחרי הפסקה.',expect:'תהליך איטי. מסתכלים על היקף טבור, כוח באימונים ומראה, לא רק על המשקל.',must:'אימוני כוח קבועים וחלבון גבוה.'},
+  maintain:{icon:'',title:'שמירה',short:'להישאר באותו משקל',what:'אוכלים בערך מה שהגוף שורף.',how:'המשקל נשאר יציב, ושומרים על הכושר.',expect:'משקל יציב, עם תנודות קטנות.',must:'להמשיך להתאמן ולאכול מספיק חלבון.'}};
 const PCT={lose:{slow:-.10,normal:-.15,fast:-.20},gain:{slow:.03,normal:.05,fast:.08},recomp:{slow:-.02,normal:-.05,fast:-.08},maintain:{slow:0,normal:0,fast:0}};
 const RATES=[['slow','איטי'],['normal','מתון'],['fast','מהיר']];
 const WHY={lose:'מתון מספיק מהר כדי לראות שינוי, ומספיק לאט כדי לשמור על השריר בלי להיות רעב כל הזמן.',gain:'מתון בונה שריר כמעט באותו קצב כמו מהיר, אבל עם הרבה פחות שומן.',recomp:'מתון נותן לגוף מספיק אוכל לבנות שריר, ועדיין להוריד שומן לאט.'};
-const COMBO={s2r1:{s:2,r:1,t:'2 כוח + ריצה'},s2r2:{s:2,r:2,t:'2 כוח + 2 ריצות'},s1r2:{s:1,r:2,t:'כוח + 2 ריצות'},s3r2:{s:3,r:2,t:'3 כוח + 2 ריצות'},r2:{s:0,r:2,t:'2 ריצות'},r3:{s:0,r:3,t:'3 ריצות'},own:{t:'אחר: אני כותב'}};
 const CARK=[['walk','הליכה מהירה'],['tread','הליכון'],['bike','אופניים'],['ell','אליפטיקל'],['row','חתירה'],['swim','שחייה'],['stairs','מדרגות']];
-const CALS={apple:'📱 אפל (iCloud)',google:'Google Calendar',other:'סמסונג / Outlook / אחר'};
-const HOLS={jewish:'✡️ יהודיים',muslim:'☪️ מוסלמיים',christian:'✝️ נוצריים',civil:'🎆 לועזיים'};
+const CALS={apple:'אפל (iCloud)',google:'Google Calendar',other:'סמסונג / Outlook / אחר'};
+const HOLS={jewish:'יהודיים',muslim:'מוסלמיים',christian:'נוצריים',civil:'לועזיים'};
 const COOK=[['s','ספריי','כמעט בלי שמן'],['k','קצת','כפית בסלט'],['r','בינוני','כף במחבת'],['g','הרבה','מטוגן'],['v','משתנה','כל יום אחרת']];
 const STEPS=['פרטים','מטרה','היום','אימונים','תזונה','ארוחות','סיכום'];
 
 let Q=null;
 const sec=s=>{const m=String(s||'').trim().match(/^(\d{1,2})[:.](\d{1,2})$/);return m?(+m[1])*60+(+m[2]):null};
 const guided=d=>d.want.includes('run')&&d.runMode&&d.runMode!=='self';
-function runsPW(d){if(!d.want.includes('run'))return 0;if(!guided(d))return 2;return d.combo==='own'?d.ownR:(COMBO[d.combo]||{r:2}).r}
-function strPW(d){if(!d.want.includes('str'))return 0;if(guided(d))return d.combo==='own'?d.ownS:(COMBO[d.combo]||{s:2}).s;return d.strGoal}
+function runsPW(d){if(!d.want.includes('run'))return 0;if(!guided(d))return 2;return Math.max(1,Number(d.runsGoal)||2)}
+function strPW(d){if(!d.want.includes('str'))return 0;return d.strGoal}
 function carPW(d){return d.want.includes('car')?d.carGoal:0}
 function weekDays(d){const R=runsPW(d),C=carPW(d);return window.FPW?FPW.build(strPW(d),R,C,(Number(d.runNow)||0)>=3&&R>=2?1:0,C>=2?1:0):[[],[],[],[],[],[],[]]}
 function profileOf(d){
@@ -86,7 +85,7 @@ openOnboarding=function(first){
     d:{name:personalName(),sex:p.sex||'',age:p.age||'',height:p.height||'',weight:p.weight||'',goal:p.goal||'recomp',rate:p.rate||'normal',steps:p.steps||'mid',
       job:p.job||'desk',want:Array.isArray(p.want)?p.want.slice():['str'],strNow:p.strNow!=null?p.strNow:0,strGoal:p.strGoal||p.days||3,durS:[30,40,50].includes(Number(p.duration))?Number(p.duration):40,
       carNow:p.carNow||0,carGoal:p.carGoal||2,carDur:p.carDur||30,carKinds:Array.isArray(p.carKinds)?p.carKinds.slice():['ell'],
-      runMode:p.runMode||'',runNow:p.runNow||'',runsNow:p.runsNow||0,paceNow:p.paceNow||'',runGoalKm:p.runGoalKm||5,tw:p.targetWeight||'',paceGoal:p.paceGoal||'',combo:'',ownS:2,ownR:2,wmode:'P',
+      runMode:p.runMode||'',runNow:p.runNow||'',runsNow:p.runsNow||0,paceNow:p.paceNow||'',runGoalKm:p.runGoalKm||5,tw:p.targetWeight||'',paceGoal:p.paceGoal||'',runsGoal:p.runsPW||2,wplan:(()=>{try{const w=JSON.parse(prop('WEEK_PLAN')||'null');return w?(w.plan||(w.mode==='F'?'none':'fixed')):'fixed'}catch(_){return 'fixed'}})(),ask:'ci',
       diet:p.diet||'all',no:Array.isArray(p.no)?p.no.slice():[],prod:null,bread:['whole','crisp'],milk:'reg',meals:p.meals||'3f',free:250,
       cook:String(s.oil_profile||'')||'k',cal:cals.length?cals:[/iPhone|iPad|Mac/.test(navigator.userAgent)?'apple':'google'],hol,shab:null,shabPick:['fri','satB']}};
   /* keep the old state.onb alive for code that still reads it */
@@ -110,44 +109,44 @@ const inp=(k,l,ph,mode)=>`<div class="field"><label for="fpq_${k}">${l}</label><
 function bmiHtml(){const d=Q.d,w=+d.weight,h=+d.height;const b=w&&h?w/((h/100)**2):0;const t=!b?'':b<18.5?'מתחת לטווח התקין':b<25?'בטווח התקין':b<30?'מעל הטווח התקין':'הרבה מעל הטווח';
   return `<div class="fpq-bmi"><span>BMI<br><small class="muted">${t}</small></span><b>${b?b.toFixed(1):'–'}</b></div>`}
 function runLive(){
-  const d=Q.d;if(!guided(d))return'';const opts=d.want.includes('str')?['s2r1','s2r2','s1r2','s3r2','own']:['r2','r3','own'];
-  if(!opts.includes(d.combo))d.combo=opts[0];
-  let h=`<label style="margin-top:14px">${d.want.includes('str')?'כוח וריצה הולכים ביחד: רגליים חזקות מגינות מפציעות ומשפרות ריצה. רגליים רק פעם בשבוע, השאר פלג גוף עליון. כמה מכל אחד בשבוע?':'כמה ריצות בשבוע?'}</label>
-    <div class="onb-options">${opts.map((k,i)=>`<button type="button" class="onb-choice chip${d.combo===k?' selected':''}" onclick="fpQ.set('combo','${k}')">${COMBO[k].t}${i===0?' ⭐':''}</button>`).join('')}</div>`;
-  if(d.combo==='own')h+=`<div class="fpq-sub">${d.want.includes('str')?stp('ownS',0,6,'אימוני כוח'):''}${stp('ownR',1,6,'ריצות')}</div>`;
+  const d=Q.d;if(!guided(d))return'';let h='';
   const gp=sec(d.paceGoal),now=sec(d.paceNow);
   if(gp!=null&&gp<150)return h+`<div class="fpq-warn"><b>הקצב לא אפשרי.</b> אף אחד לא רץ קילומטר מהר מ-2:30. תכתוב יעד אחר.</div>`;
-  const usual=d.runMode==='zero'?0:d.runsNow,r=runsPW(d),s=strPW(d);
-  const more=r>usual+1||(d.want.includes('str')&&s>d.strNow+1)||(d.runMode==='zero'&&r>=3)||(gp&&now&&(now-gp)/now>.2);
-  if(more)h+=`<div class="fpq-warn"><b>⚠️ שים לב:</b> זה יותר ממה שאתה רגיל לעשות. הסיבה הכי גדולה לפציעות היא יותר מדי, מהר מדי. אפשר, רק תתחיל בעדינות ותקשיב לגוף.</div>`;
+  const usual=d.runMode==='zero'?0:Number(d.runsNow)||0,r=runsPW(d);
+  /* only a real jump: 2+ runs more than today, 4+ runs from zero, or a goal pace 20% faster */
+  const load=(d.runMode==='zero'&&r>=4)||(d.runMode==='runs'&&r>=Math.max(3,usual+2))||(gp&&now&&(now-gp)/now>.2);
+  if(load)h+=`<div class="fpq-warn"><b>שים לב:</b> זה הרבה יותר ממה שאתה רגיל. הסיבה הכי גדולה לפציעות היא יותר מדי, מהר מדי. אפשר, רק תתחיל בעדינות.</div>`;
   return h;
 }
 function trainHtml(){
   const d=Q.d,w=d.want;let h=`<h2>איך אתה רוצה להתאמן?</h2><p class="onb-intro">בחר מה מעניין אותך. אפשר כמה. מה שתבחר ייפתח למטה.</p>
-    <div class="onb-options">${tg('want','str','🏋️ כוח')}${tg('want','car','🚴 אירובי')}${tg('want','run','🏃 ריצה')}</div>`;
+    <div class="onb-options">${tg('want','str','כוח')}${tg('want','car','אירובי')}${tg('want','run','ריצה')}</div>`;
   if(!w.length)return h+`<div class="fpq-good">לא בחרת אימונים, וזה בסדר. נתמקד באוכל, ואפשר להוסיף אימונים מתי שרוצים.</div>`;
   if(w.includes('str')){const rec=d.goal==='gain'?50:40;const T={30:'גוף מלא, 4–5 תרגילים. טוב לימים עמוסים.',40:'5–6 תרגילים, עם מנוחות נוחות.',50:'6–7 תרגילים, הכי טוב לבניית שריר.'};
-    h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">🏋️ כוח</b>${stp('strNow',0,7,'כמה אתה מתאמן היום?','בשבוע')}${guided(d)?'<p class="muted" style="margin:6px 0">כמה אימוני כוח בשבוע, בוחרים למטה ביחד עם הריצה.</p>':stp('strGoal',1,6,'כמה תרצה להתאמן?','היעד שלך בשבוע')}
-      <div class="field" style="margin-top:12px"><label>כמה זמן כל אימון?</label><div class="onb-options">${[30,40,50].map(v=>ch('durS',v,v+' דק׳'+(v===rec?' ⭐':''))).join('')}</div><p class="muted" style="margin:4px 0 0">${T[d.durS]} ⭐ מומלץ לך: ${rec} דק׳</p></div></div>`}
-  if(w.includes('car'))h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">🚴 אירובי</b>${stp('carNow',0,7,'כמה אתה עושה היום?','בשבוע')}${stp('carGoal',1,6,'כמה תרצה?','בשבוע')}
+    h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">כוח</b>${stp('strNow',0,7,'כמה אתה מתאמן היום?','בשבוע')}${stp('strGoal',1,6,'כמה תרצה להתאמן?','היעד שלך בשבוע')}${d.strGoal>=d.strNow+3?'<div class="fpq-warn"><b>שים לב:</b> זה הרבה יותר ממה שאתה רגיל. אפשר, רק תתחיל בעדינות.</div>':''}
+      <div class="field" style="margin-top:12px"><label>כמה זמן כל אימון?</label><div class="onb-options">${[30,40,50].map(v=>ch('durS',v,v+' דק׳'+(v===rec?' · מומלץ':''))).join('')}</div><p class="muted" style="margin:4px 0 0">${T[d.durS]} מומלץ לך: ${rec} דק׳</p></div></div>`}
+  if(w.includes('car'))h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">אירובי</b>${stp('carNow',0,7,'כמה אתה עושה היום?','בשבוע')}${stp('carGoal',1,6,'כמה תרצה?','בשבוע')}
       <div class="field" style="margin-top:12px"><label>מה אתה אוהב? (אפשר כמה)</label><div class="onb-options">${CARK.map(([k,l])=>tg('carKinds',k,l,'chip')).join('')}</div></div>
-      <div class="field"><label>כמה זמן כל אימון?</label><div class="onb-options">${[30,40,50].map(v=>ch('carDur',v,v+' דק׳'+(v===30?' ⭐':''))).join('')}</div></div>
+      <div class="field"><label>כמה זמן כל אימון?</label><div class="onb-options">${[30,40,50].map(v=>ch('carDur',v,v+' דק׳'+(v===30?' · מומלץ':''))).join('')}</div></div>
       <p class="muted" style="margin:0">${d.carNow<2?'תקבל תוכנית למתחילים: קודם מאריכים את הזמן, ומשבוע 5 מוסיפים קטעים חזקים קצרים.':d.carNow<4?'תקבל תוכנית ממשיכים: אימון קטעים אחד בשבוע, והשאר קל.':'תקבל תוכנית 4×4: פעמיים בשבוע, ו-1–2 אימונים קלים ארוכים.'}</p></div>`;
   if(w.includes('run')){
-    h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">🏃 ריצה</b><label>איך אתה רוצה לרוץ?</label><div class="fpq-grid">${chc('runMode','zero','מתחיל מ-0')}${chc('runMode','runs','כבר רץ, תדריך אותי')}${chc('runMode','self','אני בונה לבד')}</div>`;
-    if(d.runMode==='runs')h+=`<label style="margin-top:14px">כמה אתה רץ היום, הכי הרבה?</label><div class="onb-options">${[3,5,7,10,12,15,20].map(k=>`<button type="button" class="onb-choice chip${String(d.runNow)===String(k)?' selected':''}" onclick="fpQ.set('runNow','${k}')">${k} ק״מ</button>`).join('')}</div>
+    h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">ריצה</b><label>איך אתה רוצה לרוץ?</label><div class="fpq-grid">${chc('runMode','zero','מתחיל מ-0')}${chc('runMode','runs','כבר רץ, תדריך אותי')}${chc('runMode','self','אני בונה לבד')}</div>`;
+    if(d.runMode==='runs')h+=`<label style="margin-top:14px;display:block;font-weight:700">איפה אתה היום?</label><label style="margin-top:6px">כמה אתה רץ היום, הכי הרבה?</label><div class="onb-options">${[3,5,7,10,12,15,20].map(k=>`<button type="button" class="onb-choice chip${String(d.runNow)===String(k)?' selected':''}" onclick="fpQ.set('runNow','${k}')">${k} ק״מ</button>`).join('')}</div>
       <div class="onb-fields">${inp('runNow','או כתוב (ק״מ)','למשל 4')}${inp('paceNow','קצב נוח לך (דק׳ לק״מ)','6:00','text')}</div>${stp('runsNow',0,7,'כמה פעמים בשבוע אתה רץ היום?','')}`;
     if(d.runMode==='zero')h+=`<div class="onb-fields" style="margin-top:10px">${inp('paceNow','באיזה קצב נוח לך לרוץ? (לא חובה)','6:30','text')}</div><p class="muted" style="margin:0">לא יודע? נתחיל בקצב קל ונכוון לפי הריצות הראשונות.</p>`;
-    if(guided(d))h+=`<label style="margin-top:14px">לאן תרצה להגיע?</label><div class="onb-options">${[3,5,7,10,12,15,21.1].map(k=>`<button type="button" class="onb-choice chip${String(d.runGoalKm)===String(k)?' selected':''}" onclick="fpQ.set('runGoalKm','${k}')">${k===21.1?'חצי מרתון':k+' ק״מ'}</button>`).join('')}</div>
-      <div class="onb-fields">${inp('runGoalKm','או כתוב (ק״מ)','')}${inp('paceGoal','קצב יעד לק״מ (לא חובה)','למשל 5:00','text')}</div><div id="fpqLive">${runLive()}</div>`;
+    if(guided(d))h+=`<label style="margin-top:18px;display:block;font-weight:700">${d.runMode==='runs'?'ומה אתה רוצה?':'מה המטרה?'}</label><label style="margin-top:6px">לאן תרצה להגיע?</label><div class="onb-options">${[3,5,7,10,12,15,21.1].map(k=>`<button type="button" class="onb-choice chip${String(d.runGoalKm)===String(k)?' selected':''}" onclick="fpQ.set('runGoalKm','${k}')">${k===21.1?'חצי מרתון':k+' ק״מ'}</button>`).join('')}</div>
+      <div class="onb-fields">${inp('runGoalKm','או כתוב (ק״מ)','')}${inp('paceGoal','קצב יעד לק״מ (לא חובה)','למשל 5:00','text')}</div>${stp('runsGoal',1,5,'כמה ריצות בשבוע תרצה?','2 זה הכי נכון להתחלה')}<div id="fpqLive">${runLive()}</div>`;
     if(d.runMode==='self')h+=`<p class="muted" style="margin:8px 0 0">אין תוכנית. רושמים ריצות מתי שרוצים.</p>`;
     h+=`</div>`}
-  if(w.length>=2&&window.FPW){const S=strPW(d),R=runsPW(d),Cc=carPW(d),tot=S+R+Cc;const days=weekDays(d),L=FPW.label(days,(Number(d.runNow)||0)>=3&&R>=2?1:0,Cc>=2?1:0),TN={s:'💪',r:'🏃',c:'🚴'};
-    h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">📅 השבוע שלך ביחד</b><div class="fpq-row"><span>בשבוע</span><b>${[S?S+' כוח':'',R?R+' ריצה':'',Cc?Cc+' אירובי':''].filter(Boolean).join(' · ')}</b></div>
-      <div class="onb-options" style="margin:8px 0">${ch('wmode','P','📅 תוכנית שבועית ⭐')}${ch('wmode','F','🕊 חופשי')}</div>
-      ${d.wmode==='F'?'<p class="muted" style="margin:0">בלי לוח קבוע. כל יום עושים מה שבא, והאפליקציה מציעה מה מתאים.</p>':`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:12px">${FPW.W.map((n,i)=>`<div style="background:#1F262E;border-radius:10px;padding:6px 0">${n}<div style="font-size:15px">${days[i].map(t=>TN[t]).join('')||'·'}</div>${L.hard[i]?'<div style="font-size:10.5px;color:#FF8A80">חזק</div>':''}</div>`).join('')}</div>
-      <p class="muted" style="margin:6px 0 0">הצעה לפי הכללים: הכי הרבה 2 אימונים חזקים בשבוע, לא לפני יום רגליים. את הימים משנים אחר כך ב״📅 השבוע שלי״, בלשונית אימון.</p>`}
-      ${tot>7?'<div class="fpq-warn"><b>⚠️ יותר מ-7 אימונים בשבוע.</b> חלק יהיו באותו יום. למתחילים עדיף פחות.</div>':''}</div>`}
+  if(w.length&&window.FPW){const S=strPW(d),R=runsPW(d),Cc=carPW(d),tot=S+R+Cc;const days=weekDays(d),L=FPW.label(days,(Number(d.runNow)||0)>=3&&R>=2?1:0,Cc>=2?1:0),DT=t=>`<i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${{s:'#D7F36B',r:'#7CC4FF',c:'#FFB86B'}[t]}"></i>`;
+    const DN=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'],ci=(()=>{try{return checkinDay()}catch(_){return 5}})();
+    h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">תוכנית שבועית</b><div class="fpq-row"><span>בשבוע</span><b>${[S?S+' כוח':'',R?R+' ריצה':'',Cc?Cc+' אירובי':''].filter(Boolean).join(' · ')}</b></div>
+      <p class="muted" style="margin:6px 0">לקבוע מראש איזה יום מה? זה עוזר להתמיד.</p>
+      <div class="fpq-grid">${chc('wplan','fixed','קבועה · מומלץ','אותם ימים כל שבוע')}${chc('wplan','weekly','משתנה כל שבוע','כל שבוע בוחרים מחדש, עם תזכורת')}${chc('wplan','none','בלי תוכנית','כל יום מה שבא, והאפליקציה מציעה')}</div>
+      ${d.wplan==='weekly'?`<label style="margin-top:12px">באיזה יום לשאול אותך?</label><div class="onb-options">${[['ci','ביום הצ׳ק-אין ('+DN[ci]+')']].concat(DN.map((n,i)=>[i,n])).map(([k,l])=>`<button type="button" class="onb-choice chip${String(d.ask)===String(k)?' selected':''}" onclick="fpQ.set('ask',${typeof k==='number'?k:"'ci'"})">${l}</button>`).join('')}</div>`:''}
+      ${d.wplan==='none'?'':`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:12px;margin-top:10px">${FPW.W.map((n,i)=>`<div style="background:#1F262E;border-radius:10px;padding:6px 0">${n}<div style="display:flex;gap:3px;justify-content:center;min-height:12px;margin-top:4px">${days[i].map(DT).join('')||'<span style="color:#46525F">·</span>'}</div>${L.hard[i]?'<div style="font-size:10.5px;color:#FF8A80">חזק</div>':''}</div>`).join('')}</div>
+      <p class="muted" style="margin:6px 0 0">הצעה לפי הכללים: הכי הרבה 2 אימונים חזקים בשבוע, לא לפני יום רגליים.</p><p class="muted" style="margin:2px 0 0;font-size:12px;color:#6B7682">ניתן לשינוי בהגדרות</p>`}
+      ${tot>7?'<div class="fpq-warn"><b>יותר מ-7 אימונים בשבוע.</b> חלק יהיו באותו יום. למתחילים עדיף פחות.</div>':''}</div>`}
   const t=targets(d);if(t)h+=`<div class="onb-info"><b>יעד יומי לפי האימונים: ${t.cal.toLocaleString('he-IL')} קלוריות</b><p>קבוע כל יום. האימונים מחולקים על כל השבוע.</p></div>`;
   return h;
 }
@@ -158,7 +157,7 @@ function mealsHtml(S){const t=targets(Q.d)||{};
     <div class="fpq-seg" role="group" aria-label="אפשרויות ל${m.name}">${m.opts.map((_,i)=>`<button type="button" class="${i===m.sel?'on':''}" onclick="fpQ.opt(${mi},${i})">${i+1}</button>`).join('')}</div>
     <div style="font-weight:700;margin:2px 0 4px">${esc(o.t)}</div>${o.lines.map(l=>`<div class="fpq-it"><span>${esc(l.f.n)}</span><span>${esc(FPM.amount(l))}</span></div>`).join('')}
     <div class="muted" style="font-size:13px;margin-top:2px">${o.kc} קל׳ · ${o.p} ג׳ חלבון</div></div>`}).join('')+
-  (Q.d.meals==='3f'?`<div class="fpq-meal" style="border-style:dashed"><div class="h"><b>🍫 קלוריות חופשיות</b><b style="color:var(--brand,#D7F36B)">${Q.d.free}</b></div><div class="muted" style="font-size:13px">למה שבא לך: חטיף, קפה, משהו מתוק. משנים בהגדרות.</div></div>`:'');
+  (Q.d.meals==='3f'?`<div class="fpq-meal" style="border-style:dashed"><div class="h"><b>קלוריות חופשיות</b><b style="color:var(--brand,#D7F36B)">${Q.d.free}</b></div><div class="muted" style="font-size:13px">למה שבא לך: חטיף, קפה, משהו מתוק. משנים בהגדרות.</div></div>`:'');
 }
 function screen(id){
   const d=Q.d;
@@ -168,7 +167,7 @@ function screen(id){
   if(id==='goal'){const g=GOALS[d.goal];return `<h2>מה המטרה שלך?</h2><p class="onb-intro">אפשר לשנות מתי שרוצים בהגדרות.</p><div class="fpq-grid">${Object.keys(GOALS).map(k=>chc('goal',k,GOALS[k].icon+' '+GOALS[k].title,GOALS[k].short)).join('')}</div>
     <div class="onb-panel" style="margin-top:14px"><b style="display:block;margin-bottom:6px">${g.icon} ${g.title}</b><p style="margin:0 0 6px"><b>מה זה:</b> ${g.what}</p><p style="margin:0 0 6px"><b>איך זה עובד:</b> ${g.how}</p><p style="margin:0 0 6px"><b>למה לצפות:</b> ${g.expect}</p><p style="margin:0"><b>חשוב:</b> ${g.must}</p>
     ${d.goal==='maintain'?'':`<label style="margin-top:14px">באיזה קצב?</label><div class="fpq-grid">${RATES.map(([r,l])=>{const save=d.rate;d.rate=r;const t=targets(d);d.rate=save;const m=t?Math.round(t.weeklyChange*4.3*10)/10:0;const pc=PCT[d.goal][r];
-      return chc('rate',r,`${l}${r==='normal'?' ⭐':''} · ${pc>0?'+':''}${Math.round(pc*100)}%`,t?`${m>0?'עלייה':'ירידה'} של כ-${Math.abs(m).toFixed(1)} ק״ג בחודש`:'')}).join('')}</div><p class="muted" style="margin:8px 0 0">⭐ למה מתון? ${WHY[d.goal]}</p>`}</div>${d.goal==='lose'||d.goal==='gain'?`<div class="onb-panel" style="margin-top:10px">${inp('tw','משקל יעד (לא חובה)','למשל '+(d.goal==='lose'?Math.max(40,Math.round((Number(d.weight)||80)-8)):Math.round((Number(d.weight)||70)+5)))}<p class="muted" style="margin:4px 0 0">כשתגיע אליו תקבל מדליה.</p></div>`:''}`}
+      return chc('rate',r,`${l}${r==='normal'?' · מומלץ':''} · ${pc>0?'+':''}${Math.round(pc*100)}%`,t?`${m>0?'עלייה':'ירידה'} של כ-${Math.abs(m).toFixed(1)} ק״ג בחודש`:'')}).join('')}</div><p class="muted" style="margin:8px 0 0">למה מתון? ${WHY[d.goal]}</p>`}</div>${d.goal==='lose'||d.goal==='gain'?`<div class="onb-panel" style="margin-top:10px">${inp('tw','משקל יעד (לא חובה)','למשל '+(d.goal==='lose'?Math.max(40,Math.round((Number(d.weight)||80)-8)):Math.round((Number(d.weight)||70)+5)))}<p class="muted" style="margin:4px 0 0">כשתגיע אליו תקבל מדליה.</p></div>`:''}`}
   if(id==='day')return `<h2>איך נראה היום שלך?</h2><p class="onb-intro">בלי האימונים. עליהם נשאל בשלב הבא.</p><div class="onb-panel">
     <label>כמה צעדים ביום, בערך?</label><div class="fpq-grid">${chc('steps','low','פחות מ-7,000','רוב היום בישיבה')}${chc('steps','mid','7,000 עד 10,000','')}${chc('steps','high','יותר מ-10,000','הרבה הליכה')}</div>
     <label style="margin-top:14px">מה סוג העבודה?</label><div class="fpq-grid">${chc('job','desk','בישיבה','משרד, מחשב, נהיגה, שמירה')}${chc('job','feet','בעמידה ובהליכה','מכירות, הוראה, מלצרות')}${chc('job','physical','עבודה פיזית','בנייה, מחסן, שליחויות')}</div>
@@ -193,10 +192,10 @@ function screen(id){
   if(id==='sum'){const t=targets(d)||{};return `<h2>כמעט סיימנו</h2><div class="onb-panel"><div class="fpq-row"><span>מטרה</span><b>${GOALS[d.goal].title}${d.goal==='maintain'?'':' · '+RATES.find(r=>r[0]===d.rate)[1]}</b></div><div class="fpq-row"><span>יעד יומי</span><b>${(t.cal||0).toLocaleString('he-IL')} קל׳</b></div><div class="fpq-row"><span>חלבון</span><b>${t.prot||'—'} ג׳</b></div>
       <div class="fpq-row"><span>אימונים בשבוע</span><b>${[strPW(d)?strPW(d)+' כוח':'',carPW(d)?carPW(d)+' אירובי':'',runsPW(d)?runsPW(d)+' ריצה':''].filter(Boolean).join(' · ')||'—'}</b></div>${d.meals==='3f'?`<div class="fpq-row"><span>קלוריות חופשיות</span><b>${d.free}</b></div>`:''}</div>
     <b style="display:block;margin:14px 0 8px">עוד 3 שאלות קצרות</b>
-    <div class="onb-panel"><label>✨ באיזה יומן אתה משתמש בטלפון? (אפשר כמה)</label><div class="onb-options">${Object.keys(CALS).map(k=>tg('cal',k,CALS[k])).join('')}</div><p class="muted" style="margin:0">חתונה או מסעדה ביומן? האפליקציה תשאל אם לחסוך לזה קלוריות.</p></div>
-    <div class="onb-panel"><label>✨ אילו חגים לחגוג באפליקציה? (אפשר כמה)</label><div class="onb-options">${Object.keys(HOLS).map(k=>tg('hol',k,HOLS[k])).join('')}</div><p class="muted" style="margin:0">שבוע לפני חג תישאל אם לשמור לו קלוריות.</p></div>
-    <div class="onb-panel"><label>✨ שבת</label><p style="margin:0 0 8px;line-height:1.6">יש לנו אפשרות שהאפליקציה תלמד כמה אתה אוכל בשבת, ותמלא את זה לבד. ככה לא צריך לרשום בשבת, והיא גם חוסכת לזה במהלך השבוע.</p><b>רוצה?</b><div class="onb-options" style="margin-top:6px">${ch('shab',true,'כן')}${ch('shab',false,'לא צריך')}</div>
-      ${d.shab===true?`<label style="margin-top:10px">אילו ארוחות?</label><div class="onb-options">${tg('shabPick','fri','שישי בערב')}${tg('shabPick','satB','שבת בבוקר')}${tg('shabPick','satL','שבת בצהריים')}</div>`:''}</div>`}
+    <div class="onb-panel"><label>באיזה יומן אתה משתמש בטלפון? (אפשר כמה)</label><div class="onb-options">${Object.keys(CALS).map(k=>tg('cal',k,CALS[k])).join('')}</div><p class="muted" style="margin:0">חתונה או מסעדה ביומן? האפליקציה תשאל אם לחסוך לזה קלוריות.</p></div>
+    <div class="onb-panel"><label>אילו חגים לחגוג באפליקציה? (אפשר כמה)</label><div class="onb-options">${Object.keys(HOLS).map(k=>tg('hol',k,HOLS[k])).join('')}</div><p class="muted" style="margin:0">שבוע לפני חג תישאל אם לשמור לו קלוריות.</p></div>
+    <div class="onb-panel"><label>שבת</label><p style="margin:0 0 8px;line-height:1.6">יש לנו אפשרות שהאפליקציה תלמד כמה אתה אוכל בשבת, ותמלא את זה לבד. ככה לא צריך לרשום בשבת, והיא גם חוסכת לזה במהלך השבוע.</p><b>רוצה?</b><div class="onb-options" style="margin-top:6px">${ch('shab',true,'כן')}${ch('shab',false,'לא צריך')}</div>
+      ${d.shab===true?`<label style="margin-top:10px">אילו ארוחות?</label><div class="onb-options">${tg('shabPick','friD','שישי')}${tg('shabPick','fri','ערב שבת')}${tg('shabPick','satB','שבת בוקר')}${tg('shabPick','satL','שבת צהריים')}</div>`:''}</div>`}
   return '';
 }
 function valid(id){const d=Q.d;
@@ -214,7 +213,7 @@ function render(keep){
   const back=Q.step>0&&id!=='load'?`<button class="btn light" ${Q.saving?'disabled':''} onclick="fpQ.back()">חזרה</button>`:(Q.first?'<span></span>':`<button class="btn light" onclick="closeOnboarding()">ביטול</button>`);
   let next;
   if(id==='load')next='';
-  else if(id==='menu')next=`<button class="btn light" ${Q.changes?'':'disabled'} onclick="fpQ.change()">🔄 החלף תפריט${Q.changes?` (${Q.changes})`:''}</button><button class="btn" onclick="fpQ.toSum()">ממשיכים</button>`;
+  else if(id==='menu')next=`<button class="btn light" ${Q.changes?'':'disabled'} onclick="fpQ.change()">החלף תפריט${Q.changes?` (${Q.changes})`:''}</button><button class="btn" onclick="fpQ.toSum()">ממשיכים</button>`;
   else if(id==='cmp')next=`<button class="btn" onclick="fpQ.choose()">בוחר ב${Q.cmp===0?'חדש':'קודם'} וממשיך</button>`;
   else if(id==='sum')next=`<button class="btn" ${Q.saving?'disabled':''} onclick="fpQ.finish()">${Q.saving?'שומר…':Q.first?'סיימתי, בוא נתחיל':'שמור שינויים'}</button>`;
   else next=`<button class="btn" onclick="fpQ.next()">${id==='meals'&&Q.menu?'בנה לי תוכנית':'המשך'}</button>`;
@@ -267,7 +266,7 @@ async function finish(){
     setProp('MENU_PREFS',JSON.stringify({prod:FPM.prodSet(),bread:d.bread,milk:d.milk}));
     setProp('TRAIN_PLAN',JSON.stringify({want:d.want,str:strPW(d),car:carPW(d),run:runsPW(d),durS:d.durS,carDur:d.carDur,carKinds:d.carKinds,carNow:d.carNow,set:new Date().toISOString().slice(0,10)}));
     if(d.want.includes('run'))setProp('RUN_PLAN',JSON.stringify({mode:d.runMode,start:d.runMode==='zero'?0:Number(d.runNow)||0,runsNow:d.runsNow,paceNow:d.paceNow,goal:Number(d.runGoalKm)||5,paceGoal:d.paceGoal,runs:runsPW(d),str:strPW(d),since:state.todayDate||state.date||'',week:1,m3:(Number(d.runNow)||0)>=3}));
-    if(d.want.length){setProp('WEEK_PLAN',JSON.stringify({mode:d.wmode==='F'?'F':'P',days:weekDays(d)}))}
+    if(d.want.length){const ws=(()=>{const x=new Date((state.todayDate||state.date||new Date().toISOString().slice(0,10))+'T12:00:00');x.setDate(x.getDate()-x.getDay());return x.toISOString().slice(0,10)})(),dz=weekDays(d);setProp('WEEK_PLAN',JSON.stringify({plan:d.wplan,mode:d.wplan==='none'?'F':'P',days:dz,askDay:d.ask,weeks:d.wplan==='weekly'?{[ws]:dz}:{}}))}
     if(d.want.includes('car')){const n=Number(d.carNow)||0;const td=state.todayDate||state.date||new Date().toISOString().slice(0,10);const ws=new Date(td+'T12:00:00');ws.setDate(ws.getDate()-ws.getDay());setProp('CARDIO_LVL',JSON.stringify({lvl:n>=4?'adv':n>=2?'mid':'beg',since:ws.toISOString().slice(0,10)}))}
     LS.set('fp2.firstDay',state.todayDate||state.date||'');
     saveCachedState();Q.saving=false;const wasFirst=Q.first;Q=null;closeOnboarding();try{applyRole()}catch(_){}renderAll();

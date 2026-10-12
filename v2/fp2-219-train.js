@@ -62,7 +62,7 @@ function weekSchedule(s,r){const runDays=r>=3?[0,2,4]:r===2?[1,4]:r===1?[2]:[];c
   const pref=[0,3,5,2,1,6,4];let k=0;for(const d of pref){if(k>=s)break;if(out[d])continue;out[d]={t:'str',legs:k===0};k++}return out}
 function runSteps(r,p){const t=r[0],d=r[1];
   if(/איכותית/.test(t)||/ואז/.test(d)){const q=d.replace(/^.*ואז /,'');return[['חימום','5 דק׳ תרגילי חימום'],['ריצה קלה','10 דק׳, '+easyPace(p)],['העיקר',q+(/פרטלק/.test(q)?' · החלק המהיר: '+fastPace(p):/עליות/.test(q)?' · עולים מהר, יורדים בהליכה':/טמפו/.test(q)?'':' · '+fastPace(p)+', בין קטע לקטע הליכה')],['שחרור','5 דק׳ ריצה איטית או הליכה'],['מתיחות','3–4 מתיחות']]}
-  if(t==='ריצה משלי')return[['חימום','5 דק׳ תרגילי חימום'],['העיקר','ריצה '+d],['שחרור','5 דק׳ הליכה ומתיחות']];
+  if(t==='ריצה משלי'||V.fixed===t)return[['חימום','5 דק׳ תרגילי חימום'],['העיקר','ריצה '+d],['שחרור','5 דק׳ הליכה ומתיחות']];
   return[['חימום','5 דק׳ תרגילי חימום'],['העיקר',d.split(',')[0]+' רצוף · '+easyPace(p)],['שחרור','5 דק׳ הליכה'],['מתיחות','3–4 מתיחות']];
 }
 const wk=(rows)=>rows.map((x,i)=>`<div class="fpT-wk"><b>${i+1}. ${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join('');
@@ -77,7 +77,7 @@ function anBox(x,bd,V){const k=x.id+bd+JSON.stringify(V||{});if(VB[k])return VB[
 const pat=id=>window.FP2Anim&&FP2Anim.pat&&FP2Anim.pat.find(p=>p.id===id);
 function exCard([id,name,time,V],i,sel){const x=pat(id);if(!x)return'';const bad=(x.bad[0]||[])[0];
   return `<div class="fpT-ex${sel&&sel.includes(i)?' pick':''}"><svg class="fpT-an" data-an="${id}" data-bd="-1" data-v='${JSON.stringify(V||{})}' viewBox="${anBox(x,-1,V)}" role="img" aria-label="${esc(name)}"></svg><div><h4>${esc(name)} <small class="muted">· ${time}</small></h4>
-    ${x.good.map(g=>`<p>✓ ${esc(g)}</p>`).join('')}${bad?`<button type="button" class="fpT-chip" onclick="fpT.bad(this)">❌ מה לא לעשות</button><p class="no" hidden><b>${esc(bad.t)}:</b> ${esc(bad.fix)}</p>`:''}</div></div>`}
+    ${x.good.map(g=>`<p>✓ ${esc(g)}</p>`).join('')}${bad?`<button type="button" class="fpT-chip" onclick="fpT.bad(this)">מה לא לעשות</button><p class="no" hidden><b>${esc(bad.t)}:</b> ${esc(bad.fix)}</p>`:''}</div></div>`}
 let raf=0;
 function animate(){cancelAnimationFrame(raf);const t0=performance.now(),reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const tick=now=>{const svgs=document.querySelectorAll('svg.fpT-an');if(!svgs.length)return;svgs.forEach(s=>{const x=pat(s.dataset.an);if(!x)return;const per=(x.period||5.2)*(x.loop&&x.period<2?2:1);const T=reduce?.3:((now-t0)/1000/per)%1;
@@ -90,8 +90,8 @@ let V={step:0,pick:null,own:{type:'קלה',km:'',min:''}};
 
 /* ---------- running screens ---------- */
 function planHtml(p){const sch=weekSchedule(Number(p.str)||0,p.runs),runs=weekRuns(p,p.week);
-  return `<div class="fpT-card"><b>${p.name}</b> · שבוע ${p.week}<div class="muted">${p.str?p.str+' כוח + ':''}${p.runs} ${p.runs===1?'ריצה':'ריצות'} בשבוע · היעד ${p.goal===21.1?'חצי מרתון':p.goal+' ק״מ'}${p.m3?' · 🏅 3 ק״מ':''}</div></div>
-   <div class="fpT-card"><h3>השבוע</h3>${sch.map((d,i)=>d?`<div class="fpT-wk"><b>${DAYS[i]}</b><span>${d.t==='str'?'🏋️ כוח'+(d.legs?' · כולל רגליים לרצים':' · פלג גוף עליון'):'🏃 '+(runs[d.i]?runs[d.i][0]+': '+runs[d.i][1]:'ריצה')}</span></div>`:'').join('')}
+  return `<div class="fpT-card"><b>${p.name}</b> · שבוע ${p.week}<div class="muted">${p.str?p.str+' כוח + ':''}${p.runs} ${p.runs===1?'ריצה':'ריצות'} בשבוע · היעד ${p.goal===21.1?'חצי מרתון':p.goal+' ק״מ'}${p.m3?' · 3 ק״מ':''}</div></div>
+   <div class="fpT-card"><h3>השבוע</h3>${sch.map((d,i)=>d?`<div class="fpT-wk"><b>${DAYS[i]}</b><span>${d.t==='str'?'כוח'+(d.legs?' · כולל רגליים לרצים':' · פלג גוף עליון'):''+(runs[d.i]?runs[d.i][0]+': '+runs[d.i][1]:'ריצה')}</span></div>`:'').join('')}
     <p class="muted" style="margin:8px 0 0">רצים עושים רגליים רק באימון כוח אחד בשבוע. ${p.m3?(p.base>=10?'רץ כבר 10 ק״מ: נפתחו קטעים ארוכים.':'הקטעים המהירים קצרים, עד 200 מ׳. ב-10 ק״מ נפתחים קטעים ארוכים.'):'עד 3 ק״מ: רק ריצות קלות.'}</p></div>
    <details class="fpT-card"><summary style="cursor:pointer;font-weight:700">החודש הראשון</summary>${[1,2,3,4].map(w=>`<div class="fpT-wk${w===p.week?' now':''}"><b>שבוע ${w}</b><span>${weekRuns(p,w).map(r=>r[0]+': '+r[1].split(',')[0]).join(' · ')}</span></div>`).join('')}<p class="muted">שבוע חדש נפתח כשמסיימים את השבוע הקודם.</p></details>`}
 function runSheet(){const p=plan();if(!p)return setupSheet();const runs=weekRuns(p,p.week),st=V.step;
@@ -100,40 +100,85 @@ function runSheet(){const p=plan();if(!p)return setupSheet();const runs=weekRuns
   if(st===0){const types=[['קלה',0],['ארוכה',0],['האצות קצרות',1],['פרטלק',1],['עליות',1],['אינטרוולים',1],['ספרינטים',1]];
     b=`<p class="muted" style="margin:6px 0">מה רצים היום?</p>${runs.map((r,i)=>`<button type="button" class="btn ${V.pick===i?'':'light '}full" style="margin-top:8px;text-align:right;display:block" onclick="fpT.pick(${i})"><b>${esc(r[0])}</b><div class="muted" style="font-size:12.5px">${esc(r[1])}</div></button>`).join('')}
       <button type="button" class="btn ${V.pick==='own'?'':'light '}full" style="margin-top:8px;text-align:right;display:block" onclick="fpT.pick('own')"><b>ריצה משלי</b><div class="muted" style="font-size:12.5px">בוחר סוג ומרחק או זמן</div></button>
-      ${V.pick==='own'?`<div class="fpT-card" style="margin-top:10px">${types.map(([t,l])=>{const lk=l&&!p.m3;return `<button type="button" class="fpT-chip${V.own.type===t&&!lk?' on':''}${lk?' lock':''}" ${lk?'aria-disabled="true"':`onclick="fpT.own('type','${t}')"`}>${lk?'🔒 ':''}${t}</button>`}).join(' ')}
-        ${!p.m3?'<div class="fpT-warn"><b>🔒 נפתח ב-3 ק״מ.</b> אימונים מהירים לפני שיש בסיס הם הדרך הכי מהירה להיפצע.</div>':''}
+      ${V.pick==='own'?`<div class="fpT-card" style="margin-top:10px">${types.map(([t,l])=>{const lk=l&&!p.m3;return `<button type="button" class="fpT-chip${V.own.type===t&&!lk?' on':''}${lk?' lock':''}" ${lk?'aria-disabled="true"':`onclick="fpT.own('type','${t}')"`}>${lk?'':''}${t}</button>`}).join(' ')}
+        ${!p.m3?'<div class="fpT-warn"><b>נפתח ב-3 ק״מ.</b> אימונים מהירים לפני שיש בסיס הם הדרך הכי מהירה להיפצע.</div>':''}
         <div class="row"><div class="field"><label>מרחק (ק״מ)</label><input inputmode="decimal" value="${esc(V.own.km)}" oninput="fpT.own('km',this.value,1)"></div><div class="field"><label>או זמן (דק׳)</label><input inputmode="numeric" value="${esc(V.own.min)}" oninput="fpT.own('min',this.value,1)"></div></div></div>`:''}
       ${V.pick!=null&&V.pick!=='own'&&runs[V.pick]?`<div class="fpT-card" style="margin-top:10px"><h3>האימון של היום</h3>${wk(runSteps(runs[V.pick],p))}</div>`:''}
       <button type="button" class="btn full" style="margin-top:12px" ${V.pick==null?'disabled':''} onclick="fpT.go(1)">לחימום ←</button>
-      <details class="fpT-card" style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">📋 התוכנית</summary>${planHtml(p)}</details>`}
+      <details class="fpT-card" style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">התוכנית</summary>${planHtml(p)}</details>`}
   if(st===1)b=`<div class="fpT-good"><b>לא חייבים את כולם.</b> בוחרים 3–4 תרגילים, 5 דקות בסך הכל. לפני ריצה לא מחזיקים מתיחות במקום, רק תנועה.</div>${WARM.map((e,i)=>exCard(e,i)).join('')}<button type="button" class="btn full" onclick="fpT.go(2)">סיימתי חימום, רצים ←</button>`;
-  if(st===2){const t=V.pick==='own'?['ריצה משלי',(V.own.km?V.own.km+' ק״מ':V.own.min?V.own.min+' דק׳':'')+' · '+V.own.type]:runs[V.pick||0]||runs[0];
+  if(st===2){const t=V.pick==='own'?[V.fixed||'ריצה משלי',(V.own.km?V.own.km+' ק״מ':V.own.min?V.own.min+' דק׳':'')+' · '+V.own.type]:runs[V.pick||0]||runs[0];
     b=`<div class="fpT-card"><h3>האימון של היום</h3>${wk(runSteps(t,p))}<p class="muted" style="margin:6px 0 0">הקצב בדקות לקילומטר. יש שעון? תסתכל עליו. אין? לפי הדיבור.</p></div>
-      <div class="fpT-card"><div class="row"><div class="field"><label>כמה רצת (ק״מ)</label><input id="fpTkm" inputmode="decimal" placeholder="3"></div><div class="field"><label>כמה זמן (דק׳:שנ׳)</label><input id="fpTtime" inputmode="text" placeholder="20:30"></div></div><p class="muted" style="margin:0">📱 מדדת ב-Strava? רק תעתיק לכאן.</p></div>
+      <div class="fpT-card" id="fpGps">${gpsHtml()}</div>
+      <div class="fpT-card"><div class="row"><div class="field"><label>כמה רצת (ק״מ)</label><input id="fpTkm" inputmode="decimal" placeholder="3" value="${esc(V.km||'')}" oninput="fpT.km(this.value)"></div><div class="field"><label>כמה זמן (דק׳:שנ׳)</label><input id="fpTtime" inputmode="text" placeholder="20:30" value="${esc(V.tm||'')}" oninput="fpT.tm(this.value)"></div></div>
+        <details id="fpSplitsBox"${V.spOpen?' open':''} ontoggle="fpT.spOpen(this.open)"><summary class="muted" style="cursor:pointer">קצב לכל ק״מ (לא חובה)</summary><div id="fpSplits">${splitsHtml()}</div></details>
+        <p class="muted" style="margin:6px 0 0">מדדת בשעון או ב-Strava? רק תעתיק לכאן.</p></div>
       <div class="row"><button type="button" class="btn light" onclick="fpT.ran(0)">עצרתי באמצע</button><button type="button" class="btn" onclick="fpT.ran(1)">רצתי בלי לעצור</button></div>`}
   if(st===3)b=`<div class="fpT-good"><b>לא חייבים את כולם.</b> 5 דקות: הליכה רגועה ו-3–4 מתיחות. מרגישים מתיחה, לא כאב. האדום מראה איפה מרגישים.</div>${COOL.map((e,i)=>exCard(e,i)).join('')}<button type="button" class="btn full" onclick="fpT.close()">סיימתי ✓</button>`;
-  sheet('🏃 ריצה',seg+b);
+  sheet('ריצה',seg+b);
 }
-function setupSheet(){const s=V.setup||(V.setup={mode:'zero',now:'',goal:'5',runs:2});
-  sheet('🏃 תוכנית ריצה',`<p class="muted" style="margin:0 0 8px">כמה שאלות, ויש תוכנית.</p>
-   <label>איך אתה רוצה לרוץ?</label>${[['zero','מתחיל מ-0'],['runs','כבר רץ, תדריך אותי']].map(([k,l])=>`<button type="button" class="btn ${s.mode===k?'':'light '}full" style="margin-top:6px" onclick="fpT.setup('mode','${k}')">${l}</button>`).join('')}
-   ${s.mode==='runs'?`<div class="field" style="margin-top:10px"><label>כמה אתה רץ היום, הכי הרבה (ק״מ)?</label><input inputmode="decimal" value="${esc(s.now)}" oninput="fpT.setup('now',this.value,1)"></div>`:''}
-   <label style="margin-top:10px;display:block">לאן תרצה להגיע?</label><div class="meal-tabs" style="flex-wrap:wrap">${[3,5,7,10,12,15,21.1].map(k=>`<button type="button" class="chip${String(s.goal)===String(k)?' active':''}" onclick="fpT.setup('goal','${k}')">${k===21.1?'חצי מרתון':k+' ק״מ'}</button>`).join('')}</div>
-   <label style="margin-top:10px;display:block">כמה ריצות בשבוע?</label><div class="meal-tabs">${[1,2,3].map(n=>`<button type="button" class="chip${s.runs===n?' active':''}" onclick="fpT.setup('runs',${n})">${n}${n===2?' ⭐':''}</button>`).join('')}</div>
-   <button type="button" class="btn full" style="margin-top:14px" onclick="fpT.makePlan()">צור תוכנית</button>`)}
+/* ---------- 2.22: GPS while the screen is on, and per-km pace ---------- */
+const STRAVA={ios:'https://apps.apple.com/app/strava/id426826309',and:'https://play.google.com/store/apps/details?id=com.strava'};
+const storeBtns=()=>`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><a class="btn light" style="flex:1;text-align:center;text-decoration:none" href="${STRAVA.ios}" target="_blank" rel="noopener">App Store</a><a class="btn light" style="flex:1;text-align:center;text-decoration:none" href="${STRAVA.and}" target="_blank" rel="noopener">Google Play</a></div>`;
+let G=null,gInt=0,gLock=null;
+const hav=(a,b)=>{const R=6371,r=x=>x*Math.PI/180,dl=r(b[0]-a[0]),dn=r(b[1]-a[1]);const h=Math.sin(dl/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+function gpsHtml(){
+  if(G&&G.no)return `<b>המדידה ב-GPS לא זמינה כאן</b><p class="muted" style="margin:4px 0 0">${esc(G.no)}. אפשר למדוד ב-Strava (חינם) או בשעון ריצה, ולהעתיק לכאן.</p>${storeBtns()}`;
+  if(G&&G.on)return `<div style="display:flex;justify-content:space-between;align-items:center"><b>מודד ב-GPS</b><span class="muted" style="font-size:12.5px">${G.fix?'יש קליטה':'מחפש קליטה…'}</span></div>
+    <div style="display:flex;justify-content:space-around;text-align:center;margin:10px 0"><div><div style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums" id="fpGkm">${G.km.toFixed(2)}</div><span class="muted">ק״מ</span></div><div><div style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums" id="fpGt">${mmss((Date.now()-G.t0)/1000)}</div><span class="muted">זמן</span></div></div>
+    <p class="muted" style="margin:0 0 8px;font-size:12.5px">המסך צריך להישאר פתוח בזמן הריצה. לריצה ארוכה עדיף Strava.</p><button type="button" class="btn full" onclick="fpT.gps(0)">סיום מדידה</button>`;
+  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b>למדוד את הריצה</b><br><span class="muted" style="font-size:12.5px">ב-GPS של הטלפון, כשהמסך פתוח</span></span><button type="button" class="btn light" onclick="fpT.gps(1)">התחל מדידה</button></div>`}
+function gpsDraw(){const b=$('fpGps');if(b)b.innerHTML=gpsHtml()}
+function gpsStop(keep){if(!G)return;try{if(G.id!=null)navigator.geolocation.clearWatch(G.id)}catch(_){}clearInterval(gInt);try{gLock&&gLock.release()}catch(_){}gLock=null;
+  if(keep&&G.on&&G.km>0){V.gps=1;V.km=String(Math.round(G.km*100)/100);V.tm=mmss((Date.now()-G.t0)/1000)}const no=G.no;G=no&&!keep?{no}:null}
+function gpsStart(){if(!navigator.geolocation||!window.isSecureContext){G={no:'הטלפון לא נותן מיקום לאפליקציה'};return gpsDraw()}
+  G={on:1,km:0,t0:Date.now(),last:null,fix:0,id:null};
+  try{G.id=navigator.geolocation.watchPosition(pos=>{if(!G||!G.on)return;const c=pos.coords;G.fix=1;if(c.accuracy>40)return;const pt=[c.latitude,c.longitude];
+      if(G.last){const d=hav(G.last,pt);if(d<0.004)return;if(d<0.25)G.km+=d}G.last=pt;const k=$('fpGkm');if(k)k.textContent=G.km.toFixed(2);else gpsDraw()},
+    err=>{const m=err&&err.code===1?'אין הרשאה למיקום. באייפון: הגדרות ← פרטיות ← שירותי מיקום':'אין קליטת GPS';try{navigator.geolocation.clearWatch(G.id)}catch(_){}clearInterval(gInt);G={no:m};gpsDraw()},{enableHighAccuracy:true,maximumAge:0,timeout:30000})}catch(e){G={no:'המיקום לא נפתח'};return gpsDraw()}
+  try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(l=>gLock=l).catch(()=>{})}catch(_){}
+  clearInterval(gInt);gInt=setInterval(()=>{const t=$('fpGt');if(!G||!G.on){clearInterval(gInt);return}if(t)t.textContent=mmss((Date.now()-G.t0)/1000)},1000);gpsDraw()}
+function splitsHtml(){const km=Math.floor(Number(String(V.km||'').replace(',','.'))||0);if(!km)return '<p class="muted" style="margin:6px 0 0">כותבים קודם כמה ק״מ.</p>';
+  V.sp=V.sp||[];return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px">${Array.from({length:Math.min(km,42)},(_,i)=>`<label style="font-size:12.5px">ק״מ ${i+1}<input inputmode="text" placeholder="6:00" value="${esc(V.sp[i]||'')}" oninput="fpT.sp(${i},this.value)"></label>`).join('')}</div>`}
+/* 2.22: the run questionnaire on one organized screen: where you are today, where you want to get, your plan */
+function planWeeks(start,goal){const base=Math.max(1.5,Number(start)||0),g=Number(goal)||5;let w=base>=g?4:Math.ceil(Math.log(g/base)/Math.log(1.1));w+=Math.floor(w/3);return Math.max(4,Math.min(30,w))}
+function setupSheet(){const s=V.setup||(V.setup=Object.assign({mode:'zero',now:'3',runsNow:2,paceNow:'',goal:'5',runs:2,paceGoal:'',done:0},(()=>{const p=J('RUN_PLAN',null);return p?{mode:p.mode==='runs'?'runs':'zero',now:String(p.start||3),runsNow:Number(p.runsNow)||2,paceNow:p.paceNow||'',goal:String(p.goal||5),runs:Number(p.runs)||2,paceGoal:p.paceGoal||''}:{}})()));
+  if(s.done)return sheet('תוכנית ריצה',`<h2 style="margin:4px 0 10px">התוכנית שלך מוכנה</h2>${planSum(s)}
+    <div class="fpT-card"><b>למדוד את הריצה</b><p class="muted" style="margin:4px 0 0">האפליקציה יכולה למדוד ב-GPS כשהמסך פתוח. לריצות ארוכות, או עם מסך כבוי: Strava (חינם) או שעון ריצה. אחרי הריצה מעתיקים לכאן.</p>${storeBtns()}</div>
+    <button type="button" class="btn full" style="margin-top:6px" onclick="fpT.run()">יאללה, מתחילים</button>`);
+  const g=Number(s.goal)||5,start=s.mode==='zero'?0:Number(String(s.now).replace(',','.'))||0;
+  const usual=s.mode==='zero'?0:Number(s.runsNow)||0,load=(s.mode==='zero'&&s.runs>=4)||(s.mode==='runs'&&s.runs>=Math.max(3,usual+2));
+  const num=n=>`<span style="display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--brand,#D7F36B);color:#14190a;font-size:12px;font-weight:800;margin-inline-end:6px">${n}</span>`;
+  sheet('תוכנית ריצה',`<div class="fpT-card"><b>${num(1)}איפה אתה היום</b>
+     <div class="fpT-seg" role="group">${[['zero','מתחיל מ-0'],['runs','כבר רץ']].map(([k,l])=>`<button type="button" class="${s.mode===k?'on':''}" onclick="fpT.setup('mode','${k}')">${l}</button>`).join('')}</div>
+     ${s.mode==='runs'?`<label style="display:flex;justify-content:space-between;margin-top:6px"><span>הכי רחוק שאתה רץ היום</span><b>${esc(s.now)} ק״מ</b></label><input type="range" min="1" max="21" step="0.5" value="${esc(s.now)}" style="width:100%" oninput="fpT.setup('now',this.value,1);this.previousElementSibling.lastElementChild.textContent=this.value+' ק״מ'" onchange="fpT.setup('now',this.value)">
+       <label style="display:block;margin-top:8px">כמה פעמים בשבוע אתה רץ היום</label><div class="meal-tabs" style="flex-wrap:wrap">${[1,2,3,4].map(n=>`<button type="button" class="chip${Number(s.runsNow)===n?' active':''}" onclick="fpT.setup('runsNow',${n})">${n===4?'4+':n}</button>`).join('')}</div>
+       <div class="field" style="margin-top:8px"><label>קצב נוח לך (לא חובה)</label><input inputmode="text" placeholder="6:00" value="${esc(s.paceNow)}" oninput="fpT.setup('paceNow',this.value,1)"></div>`:'<p class="muted" style="margin:6px 0 0">מתחילים בריצה והליכה, ומאריכים לאט.</p>'}</div>
+   <div class="fpT-card"><b>${num(2)}לאן להגיע</b><div class="meal-tabs" style="flex-wrap:wrap;margin-top:8px">${[3,5,7,10,15,21.1].map(k=>`<button type="button" class="chip${String(s.goal)===String(k)?' active':''}" onclick="fpT.setup('goal','${k}')">${k===21.1?'חצי מרתון':k+' ק״מ'}</button>`).join('')}</div>
+     <label style="display:block;margin-top:8px">כמה ריצות בשבוע תרצה</label><div class="meal-tabs">${[1,2,3,4].map(n=>`<button type="button" class="chip${s.runs===n?' active':''}" onclick="fpT.setup('runs',${n})">${n}</button>`).join('')}</div>
+     ${load?`<div class="fpT-warn">זה יותר ממה שאתה רגיל. אפשר, רק תתחיל בעדינות.</div>`:''}
+     <div class="field" style="margin-top:8px"><label>קצב יעד (לא חובה)</label><input inputmode="text" placeholder="5:30" value="${esc(s.paceGoal)}" oninput="fpT.setup('paceGoal',this.value,1)"></div></div>
+   ${planSum(s)}
+   <button type="button" class="btn full" onclick="fpT.makePlan()">צור תוכנית</button>`)}
+function planSum(s){const start=s.mode==='zero'?0:Number(String(s.now).replace(',','.'))||0,g=Number(s.goal)||5,first=Math.max(1.5,Math.round(Math.max(1.5,start)*0.6*2)/2);
+  const pn=sec(s.paceNow),pg=sec(s.paceGoal),ez=pg?pg+48:pn?pn+15:start<3?375:360;
+  return `<div class="fpT-card" style="background:linear-gradient(160deg,#1E2A33,#171C22)"><b>התוכנית שלך</b>
+    <div class="fpT-wk"><b>משך</b><span>${planWeeks(start,g)} שבועות, בערך</span></div><div class="fpT-wk"><b>ריצות בשבוע</b><span>${s.runs}</span></div>
+    <div class="fpT-wk"><b>מתחילים מ</b><span>${start<3&&s.mode==='zero'?'ריצה והליכה':first+' ק״מ קל'}</span></div><div class="fpT-wk"><b>קצב קל</b><span>${mmss(Math.round(ez/15)*15)}</span></div><div class="fpT-wk"><b>שבוע קל</b><span>כל 4 שבועות</span></div></div>`}
 async function logRun(ok){
   const km=Number(String(($('fpTkm')||{}).value||'').replace(',','.'))||0,tm=sec(($('fpTtime')||{}).value)||null;
-  const p=plan();const log=J('RUN_LOG',[]);log.push({d:today(),km,s:tm,ok:!!ok,type:V.pick==='own'?V.own.type:'plan'});setProp('RUN_LOG',JSON.stringify(log.slice(-400)));
+  const p=plan();const log=J('RUN_LOG',[]);const sp=[...document.querySelectorAll('#fpSplits input')].map(i=>sec(i.value)).filter(x=>x!=null);gpsStop(true);V.km='';V.tm='';
+  const row={d:today(),km,s:tm,ok:!!ok,type:V.pick==='own'?V.own.type:'plan'};if(V.fixed)row.name=V.fixed;if(sp.length)row.sp=sp;if(V.gps)row.gps=1;V.gps=0;log.push(row);setProp('RUN_LOG',JSON.stringify(log.slice(-400)));
   const note=(km?km+' ק״מ':'')+(tm?' · '+mmss(tm):'')+(ok?'':' · עצרתי באמצע');
   try{const r=await call('createWorkoutSession',{date:state.date,name:'ריצה',type:'אירובי'});state.data.workout=await call('saveWorkout',{date:state.date,muscleGroup:'אירובי',exercise:'ריצה',sets:[{weight:'',reps:1,note}],notes:note,sessionName:'ריצה',sessionId:r.id});
     try{state.data.workout=(await call('finishWorkoutSession',{id:r.id,minutes:tm?Math.round(tm/60):''})).workout||state.data.workout}catch(_){}try{renderWorkouts(false)}catch(_){}}catch(e){console.warn(e)}
   const total=log.reduce((s,r)=>s+(Number(r.km)||0),0);shoes(total);
-  if(ok&&km>=3&&p&&!p.m3){p.m3=true;savePlan(p);try{fpMedalGive&&fpMedalGive('run3')}catch(_){}try{fpConfetti&&fpConfetti('🏅 3 ק״מ בלי לעצור!')}catch(_){}
-    return sheet('🏅',`<div style="text-align:center"><div style="font-size:56px">🏅</div><h2>3 ק״מ בלי לעצור!</h2><p>עלית שלב. נפתחו לך: האצות קצרות, פרטלק, עליות ואינטרוולים. מתחילים קטן, פעם בשבוע.</p><button type="button" class="btn full" onclick="fpT.go(3)">למתיחות ←</button></div>`)}
+  if(ok&&km>=3&&p&&!p.m3){p.m3=true;savePlan(p);try{fpMedalGive&&fpMedalGive('run3')}catch(_){}try{fpMedalPop&&fpMedalPop('run3')}catch(_){}
+    return sheet('',`<div style="text-align:center">${window.fpMedalBadge?fpMedalBadge('run3',1,'big'):''}<h2>3 ק״מ בלי לעצור!</h2><p>עלית שלב. נפתחו לך: האצות קצרות, פרטלק, עליות ואינטרוולים. מתחילים קטן, פעם בשבוע.</p><button type="button" class="btn full" onclick="fpT.go(3)">למתיחות ←</button></div>`)}
   if(!ok){const c=(Number(prop('RUN_STOPS'))||0)+1;setProp('RUN_STOPS',String(c))}else setProp('RUN_STOPS','0');
-  sheet('🏃',`<div style="text-align:center"><h2>${ok?'יפה, נרשם ✓':'זה בסדר גמור'}</h2><p>${ok?'עכשיו מתיחות.':Number(prop('RUN_STOPS'))>=2?'פעמיים ברצף עצרת. בפעם הבאה נכניס הפסקות הליכה קצרות באמצע, וזה בסדר.':'בפעם הבאה אותה ריצה שוב. ככה בונים בלי להיפצע.'}</p><button type="button" class="btn full" onclick="fpT.go(3)">למתיחות ←</button></div>`);
+  sheet('',`<div style="text-align:center"><h2>${ok?'יפה, נרשם ✓':'זה בסדר גמור'}</h2><p>${ok?'עכשיו מתיחות.':Number(prop('RUN_STOPS'))>=2?'פעמיים ברצף עצרת. בפעם הבאה נכניס הפסקות הליכה קצרות באמצע, וזה בסדר.':'בפעם הבאה אותה ריצה שוב. ככה בונים בלי להיפצע.'}</p><button type="button" class="btn full" onclick="fpT.go(3)">למתיחות ←</button></div>`);
 }
-function shoes(total){total=Math.max(0,total-(Number(prop('SHOE_START'))||0));const warned=J('SHOE_WARN',[]);for(const at of [550,700,800]){if(total>=at&&!warned.includes(at)){warned.push(at);setProp('SHOE_WARN',JSON.stringify(warned));try{toast(`👟 הנעליים עברו ${at} ק״מ. כדאי לחשוב על זוג חדש`)}catch(_){}break}}}
+function shoes(total){total=Math.max(0,total-(Number(prop('SHOE_START'))||0));const warned=J('SHOE_WARN',[]);for(const at of [550,700,800]){if(total>=at&&!warned.includes(at)){warned.push(at);setProp('SHOE_WARN',JSON.stringify(warned));try{toast(`הנעליים עברו ${at} ק״מ. כדאי לחשוב על זוג חדש`)}catch(_){}break}}}
 
 /* ---------- cardio ---------- */
 const MACH={walk:{n:'הליכה מהירה',fig:['walk',{mode:'brisk'}],easy:'5.5–6.5 קמ״ש, צעדים מהירים, ידיים זזות',hard:'הכי מהר שאפשר בלי לרוץ, או בעלייה'},
@@ -151,14 +196,14 @@ function cardioSheet(){const t=cplan()||{lvl:'beg',kinds:['ell'],carGoal:2,week:
   const beg=[['שבוע 1','2–3 × 20 דק׳ קל'],['שבוע 2','2–3 × 25 דק׳ קל'],['שבוע 3','2 × 30 דק׳ קל + 3 × 3 דק׳ חזק'],['שבוע 4','2 × 30 דק׳ קל + 4 × 3 דק׳ חזק'],['שבוע 5','2 × 35 דק׳ קל + 4 × 4 דק׳ חזק'],['שבוע 6','2 × 40 דק׳ קל + 4 × 4 דק׳ חזק']];
   const adv=[['שבועות 1–2','2 × 4×4 עם 3 קטעים · 1–2 × 45 דק׳ קל'],['שבועות 3–4','2 × 4×4 עם 4 קטעים · 1–2 × 50 דק׳ קל'],['שבועות 5–6','2 × 4×4, הקטעים האחרונים חזקים מאוד · 1–2 × 60 דק׳ קל'],['שבועות 7–8','כמו 5–6, אפשר 4×4 שלישי'],['שבוע 9','שבוע קל: 4×4 אחד ואימון קל'],['אחר כך','לשמירה: 4×4 אחד ו-2–3 קלים בשבוע']];
   const ph=carPhases(lvl,C.day);const tot=ph.reduce((s,x)=>s+x[1],0);
-  let timer='';if(C.run){const r=C.run,cur=ph[r.i]||ph[ph.length-1],left=Math.max(0,cur[1]-r.t);timer=`<div class="fpT-timer"><div class="muted">${cur[0]} · שלב ${r.i+1} מתוך ${ph.length}</div><div class="big">${mmss(left)}</div><div class="fpT-bar">${ph.map((x,i)=>`<span class="${x[2]}${i===r.i?' cur':''}" style="flex:${x[1]}">${x[0]==='חזק'?'חזק':''}</span>`).join('')}</div><div class="row"><button type="button" class="btn light" onclick="fpT.cStop(0)">⏹ עצור</button><button type="button" class="btn" onclick="fpT.cStop(1)">סיימתי ושמור</button></div></div>`}
-  sheet('🚴 אירובי',`<div class="fpT-seg" role="group"><button type="button" class="${lvl==='beg'?'on':''}" onclick="fpT.c('lvl','beg')">מתחיל</button><button type="button" class="${lvl==='adv'?'on':''}" onclick="fpT.c('lvl','adv')">מתקדם</button></div>
+  let timer='';if(C.run){const r=C.run,cur=ph[r.i]||ph[ph.length-1],left=Math.max(0,cur[1]-r.t);timer=`<div class="fpT-timer"><div class="muted">${cur[0]} · שלב ${r.i+1} מתוך ${ph.length}</div><div class="big">${mmss(left)}</div><div class="fpT-bar">${ph.map((x,i)=>`<span class="${x[2]}${i===r.i?' cur':''}" style="flex:${x[1]}">${x[0]==='חזק'?'חזק':''}</span>`).join('')}</div><div class="row"><button type="button" class="btn light" onclick="fpT.cStop(0)">עצור</button><button type="button" class="btn" onclick="fpT.cStop(1)">סיימתי ושמור</button></div></div>`}
+  sheet('אירובי',`<div class="fpT-seg" role="group"><button type="button" class="${lvl==='beg'?'on':''}" onclick="fpT.c('lvl','beg')">מתחיל</button><button type="button" class="${lvl==='adv'?'on':''}" onclick="fpT.c('lvl','adv')">מתקדם</button></div>
    <div class="fpT-card"><h3>על מה מתאמנים</h3><div>${[...new Set([...t.kinds.filter(x=>MACH[x]),k])].map(x=>`<button type="button" class="fpT-chip${x===k?' on':''}" onclick="fpT.c('mach','${x}')">${MACH[x].n}</button>`).join(' ')}</div>
     ${m.fig?exCard([m.fig[0],m.n,C.day==='easy'?'קל':'4×4',m.fig[1]],0):`<p class="muted">הדמיה של ${m.n} תתווסף.</p>`}
     <div class="fpT-wk"><b>קל</b><span>${m.easy}</span></div><div class="fpT-wk"><b>חזק</b><span>${m.hard}</span></div><p class="muted" style="margin:6px 0 0">המספרים משתנים בין מכונות. הכלל: קל = אפשר לדבר, לא לשיר. חזק = רק כמה מילים.</p></div>
    <div class="fpT-card"><h3>האימון של היום</h3><div class="fpT-seg" role="group"><button type="button" class="${C.day==='easy'?'on':''}" onclick="fpT.c('day','easy')">יום קל</button><button type="button" class="${C.day==='hard'?'on':''}" onclick="fpT.c('day','hard')">יום 4×4</button></div>
     ${wk(carSteps(lvl,C.day,m))}<p class="muted" style="margin:6px 0 0">סה״כ ${Math.round(tot/60)} דקות.</p>${timer||`<button type="button" class="btn full" style="margin-top:8px" onclick="fpT.cStart()">▶ התחל, הטיימר מוביל אותך</button>`}</div>
-   <details class="fpT-card"><summary style="cursor:pointer;font-weight:700">📋 ${lvl==='beg'?'תוכנית למתחילים':'תוכנית למתקדמים'}</summary>${(lvl==='beg'?beg:adv).map((x,i)=>`<div class="fpT-wk${i===Math.min(5,t.week-1)?' now':''}"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('')}<p class="muted">${lvl==='beg'?'מוסיפים 5 דקות כל שבוע. האימון החזק נכנס רק כשמרגישים שמתאוששים טוב.':'בין שני אימוני 4×4 לפחות 3 ימים.'} שבוע שהיה קשה מדי? חוזרים עליו.</p></details>`)}
+   <details class="fpT-card"><summary style="cursor:pointer;font-weight:700">${lvl==='beg'?'תוכנית למתחילים':'תוכנית למתקדמים'}</summary>${(lvl==='beg'?beg:adv).map((x,i)=>`<div class="fpT-wk${i===Math.min(5,t.week-1)?' now':''}"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('')}<p class="muted">${lvl==='beg'?'מוסיפים 5 דקות כל שבוע. האימון החזק נכנס רק כשמרגישים שמתאוששים טוב.':'בין שני אימוני 4×4 לפחות 3 ימים.'} שבוע שהיה קשה מדי? חוזרים עליו.</p></details>`)}
 let cInt=0;
 function cTick(){const lvl=C.lvl||(cplan()||{lvl:'beg'}).lvl,ph=carPhases(lvl,C.day);if(!C.run)return;C.run.t++;if(C.run.t>=ph[C.run.i][1]){C.run.i++;C.run.t=0;try{fpRestSound&&fpRestSound()}catch(_){}if(C.run.i>=ph.length){clearInterval(cInt);return fpT.cStop(1)}}
   const big=document.querySelector('#fpTSheet .fpT-timer .big');if(big){const cur=ph[C.run.i];big.textContent=mmss(Math.max(0,cur[1]-C.run.t))}}
@@ -169,31 +214,36 @@ async function saveCardio(minutes,k){const m=MACH[k]||{n:'אירובי'};const l
 /* ---------- cards on the workout screen ---------- */
 function cards(){const host=$('homeActiveWorkout');if(!host)return;let box=$('fpTCards');if(!box){host.insertAdjacentHTML('afterend','<div id="fpTCards"></div>');box=$('fpTCards')}
   const p=plan(),c=cplan();let h='';
-  if(p){const runs=weekRuns(p,p.week);h+=`<div class="fpT-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><h3>🏃 ${p.name}</h3><div class="muted">שבוע ${p.week} · ${runs.map(r=>r[0]).join(' · ')}</div></div><button type="button" class="btn" onclick="fpT.run()">▶ לריצה</button></div></div>`}
-  else{const t=J('TRAIN_PLAN',null);if(!t||!(t.want||[]).includes('run'))h+=`<button type="button" class="btn secondary full" style="margin-bottom:10px" onclick="fpT.setupOpen()">🏃 רוצה להתחיל לרוץ? תוכנית ריצה</button>`}
-  if(c){const k=c.kinds.find(x=>MACH[x])||'ell';h+=`<div class="fpT-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><h3>🚴 אירובי · ${MACH[k].n}</h3><div class="muted">${c.lvl==='beg'?'תוכנית למתחילים':'תוכנית למתקדמים'} · ${c.carGoal||c.car} בשבוע</div></div><button type="button" class="btn" onclick="fpT.cardio()">▶ לאימון</button></div></div>`}
+  if(p){const runs=weekRuns(p,p.week);h+=`<div class="fpT-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><h3>${p.name}</h3><div class="muted">שבוע ${p.week} · ${runs.map(r=>r[0]).join(' · ')}</div></div><button type="button" class="btn" onclick="fpT.run()">▶ לריצה</button></div></div>`}
+  else{const t=J('TRAIN_PLAN',null);if(!t||!(t.want||[]).includes('run'))h+=`<button type="button" class="btn secondary full" style="margin-bottom:10px" onclick="fpT.setupOpen()">רוצה להתחיל לרוץ? תוכנית ריצה</button>`}
+  if(c){const k=c.kinds.find(x=>MACH[x])||'ell';h+=`<div class="fpT-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><h3>אירובי · ${MACH[k].n}</h3><div class="muted">${c.lvl==='beg'?'תוכנית למתחילים':'תוכנית למתקדמים'} · ${c.carGoal||c.car} בשבוע</div></div><button type="button" class="btn" onclick="fpT.cardio()">▶ לאימון</button></div></div>`}
   box.innerHTML=h}
 if(typeof renderWorkoutHome==='function'){const o=renderWorkoutHome;renderWorkoutHome=function(){const r=o.apply(this,arguments);try{cards()}catch(e){console.error(e)}return r}}
 
 window.fpT={
   run(){V={step:0,pick:null,own:{type:'קלה',km:'',min:''}};runSheet()},
+  runFixed(x){V={step:0,pick:'own',own:{type:x.type||'קלה',km:x.km?String(x.km):'',min:x.min?String(x.min):''},fixed:x.name};runSheet()},
   setupOpen(){V.setup=null;setupSheet()},
   setup(k,v,quiet){V.setup[k]=v;if(!quiet)setupSheet()},
-  makePlan(){const s=V.setup;const start=s.mode==='zero'?0:Number(String(s.now).replace(',','.'))||0;
-    setProp('RUN_PLAN',JSON.stringify({mode:s.mode,start,runsNow:0,paceNow:'',goal:Number(s.goal)||5,paceGoal:'',runs:s.runs,str:Number((J('TRAIN_PLAN',{})||{}).str)||0,since:today(),week:1,m3:start>=3}));
-    try{renderWorkoutHome()}catch(_){}V={step:0,pick:null,own:{type:'קלה',km:'',min:''}};runSheet()},
+  makePlan(){const s=V.setup;const start=s.mode==='zero'?0:Number(String(s.now).replace(',','.'))||0;const old=J('RUN_PLAN',null)||{};
+    setProp('RUN_PLAN',JSON.stringify({mode:s.mode,start,runsNow:s.mode==='zero'?0:Number(s.runsNow)||0,paceNow:s.paceNow||'',goal:Number(s.goal)||5,paceGoal:s.paceGoal||'',runs:s.runs,str:Number((J('TRAIN_PLAN',{})||{}).str)||0,since:today(),week:1,m3:start>=3}));
+    try{const t=J('TRAIN_PLAN',null)||{};t.want=Array.isArray(t.want)?t.want:[];if(!t.want.includes('run'))t.want.push('run');t.run=s.runs;setProp('TRAIN_PLAN',JSON.stringify(t))}catch(_){}
+    try{renderWorkoutHome()}catch(_){}try{window.fp222&&fp222.planChanged&&fp222.planChanged()}catch(_){}s.done=1;V={step:0,pick:null,own:{type:'קלה',km:'',min:''},setup:s};setupSheet()},
   go(i){V.step=i;runSheet();const s=document.querySelector('#fpTSheet .sheet');if(s)s.scrollTop=0},
   pick(i){V.pick=i;runSheet()},
   own(k,v,quiet){V.own[k]=v;if(!quiet)runSheet()},
   ran:logRun,
-  bad(b){const card=b.closest('.fpT-ex'),svg=card.querySelector('svg'),p=card.querySelector('.no'),on=svg.dataset.bd==='-1';svg.dataset.bd=on?'0':'-1';const x=pat(svg.dataset.an);if(x)svg.setAttribute('viewBox',anBox(x,on?0:-1,JSON.parse(svg.dataset.v||'{}')));p.hidden=!on;b.textContent=on?'✅ ככה נכון':'❌ מה לא לעשות'},
+  gps(on){if(on)gpsStart();else{gpsStop(true);runSheet()}},
+  km(v){V.km=v;const b=$('fpSplits');if(b)b.innerHTML=splitsHtml()},
+  tm(v){V.tm=v},sp(i,v){V.sp=V.sp||[];V.sp[i]=v},spOpen(o){V.spOpen=o},
+  bad(b){const card=b.closest('.fpT-ex'),svg=card.querySelector('svg'),p=card.querySelector('.no'),on=svg.dataset.bd==='-1';svg.dataset.bd=on?'0':'-1';const x=pat(svg.dataset.an);if(x)svg.setAttribute('viewBox',anBox(x,on?0:-1,JSON.parse(svg.dataset.v||'{}')));p.hidden=!on;b.textContent=on?'✓ ככה נכון':'מה לא לעשות'},
   cardio(){C={mach:null,day:'easy',run:null};cardioSheet()},
   c(k,v){if(C.run)return;C[k]=v;cardioSheet()},
   cStart(){C.run={i:0,t:0,at:Date.now()};clearInterval(cInt);cInt=setInterval(cTick,1000);try{fpRestSound&&0}catch(_){}cardioSheet()},
   async cStop(save){clearInterval(cInt);const r=C.run;C.run=null;const t=cplan()||{kinds:['ell']};const k=C.mach||t.kinds.find(x=>MACH[x])||'ell';
     if(save&&r){const min=Math.max(1,Math.round((Date.now()-r.at)/60000));await saveCardio(min,k);try{toast('נשמר: '+min+' דקות אירובי')}catch(_){}}cardioSheet()},
-  close(){clearInterval(cInt);C.run=null;cancelAnimationFrame(raf);const s=$('fpTSheet');if(s)s.remove()},
-  _:{exCard,animate,sheet,MACH,runSteps,wk,weekSchedule,pat,anBox,easyPace,fastPace,stop(){cancelAnimationFrame(raf)}},
+  close(){gpsStop(false);clearInterval(cInt);C.run=null;cancelAnimationFrame(raf);const s=$('fpTSheet');if(s)s.remove()},
+  _:{planWeeks,storeBtns,STRAVA,exCard,animate,sheet,MACH,runSteps,wk,weekSchedule,pat,anBox,easyPace,fastPace,stop(){cancelAnimationFrame(raf)}},
   plan,weekRuns,cplan,repeatWeek(){const p=J('RUN_PLAN',null);if(!p)return;p.rep=(Number(p.rep)||0)+1;setProp('RUN_PLAN',JSON.stringify(p))}
 };
 })();

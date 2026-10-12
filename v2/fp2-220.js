@@ -3,11 +3,11 @@
 (function(){
 'use strict';
 const FOLDERS=[
-  {id:'fpFolderAcc',title:'📁 חשבון, התראות ויומן',match:[/השם שלי/,/^\s*🔔 התראות/,/חיבור יומן/,/צ׳ק-אין שבועי/]},
-  {id:'fpFolderTools',title:'📁 גיבוי, בדיקות והגדרות נוספות',match:[/גיבוי וייצוא/,/בדיקת AI/,/הגדרות נוספות/,/צמרת/]}
+  {id:'fpFolderAcc',title:'חשבון, התראות ויומן',match:[/השם שלי/,/^[^א-ת]*התראות/,/חיבור יומן/,/צ׳ק-אין שבועי/]},
+  {id:'fpFolderTools',title:'גיבוי, בדיקות והגדרות נוספות',match:[/גיבוי וייצוא/,/בדיקת AI/,/הגדרות נוספות/,/צמרת/]}
 ];
 /* the order of what stays on top */
-const TOP=[/היעד והאירועים/,/יעדים יומיים/,/איך אתה מבשל/,/היום, חגים ושבת/,/צליל סוף מנוחה/,/מדליות וסיכום שבוע/];
+const TOP=[/היעד והאירועים/,/יעדים יומיים/,/איך אתה מבשל/,/היום, חגים ושבת/,/צליל סוף מנוחה/,/מדליות וסיכום שבוע/,/אימונים: כוח/];
 document.head.insertAdjacentHTML('beforeend','<style id="fp220css">#settings details.fp-folder>summary{font-weight:800}#settings details.fp-folder>.settings-body>details.settings-section{margin:8px 0}#settings details.fp-folder>.settings-body{padding-top:4px}</style>');
 const sumOf=d=>{const s=d.querySelector(':scope > summary');return s?s.textContent.trim():''};
 function organize(){
@@ -34,7 +34,7 @@ function organize(){
 document.head.insertAdjacentHTML('beforeend','<style id="fp220b">.fp-order{background:#1F262E;border:1px solid var(--line,#2C3640);border-radius:14px;padding:8px 10px;margin:0 0 10px}.fp-order b{display:block;font-size:13px;color:var(--muted,#A3ADB8);margin-bottom:4px}.fp-order button{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;color:inherit;font:inherit;text-align:right;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)}.fp-order button:last-child{border:0}.fp-order i{font-style:normal;flex:none;width:24px;height:24px;border-radius:7px;background:var(--brand,#D7F36B);color:#14190a;font-weight:800;display:grid;place-items:center;font-size:13px}.fp-order span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}</style>');
 if(typeof renderWorkoutPlanItems==='function'){const o=renderWorkoutPlanItems;renderWorkoutPlanItems=function(){const r=o.apply(this,arguments);
   try{const box=document.getElementById('workoutPlanItems');const rows=[...(box?box.querySelectorAll(':scope > .plan-row'):[])];if(rows.length<2)return r;
-    const items=rows.map(row=>({n:Number((row.querySelector('.fp-ord')||{}).textContent)||0,t:((row.querySelector('.fp-pr-name')||{}).textContent||'').replace('🎬','').trim(),row})).filter(x=>x.n).sort((a,b)=>a.n-b.n);
+    const items=rows.map(row=>({n:Number((row.querySelector('.fp-ord')||{}).textContent)||0,t:((row.querySelector('.fp-pr-name')||{}).textContent||'').trim(),row})).filter(x=>x.n).sort((a,b)=>a.n-b.n);
     const esc2=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const div=document.createElement('div');div.className='fp-order';div.innerHTML='<b>סדר האימון</b>'+items.map(x=>`<button type="button" data-n="${x.n}"><i>${x.n}</i><span>${esc2(x.t)}</span></button>`).join('');
     div.onclick=e=>{const b=e.target.closest('button[data-n]');if(!b)return;const it=items.find(x=>String(x.n)===b.dataset.n);if(it)it.row.scrollIntoView({behavior:'smooth',block:'start'})};

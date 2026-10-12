@@ -25,7 +25,7 @@ function toFront(n){const a=state.customIngredients||[];if(a.length>n&&a.length>
 if(typeof fpBuilderAI==='function'){const o=fpBuilderAI;window.fpBuilderAI=async function(){const n=(state.customIngredients||[]).length;const r=await o.apply(this,arguments);try{if(toFront(n))renderCustomIngredients()}catch(_){}return r}}
 
 /* ---------- search: all / mine / database ---------- */
-const SRC=[['','הכל'],['mine','⭐ המזונות שלי'],['db','📚 מאגר']];
+const SRC=[['','הכל'],['mine','המזונות שלי'],['db','מאגר']];
 const mineSet=()=>new Set(((state.data&&state.data.myFoods)||[]).map(x=>x.name));
 if(typeof localFoodSearch==='function'){const o=localFoodSearch;localFoodSearch=function(){const r=o.apply(this,arguments);try{const s=state.fpSrc;if(s&&r&&r.results){const m=mineSet();r.results=r.results.filter(x=>s==='mine'?m.has(x.name)&&!x.fpBasic:!m.has(x.name)||x.fpBasic)}}catch(_){}return r}}
 function chips(where){return `<div class="fp-src" id="fpSrc-${where}">${SRC.map(([v,l])=>`<button type="button" class="chip${(state.fpSrc||'')===v?' active':''}" onclick="fpSrc('${v}','${where}')">${l}</button>`).join('')}</div>`}
@@ -61,7 +61,7 @@ window.fpLeftDrop=function(id){setLefts(lefts().filter(v=>v.id!==id))};
 function renderLefts(){const t=$('today');if(!t)return;let box=$('fpLeft');const a=lefts();
   if(!a.length){if(box)box.remove();return}
   if(!box){box=document.createElement('div');box.id='fpLeft';const ring=t.querySelector('.progress-wrap');if(ring)ring.insertAdjacentElement('beforebegin',box);else t.prepend(box)}
-  box.innerHTML=a.map(x=>`<div class="fp-left"><span><b>🍽 נשאר ${FRAC(x.f)} מ${esc(x.name)}</b><small>כ-${kc(x.rest.calories)} קל׳ · ${fmt(n1(x.rest.protein))} ג׳ חלבון</small></span><span class="acts"><button type="button" class="btn mini" onclick="fpLeftEat('${x.id}')">אכלתי את השאר</button><button type="button" class="trash mini" aria-label="לא אוכל" onclick="fpLeftDrop('${x.id}')">✕</button></span></div>`).join('')}
+  box.innerHTML=a.map(x=>`<div class="fp-left"><span><b>נשאר ${FRAC(x.f)} מ${esc(x.name)}</b><small>כ-${kc(x.rest.calories)} קל׳ · ${fmt(n1(x.rest.protein))} ג׳ חלבון</small></span><span class="acts"><button type="button" class="btn mini" onclick="fpLeftEat('${x.id}')">אכלתי את השאר</button><button type="button" class="trash mini" aria-label="לא אוכל" onclick="fpLeftDrop('${x.id}')">✕</button></span></div>`).join('')}
 if(typeof renderDay==='function'){const o=renderDay;renderDay=function(){const r=o.apply(this,arguments);try{renderLefts()}catch(e){console.error(e)}return r}}
 /* a saved meal eaten in part (the "כמה אכלת?" chips) */
 if(typeof fpMealX==='function'){const o=fpMealX;window.fpMealX=function(i,f){state.fpMealF=state.fpMealF||{};state.fpMealF[state.category+':'+i]=f;return o.apply(this,arguments)}}
@@ -90,9 +90,9 @@ if(typeof saveEntryEdit==='function'){const o=saveEntryEdit;saveEntryEdit=async 
       if(known(from)){await renameAll(from,to);toast('השם עודכן בכל מקום')}
       else{const d=await call('renameFoodEverywhere',{from,to,date:state.date,entryId:E.entry.id});if(d&&d.entries)applyDay(d);renderDay();toast('השם עודכן')}}}catch(e){toast(e.message,true)}
   return r}}
-/* a meal in the diary: "✏️ שם" next to its tools */
+/* a meal in the diary: "שם" next to its tools */
 function nameChips(){document.querySelectorAll('#entries .fp-meal-tools').forEach(t=>{if(t.dataset.fpn)return;const b=t.querySelector('button[onclick^="fpAddToMeal"]');if(!b)return;const m=String(b.getAttribute('onclick')).match(/fpAddToMeal\('([^']+)'\)/);if(!m)return;
-  t.dataset.fpn='1';t.insertAdjacentHTML('beforeend',`<button type="button" class="chip" onclick="fpMealName('${m[1]}')">✏️ שם</button>`)})}
+  t.dataset.fpn='1';t.insertAdjacentHTML('beforeend',`<button type="button" class="chip" onclick="fpMealName('${m[1]}')">שם</button>`)})}
 if(typeof renderEntries==='function'){const o=renderEntries;renderEntries=function(){const r=o.apply(this,arguments);try{nameChips()}catch(e){console.error(e)}return r}}
 window.fpMealName=async function(gid){const its=(state.data.entries||[]).filter(x=>String(x.groupId)===String(gid));if(!its.length)return;const from=its[0].mealOption||its[0].name||'';
   const to=prompt('שם חדש',from);if(to===null||!to.trim()||to.trim()===from)return;

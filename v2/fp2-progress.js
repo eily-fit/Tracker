@@ -58,12 +58,12 @@ function renderWeek(){
   const i=WK.i,w=weekData(i),pw=prevValue(i,'weight'),pwa=prevValue(i,'waist');
   const tabs=[0,1,2,3].concat(i>3?[i]:[]).map(k=>`<button type="button" class="chip${k===i?' active':''}" onclick="fpWeek(${k})">${wkName(k)}</button>`).join('')+`<button type="button" class="chip" onclick="fpWeek(${Math.max(4,i+1)})">עוד אחורה ›</button>`;
   const ph=POSES.map(k=>{const p=w.byPose[k];return p?`<button type="button" class="fp-wk-ph" style="background-image:url(data:image/jpeg;base64,${p.thumb})" onclick="openProgressPhoto('${esc(p.id)}')">${esc(PL(k))}</button>`:`<div class="fp-wk-ph empty">${esc(PL(k))}<br>—</div>`}).join('');
-  card.innerHTML=`<h3 style="margin:0 0 8px">📆 השבוע שלי</h3><div class="fp-wk-tabs">${tabs}</div>
+  card.innerHTML=`<h3 style="margin:0 0 8px">השבוע שלי</h3><div class="fp-wk-tabs">${tabs}</div>
     <p class="muted" style="margin:6px 0 0;font-size:13px">${dShort(w.s)} – ${dShort(w.e)}${!state.photosLoaded?' · טוען תמונות…':''}</p>
     <div class="fp-wk-photos">${ph}</div>
     <div class="fp-wk-stats"><div class="fp-wk-stat"><span class="muted">משקל ממוצע</span><b>${w.weight!=null?fmt(w.weight)+' ק״ג':'—'}</b>${delta(w.weight,pw,'ק״ג')}</div>
       <div class="fp-wk-stat"><span class="muted">היקף טבור</span><b>${w.waist!=null?fmt(w.waist)+' ס״מ':'—'}</b>${delta(w.waist,pwa,'ס״מ')}</div></div>
-    <div class="quick-grid" style="margin-top:10px"><button type="button" class="btn" onclick="fpCompare()">↔️ השוואה</button><button type="button" class="btn light" onclick="fpTimeline()">🎞 ציר זמן</button></div>`;
+    <div class="quick-grid" style="margin-top:10px"><button type="button" class="btn" onclick="fpCompare()">↔ השוואה</button><button type="button" class="btn light" onclick="fpTimeline()">ציר זמן</button></div>`;
 }
 window.fpWeek=function(i){WK.i=Math.max(0,i);renderWeek()};
 const oProc=renderProcess;
@@ -87,7 +87,7 @@ async function renderCompare(){
   const list=photosOf(C.pose),chip=(on,l,js)=>`<button type="button" class="chip${on?' active':''}" onclick="${js}">${l}</button>`;
   const sel=(k,cur)=>`<select onchange="fpCmpPick('${k}',this.value)" style="width:100%">${list.map(p=>`<option value="${esc(p.id)}" ${p.id===cur?'selected':''}>${esc(dShort(p.date))}</option>`).join('')}</select>`;
   const body=$('fpCmpBody');
-  body.innerHTML=`<div class="sheet-head"><h3>↔️ השוואה</h3><button class="trash" onclick="document.getElementById('fpCmpSheet').remove()" aria-label="סגור">✕</button></div>
+  body.innerHTML=`<div class="sheet-head"><h3>↔ השוואה</h3><button class="trash" onclick="document.getElementById('fpCmpSheet').remove()" aria-label="סגור">✕</button></div>
     <div class="meal-tabs" style="flex-wrap:wrap">${POSES.map(k=>chip(C.pose===k,PL(k),`fpCmpPose('${k}')`)).join('')}</div>
     ${list.length<2?`<p class="muted">צריך לפחות שתי תמונות ${esc(PL(C.pose))} כדי להשוות.</p>`:`
     <div class="row" style="margin-top:8px"><div class="field"><label>לפני</label>${sel('a',C.a)}</div><div class="field"><label>אחרי</label>${sel('b',C.b)}</div></div>
@@ -115,7 +115,7 @@ const TL={pose:'front'};
 window.fpTimeline=function(){
   let el=$('fpTlSheet');if(!el){document.body.insertAdjacentHTML('beforeend','<div class="overlay" id="fpTlSheet" onclick="if(event.target===this)this.remove()"><div class="sheet" id="fpTlBody"></div></div>');el=$('fpTlSheet')}
   const list=photosOf(TL.pose).slice().reverse(),chip=(on,l,js)=>`<button type="button" class="chip${on?' active':''}" onclick="${js}">${l}</button>`;
-  $('fpTlBody').innerHTML=`<div class="sheet-head"><h3>🎞 ציר זמן</h3><button class="trash" onclick="document.getElementById('fpTlSheet').remove()" aria-label="סגור">✕</button></div>
+  $('fpTlBody').innerHTML=`<div class="sheet-head"><h3>ציר זמן</h3><button class="trash" onclick="document.getElementById('fpTlSheet').remove()" aria-label="סגור">✕</button></div>
     <div class="meal-tabs" style="flex-wrap:wrap">${POSES.map(k=>chip(TL.pose===k,PL(k),`fpTlPose('${k}')`)).join('')}</div>
     ${list.length?`<div class="fp-tl">${list.map(p=>`<button type="button" class="fp-wk-ph" style="background-image:url(data:image/jpeg;base64,${p.thumb})" onclick="document.getElementById('fpTlSheet').remove();openProgressPhoto('${esc(p.id)}')">${esc(dShort(p.date))}</button>`).join('')}</div><p class="muted" style="font-size:12px">מהחדשה לישנה. מחליקים הצידה.</p>`:`<p class="muted">עוד אין תמונות ${esc(PL(TL.pose))}.</p>`}`;
 };
@@ -139,7 +139,7 @@ function injectSettings(){
   const s=$('settings');if(!s||$('fpCiDaySet'))return;
   const goals=[...s.querySelectorAll('details.settings-section summary')].find(x=>/יעדים/.test(x.textContent));if(!goals)return;
   const names=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-  goals.parentElement.insertAdjacentHTML('afterend',`<details class="settings-section"><summary>✅ צ׳ק-אין שבועי</summary><div class="settings-body"><div class="field"><label>באיזה יום?</label><select id="fpCiDaySet" onchange="saveCheckinDay(this.value)">${names.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}</select></div><p class="muted">התזכורת מופיעה רק ביום הזה. אם לא מילאת, היא מופיעה גם למחרת, וזהו.</p></div></details>`);
+  goals.parentElement.insertAdjacentHTML('afterend',`<details class="settings-section"><summary>צ׳ק-אין שבועי</summary><div class="settings-body"><div class="field"><label>באיזה יום?</label><select id="fpCiDaySet" onchange="saveCheckinDay(this.value)">${names.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}</select></div><p class="muted">התזכורת מופיעה רק ביום הזה. אם לא מילאת, היא מופיעה גם למחרת, וזהו.</p></div></details>`);
   try{$('fpCiDaySet').value=String(checkinDay())}catch(_){}
 }
 if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{injectSettings()}catch(_){}return r}}

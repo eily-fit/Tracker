@@ -47,12 +47,12 @@ const CSS=`#exPickQ{width:100%;margin:0 0 8px;font:inherit;padding:11px 13px;bor
 function mount(){if(document.getElementById('exlibCss'))return;const st=document.createElement('style');st.id='exlibCss';st.textContent=CSS;document.head.appendChild(st)}
 function rowHtml(x,pm,showGroup,fam){
   const w=worksOf(x.name),lab=fam?label(x.name,fam):clean(x.name);
-  return `<button type="button" class="pick-row" data-lp="exercise:${esc2(x.id)}" data-lp-title="${esc2(x.name)}" onclick="pickExercise('${esc2(x.id)}')"><b>${x.id===pm.current?'✓ ':''}${esc2(x.name)}</b>${w?`<span class="wk">🔴 ${esc2(w)}</span>`:''}${showGroup?`<span class="eq">${esc2(x.__g||'')}${x.equipment?' · '+esc2(x.equipment):''}</span>`:(pm.all?`<span class="eq">${esc2(x.equipment==='מכונה'?'מכונה':'משקולות חופשיות')}</span>`:'')}</button>`}
+  return `<button type="button" class="pick-row" data-lp="exercise:${esc2(x.id)}" data-lp-title="${esc2(x.name)}" onclick="pickExercise('${esc2(x.id)}')"><b>${x.id===pm.current?'✓ ':''}${esc2(x.name)}</b>${w?`<span class="wk">${esc2(w)}</span>`:''}${showGroup?`<span class="eq">${esc2(x.__g||'')}${x.equipment?' · '+esc2(x.equipment):''}</span>`:(pm.all?`<span class="eq">${esc2(x.equipment==='מכונה'?'מכונה':'משקולות חופשיות')}</span>`:'')}</button>`}
 function render(){
   mount();const pm=state.pickMode,catalog=state.data.workout.exercises||{};
   const sheet=document.getElementById('exPickSheet'),listEl=document.getElementById('exPickList');if(!pm||!sheet||!listEl)return;
   let q=document.getElementById('exPickQ');
-  if(!q){q=document.createElement('input');q.id='exPickQ';q.type='search';q.placeholder='🔎 חפש תרגיל לפי שם או שריר';q.autocomplete='off';q.addEventListener('input',()=>{state.pickQuery=q.value;renderList()});listEl.parentNode.insertBefore(q,listEl)}
+  if(!q){q=document.createElement('input');q.id='exPickQ';q.type='search';q.placeholder='חפש תרגיל לפי שם או שריר';q.autocomplete='off';q.addEventListener('input',()=>{state.pickQuery=q.value;renderList()});listEl.parentNode.insertBefore(q,listEl)}
   document.getElementById('exPickTitle').textContent='בחר תרגיל · '+pm.group;
   if(state.pickQuery===undefined||state.pickFresh!==pm){q.value='';state.pickQuery='';state.pickFresh=pm}
   renderList();sheet.classList.remove('hide');
@@ -81,5 +81,5 @@ const op=window.openExercisePicker;if(typeof op==='function')window.openExercise
 const opp=window.openPlanExercisePicker;if(typeof opp==='function')window.openPlanExercisePicker=function(){state.pickQuery='';state.pickFresh=null;state.pickOpen=new Set();return opp.apply(this,arguments)};
 /* the selected exercise shows what it works */
 const ec=window.exerciseChanged;
-if(typeof ec==='function')window.exerciseChanged=function(){const r=ec.apply(this,arguments);try{const g=document.getElementById('exerciseGuide'),nm=document.getElementById('exercisePickName');const w=nm&&worksOf(nm.textContent);if(g&&w&&!g.querySelector('.wk2'))g.insertAdjacentHTML('beforeend','<p class="wk2" style="color:#FF8A80;margin:4px 0 0">🔴 עובד על: '+esc2(w)+'</p>')}catch(e){}return r};
+if(typeof ec==='function')window.exerciseChanged=function(){const r=ec.apply(this,arguments);try{const g=document.getElementById('exerciseGuide'),nm=document.getElementById('exercisePickName');const w=nm&&worksOf(nm.textContent);if(g&&w&&!g.querySelector('.wk2'))g.insertAdjacentHTML('beforeend','<p class="wk2" style="color:#FF8A80;margin:4px 0 0">עובד על: '+esc2(w)+'</p>')}catch(e){}return r};
 })();

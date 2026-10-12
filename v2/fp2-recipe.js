@@ -9,7 +9,7 @@ const FR={'½':.5,'¼':.25,'¾':.75,'⅓':.333,'⅔':.667,'⅛':.125};
 function cleanLine(t){
   let s=String(t||'').replace(/[½¼¾⅓⅔⅛]/g,m=>' '+FR[m]).replace(/(\d+)\s+(0?\.\d+)/g,(_,a,b)=>String(Number(a)+Number(b)))
     .replace(/(\d+)\s*\/\s*(\d+)/g,(_,a,b)=>String(Math.round(Number(a)/Number(b)*100)/100)).replace(/\([^)]*\)/g,' ')
-    .replace(/^[-•*·▢☐\s]+/,'')
+    .replace(/^[-•*·▢\s]+/,'')
     .replace(/\s+/g,' ').trim();
   s=s.split(/[,،;]| או /)[0].trim();
   s=s.replace(/^חצי\s+/,'0.5 ').replace(/^רבע\s+/,'0.25 ');
@@ -40,7 +40,7 @@ const mac=r=>r.on&&r.food&&r.amount>0?portionMacros(r.food,r.amount,r.unit):null
 function totals(){const t={calories:0,protein:0,carbs:0,fat:0};R.rows.forEach(r=>{const m=mac(r);if(m)Object.keys(t).forEach(k=>t[k]+=Number(m[k])||0)});return t}
 const per=t=>{const n=Math.max(1,Number(R.servings)||1);const o={};Object.keys(t).forEach(k=>o[k]=Math.round(t[k]/n*10)/10);return o};
 
-function sheet(){let s=$('fpRecipe');if(!s){document.body.insertAdjacentHTML('beforeend','<div class="overlay hide" id="fpRecipe"><div class="sheet" style="max-height:92vh;overflow:auto"><div class="sheet-head"><h3 style="margin:0">🔗 מתכון מקישור</h3><button type="button" class="trash" aria-label="סגור" onclick="fpRecipeClose()">✕</button></div><div id="fpRecipeBody"></div></div></div>');s=$('fpRecipe')}return s}
+function sheet(){let s=$('fpRecipe');if(!s){document.body.insertAdjacentHTML('beforeend','<div class="overlay hide" id="fpRecipe"><div class="sheet" style="max-height:92vh;overflow:auto"><div class="sheet-head"><h3 style="margin:0">מתכון מקישור</h3><button type="button" class="trash" aria-label="סגור" onclick="fpRecipeClose()">✕</button></div><div id="fpRecipeBody"></div></div></div>');s=$('fpRecipe')}return s}
 function render(){
   const b=$('fpRecipeBody');if(!b)return;
   if(R.step==='link'){
@@ -57,8 +57,8 @@ function render(){
     <div class="field"><label>כמה מנות יוצא המתכון?</label><input id="fpRecipeServ" type="number" min="1" step="1" inputmode="numeric" value="${R.servings}" onchange="fpRecipeSet('servings',this.value)"></div>
     <div class="card" style="padding:10px 12px;margin:8px 0"><div style="font-size:17px;font-weight:800">מנה אחת: ${kc(p.calories)} קל׳</div><div class="muted">${fmt(p.protein)} ג׳ חלבון · ${fmt(p.carbs)} ג׳ פחמימות · ${fmt(p.fat)} ג׳ שומן</div>
       ${R.site&&R.site.calories?`<div class="muted" style="font-size:12.5px;margin-top:4px">האתר כותב ${kc(R.site.calories)} קל׳ למנה. <button type="button" class="linkish" onclick="fpRecipeUseSite()">להשתמש בערכים של האתר</button></div>`:''}</div>
-    ${miss?`<p class="muted" style="margin:4px 0">${miss===1?'מצרך אחד לא נמצא במאגר':miss+' מצרכים לא נמצאו במאגר'}. אפשר לכתוב שם אחר, לדלג, או לתת ל-AI לחשב.</p><button type="button" class="btn secondary full" ${R.ai?'disabled':''} onclick="fpRecipeAI(false)">${R.ai?'ה-AI חושב…':'✨ לחשב את החסרים עם AI'}</button>`:''}
-    <button type="button" class="linkish muted" style="margin-top:6px" ${R.ai?'disabled':''} onclick="fpRecipeAI(true)">✨ לחשב את כל המתכון עם AI</button>
+    ${miss?`<p class="muted" style="margin:4px 0">${miss===1?'מצרך אחד לא נמצא במאגר':miss+' מצרכים לא נמצאו במאגר'}. אפשר לכתוב שם אחר, לדלג, או לתת ל-AI לחשב.</p><button type="button" class="btn secondary full" ${R.ai?'disabled':''} onclick="fpRecipeAI(false)">${R.ai?'ה-AI חושב…':'לחשב את החסרים עם AI'}</button>`:''}
+    <button type="button" class="linkish muted" style="margin-top:6px" ${R.ai?'disabled':''} onclick="fpRecipeAI(true)">לחשב את כל המתכון עם AI</button>
     <h4 style="margin:12px 0 6px">המצרכים (${R.rows.length})</h4>
     ${R.rows.map((r,i)=>{const m=mac(r);return `<div class="history-card${r.on?'':' off'}" style="padding:8px 10px">
       <div class="history-top"><label style="display:flex;gap:8px;align-items:center;min-width:0"><input type="checkbox" style="width:auto" ${r.on?'checked':''} ${r.food?'':'disabled'} onchange="fpRecipeRow(${i},'on',this.checked)"><span style="min-width:0">${esc(r.text)}${r.ai?' <small class="muted">· AI</small>':''}</span></label>${m?`<span class="muted" style="flex:none">${kc(m.calories)} קל׳</span>`:''}</div>
@@ -129,9 +129,9 @@ window.fpRecipeAI=async function(all){
 };
 window.fpRecipeAdd=()=>save(true);
 window.fpRecipeSave=()=>save(false);
-/* the button, next to "📸 צלם את הארוחה" */
+/* the button, next to "צלם את הארוחה" */
 function ensureBtn(){if($('fpRecipeBtn'))return;const ph=document.querySelector("#add button[onclick*='mealPhotoFile']");if(!ph)return;
-  ph.insertAdjacentHTML('afterend','<button type="button" class="btn light full" id="fpRecipeBtn" style="margin-top:8px" onclick="fpRecipeOpen()">🔗 מתכון מקישור</button>')}
+  ph.insertAdjacentHTML('afterend','<button type="button" class="btn light full" id="fpRecipeBtn" style="margin-top:8px" onclick="fpRecipeOpen()">מתכון מקישור</button>')}
 ensureBtn();setInterval(ensureBtn,3000);
 window.fpRecipeLoad=load;
 })();

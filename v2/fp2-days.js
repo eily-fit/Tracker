@@ -59,7 +59,7 @@ function quotaCheck(){
 function quotaAlert(text){
   const old=$('fpQuota');if(old)old.remove();
   document.body.insertAdjacentHTML('beforeend',`<div id="fpQuota" role="status" style="position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:60;background:#3a1d1f;color:#fff;border:1px solid #E5484D;border-radius:14px;padding:12px 14px 12px 34px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:14px;line-height:1.45">
-    <b>⚠️ ${esc(text)}</b>
+    <b>${esc(text)}</b>
     <button type="button" onclick="this.parentNode.remove()" style="position:absolute;top:6px;left:8px;background:none;border:0;color:#fff;font-size:18px" aria-label="סגור">✕</button></div>`);
   setTimeout(()=>{const e=$('fpQuota');if(e)e.remove()},9000);
 }
@@ -77,7 +77,7 @@ function showOver(today,sh){
   document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpOverSheet"><div class="sheet"><h3 style="margin:0 0 8px">${sh.source==='after-event'?`באירוע אתמול עברת ב-${kc(over)} קל׳ מעבר למה שנשמר`:`אתמול עברת את היעד ב-${kc(over)} קל׳`}</h3>
     <p style="margin:0">לכן היעד של היום ירד ב-<b>${kc(cut)}</b> קל׳${over>cut?` (זה הגבול ליום אחד בתהליך שלך)`:''}.</p>
     <p class="muted" style="margin:6px 0 0">זה רק ליום אחד. מחר חוזרים ליעד הרגיל.</p>
-    <button type="button" class="btn full" style="margin-top:12px" onclick="fpSetCut(-1)">בסדר 👍</button>
+    <button type="button" class="btn full" style="margin-top:12px" onclick="fpSetCut(-1)">בסדר </button>
     <div style="display:flex;gap:8px;margin-top:8px;align-items:center"><input id="fpCutAmt" type="number" inputmode="numeric" min="0" max="${Math.min(cap,over)}" step="10" placeholder="כמות אחרת (עד ${kc(Math.min(cap,over))})" style="flex:1"><button type="button" class="btn light" onclick="fpSetCut(Number(document.getElementById('fpCutAmt').value))">שמור</button></div>
     <button type="button" class="btn secondary full" style="margin-top:10px" onclick="fpSetCut(0)">לא להוריד היום</button></div></div>`);
   window.fpSetCut=async function(amount){
@@ -103,7 +103,7 @@ function showTwoDays(rows){
     <div id="fpTwoBody"><p style="margin:12px 0 0"><b>היה אירוע באחד הימים?</b></p>
     <div class="quick-grid" style="margin-top:8px"><button type="button" class="btn" onclick="fpTwoYes('${rows[0].date}')">כן, להוסיף אירוע</button><button type="button" class="btn light" onclick="fpTwoNo()">לא</button></div></div></div></div>`);
   window.fpTwoYes=function(d){const s=$('fpTwoDays');if(s)s.remove();try{openEventSheet({date:d})}catch(e){toast(e.message,true)}};
-  window.fpTwoNo=function(){$('fpTwoBody').innerHTML=`<p style="margin:12px 0 0">כדי לראות תוצאות, הכי חשוב להתמיד: להישאר קרוב ליעד, עד 10% למעלה או למטה. יום-יומיים לא הורסים כלום, הרצף הוא מה שקובע.</p><button type="button" class="btn full" style="margin-top:12px" onclick="document.getElementById('fpTwoDays').remove()">הבנתי 💪</button>`};
+  window.fpTwoNo=function(){$('fpTwoBody').innerHTML=`<p style="margin:12px 0 0">כדי לראות תוצאות, הכי חשוב להתמיד: להישאר קרוב ליעד, עד 10% למעלה או למטה. יום-יומיים לא הורסים כלום, הרצף הוא מה שקובע.</p><button type="button" class="btn full" style="margin-top:12px" onclick="document.getElementById('fpTwoDays').remove()">הבנתי </button>`};
 }
 window.fpTwoDaysPreview=()=>{const t=todayISO();showTwoDays([{date:addD(t,-1),name:'אתמול',cal:1980,goal:2450},{date:addD(t,-2),name:'שלשום',cal:2010,goal:2450}])};
 
@@ -140,14 +140,14 @@ function showEventSummary(ev,t,sh,today){
     ?`<p style="margin:0 0 4px">היו לך <b>${kc(goal)}</b> קל׳ לאירוע. אכלת <b>${kc(ate)}</b>.</p>
       <div style="margin:10px 0 0;font-size:17px;font-weight:800;color:#7FD67F">✓ נשארת בתוך מה שחסכת</div>
       ${plus?`<p style="margin:6px 0 0">${kc(plus)} קל׳ שנשארו עוברים להיום.</p>`:'<p style="margin:6px 0 0">היום חוזרים ליעד הרגיל.</p>'}
-      <button type="button" class="btn full" style="margin-top:12px" onclick="document.getElementById('fpEvSum').remove()">יופי 💪</button>`
+      <button type="button" class="btn full" style="margin-top:12px" onclick="document.getElementById('fpEvSum').remove()">יופי </button>`
     :`<p style="margin:0 0 4px">היו לך <b>${kc(goal)}</b> קל׳ לאירוע. אכלת <b>${kc(ate)}</b>.</p>
       <div style="margin:10px 0 0;font-size:17px;font-weight:800;color:#FF8A8A">✗ עברת ב-${kc(over)} קל׳</div>
       <p style="margin:10px 0 6px"><b>מה עושים עם זה היום?</b></p>
       ${cut?opt('fpEvSumAns(-1)',`להוריד מהיום ${kc(cut)} קל׳ · מומלץ`,`היעד של היום: ${kc(Number(state.data.settings.calorie_goal||0)-cut)}. מחר חוזרים לרגיל.${over>cut?` את ${kc(over-cut)} הנותרים לא מקזזים, זה הגבול ליום אחד.`:''}`):''}
       ${cut?opt('fpEvSumAns(1)','להוריד פחות','בוחרים כמה'):''}
       ${opt('fpEvSumAns(0)','לא להוריד, להמשיך כרגיל','היעד של היום נשאר רגיל')}`;
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpEvSum"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">🎉 ${esc(ev.label)}: איך היה?</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpEvSum').remove()">✕</button></div>${body}</div></div>`);
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpEvSum"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">${esc(ev.label)}: איך היה?</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpEvSum').remove()">✕</button></div>${body}</div></div>`);
   window.fpEvSumAns=async function(a){const s=$('fpEvSum');if(s)s.remove();
     if(a===-1){toast(`היעד של היום ירד ב-${kc(cut)}`);return}
     if(a===1){showOver(today,sh);return}
@@ -226,13 +226,13 @@ function showUnplanned(e){
   const daysTxt=days?(days===1?'יום אחד':days+' ימים'):'';
   const opt=(m,title,sub,rec)=>`<button type="button" class="remind-opt${rec?' rec':''}" onclick="fpUnplanned('${e.id}','${m}')"><b>${title}${rec?' (מומלץ)':''}</b><span>${sub}</span></button>`;
   const canSave=!c.noDeficit&&days>0;
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpUnplanned"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">📅 אירוע חדש מהיומן: ${esc(e.label)}</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpUnplanned').remove();setTimeout(()=>window.fpUnplannedCheck&&fpUnplannedCheck(),600)">✕</button></div>
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpUnplanned"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">אירוע חדש מהיומן: ${esc(e.label)}</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpUnplanned').remove();setTimeout(()=>window.fpUnplannedCheck&&fpUnplannedCheck(),600)">✕</button></div>
     <p class="muted" style="margin:0 0 10px">${esc(when)} · איך להתכונן? עד שתבחר, היעדים לא משתנים.</p>
     ${canSave?`<div class="field" style="margin:0 0 4px"><label>אם חוסכים, עד כמה ביום?</label><div class="meal-tabs" style="flex-wrap:wrap">${opts.map(v=>`<button type="button" class="chip${UP.pct===v?' active':''}" onclick="fpUnplannedPct('${e.id}',${v})">${v}% · <bdi>${kc(Math.round((c.goal||2200)*v/1000)*10)}</bdi> קל׳</button>`).join('')}</div></div>`:''}
     ${canSave?opt('spread','לחסוך כל יום עד האירוע',`${daysTxt}, עד ${kc(cut)} קל׳ פחות ביום. מה שנחסך מחכה לך ביום האירוע.`,true):''}
     ${opt('day','רק ביום עצמו','שאר הימים רגילים. ביום האירוע אוכלים קל וחלבוני עד האירוע.',!canSave)}
     ${opt('none','ללא שינוי','היעדים לא משתנים. אם תעבור ביום האירוע, זה מתאזן למחרת.')}
-    <button type="button" class="linkish muted" style="margin-top:10px" onclick="document.getElementById('fpUnplanned').remove();${e.id==='demo'?'':`openEventSheet({edit:'${e.id}'})`}">✏️ לשנות פרטים</button></div></div>`);
+    <button type="button" class="linkish muted" style="margin-top:10px" onclick="document.getElementById('fpUnplanned').remove();${e.id==='demo'?'':`openEventSheet({edit:'${e.id}'})`}">לשנות פרטים</button></div></div>`);
   window.fpUnplannedPct=function(id,v){UP.pct=v;showUnplanned(id==='demo'?e:(bankEvents().find(x=>x.id===id)||e))};
   window.fpUnplanned=async function(id,m){const s=$('fpUnplanned');if(s)s.remove();if(id==='demo')return;
     if(m==='spread'&&UP.pct&&UP.pct!==c.savePct){try{await fpSetSavePct(UP.pct)}catch(_){}}
@@ -259,19 +259,19 @@ function eventBar(ev,d){
   if(st){
     // 2.10.0: once the event started, the ring is the only counter: whatever is left today is for the event
     return `<div class="card fp-evbar" style="padding:10px 12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <span style="font-size:15px"><b>🎉 ${esc(ev.label)} התחיל!</b></span>
+      <span style="font-size:15px"><b>${esc(ev.label)} התחיל!</b></span>
       <button type="button" class="btn light mini" style="flex:none;padding:6px 10px;min-height:0;font-size:13px" onclick="fpEventStop('${d}')">עדיין לא התחיל</button></div>`;
   }
   const X=isView?eventExtra(d):Math.max(0,Number(p.adj&&p.adj[d])||0),goal=(Number(t.calorieGoal)||0)-(isView&&today?X:0),eaten=Number(t.calories)||0;let pct=0,over=false,sub='',btn='';
-  const line=`🎉 ${today?'היום':esc(dayName(d))}: ${esc(ev.label)} · `+(X>0?`שמורים לך לאירוע <b>+${kc(X)}</b> קל׳`:'מה שנשאר בעיגול הוא לאירוע');
+  const line=`${today?'היום':esc(dayName(d))}: ${esc(ev.label)} · `+(X>0?`שמורים לך לאירוע <b>+${kc(X)}</b> קל׳`:'מה שנשאר בעיגול הוא לאירוע');
   if(isView&&goal){pct=Math.min(100,eaten/goal*100);over=eaten>goal;sub=`אכלת היום ${kc(eaten)} מתוך ${kc(goal)}`}
   if(today&&isView)btn=`<button type="button" class="btn mini" style="padding:6px 12px;min-height:0;font-size:13px" onclick="fpEventStart('${d}')">התחלתי את האירוע</button>`;
   return `<div class="card fp-evbar" style="padding:10px 12px;margin:8px 0">
-    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between"><span style="font-size:14px;line-height:1.4">${line}</span><button type="button" class="icon-btn" aria-label="עריכת האירוע" style="flex:none" onclick="openEventSheet({edit:'${ev.id}'})">✏️</button></div>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between"><span style="font-size:14px;line-height:1.4">${line}</span><button type="button" class="icon-btn" aria-label="עריכת האירוע" style="flex:none" onclick="openEventSheet({edit:'${ev.id}'})"></button></div>
     ${isView?`<div class="meter" style="margin:6px 0 4px"><i style="width:${pct}%;${over?'background:#E5484D':''}"></i></div>`:''}
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="muted" style="font-size:12.5px">${sub}</span>${btn}</div></div>`;
 }
-window.fpEventStart=function(d){const X=eventExtra(d);setEvStart(d,{ts:Date.now(),ids:(state.data.entries||[]).map(x=>String(x.id))});try{renderTotals()}catch(_){}renderBankCard();toast(X>0?`תהנה! 🎉 נוספו לעיגול ${kc(X)} קל׳ לאירוע`:'תהנה! 🎉 מה שנשאר בעיגול הוא לאירוע')};
+window.fpEventStart=function(d){const X=eventExtra(d);setEvStart(d,{ts:Date.now(),ids:(state.data.entries||[]).map(x=>String(x.id))});try{renderTotals()}catch(_){}renderBankCard();toast(X>0?`תהנה! נוספו לעיגול ${kc(X)} קל׳ לאירוע`:'תהנה! מה שנשאר בעיגול הוא לאירוע')};
 window.fpEventStop=function(d){setEvStart(d,null);try{renderTotals()}catch(_){}renderBankCard()};
 if(typeof renderBankCard==='function'){
   const o=renderBankCard;
@@ -313,7 +313,7 @@ if(typeof openTreat==='function'){
       <div class="meter" style="margin:10px 0"><i style="width:${pct}%;${left<0?'background:#E5484D':''}"></i></div>
       <p>אכלת <b>${kc(eaten)}</b> מתוך <b>${kc(goal)}</b> קל׳.</p>
       <p class="muted">${before>=0?`מזה: <b>${kc(todayLeft)}</b> שנשארו מהיום, ועוד <b>${kc(before)}</b> שחסכת בימים הקודמים.`:`מזה: <b>${kc(todayLeft)}</b> שנשארו מהיום, פחות <b>${kc(-before)}</b> שעברת בימים הקודמים.`}</p>
-      <p class="muted">${left>=0?(left>500?'יש לך מקום להתפנק השבוע 😋':'כמעט ביעד. פינוק קטן, לא יותר.'):'עדיף לשמור היום. מחר מתחילים מחדש עם יעד רגיל.'}</p>
+      <p class="muted">${left>=0?(left>500?'יש לך מקום להתפנק השבוע ':'כמעט ביעד. פינוק קטן, לא יותר.'):'עדיף לשמור היום. מחר מתחילים מחדש עם יעד רגיל.'}</p>
       ${rows.map(r=>`<div class="bank-line"><span>${r[0]}</span><span>${kc(r[1])} / ${kc(r[2])}${r[1]>r[2]?' <span style="color:#FF8A8A">▲</span>':''}</span></div>`).join('')}`;
     $('treatSheet').classList.remove('hide');
   };

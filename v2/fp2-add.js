@@ -2,7 +2,7 @@
    - one "חשב בעזרת AI" button and one "＋ עוד דרכים" that opens: photo of the meal, barcode, photo of a recipe / ingredient list, recipe link.
    - "ה-AI חושב…" while it works.
    - after an estimate: "כמה אכלת מזה?" (part of the dish or grams) before saving.
-   - "💾 שמור כמוצר משלי": several foods saved as one product you find later in the search.
+   - "שמור כמוצר משלי": several foods saved as one product you find later in the search.
    - several foods added together are saved as one meal.
    - a logged meal (or one item): ×½ ×1.5 ×2 or a new amount for the whole thing. */
 (function(){
@@ -45,12 +45,12 @@ function sheet(id,title,body){
 const opt=(ic,t,sub,fn)=>`<button type="button" class="fp-more-opt" onclick="${fn}"><span class="ic">${ic}</span><div><b>${t}</b><span>${sub}</span></div></button>`;
 window.fpAddMore=function(){
   sheet('fpAddMoreSheet','עוד דרכים להוסיף',
-    opt('📸','לצלם את הארוחה','ה-AI מזהה מה בצלחת וכמה','fpMore(\'photo\')')+
-    opt('🖼','תמונה של הארוחה מהגלריה','תמונה שכבר צילמת','fpMore(\'photoGal\')')+
-    opt('📷','לסרוק ברקוד','מוצר ארוז: הערכים מגיעים לבד','fpMore(\'barcode\')')+
-    opt('📝','תמונה של מתכון או רשימת מרכיבים','ה-AI קורא את המרכיבים ומחשב','fpMore(\'recipePhoto\')')+
-    opt('🔗','מתכון מקישור','מדביקים קישור לאתר מתכונים','fpMore(\'link\')')+
-    opt('⌨️','להקליד מספר ברקוד','אם הסריקה לא עובדת','fpMore(\'barcodeType\')'));
+    opt('','לצלם את הארוחה','ה-AI מזהה מה בצלחת וכמה','fpMore(\'photo\')')+
+    opt('','תמונה של הארוחה מהגלריה','תמונה שכבר צילמת','fpMore(\'photoGal\')')+
+    opt('','לסרוק ברקוד','מוצר ארוז: הערכים מגיעים לבד','fpMore(\'barcode\')')+
+    opt('','תמונה של מתכון או רשימת מרכיבים','ה-AI קורא את המרכיבים ומחשב','fpMore(\'recipePhoto\')')+
+    opt('','מתכון מקישור','מדביקים קישור לאתר מתכונים','fpMore(\'link\')')+
+    opt('','להקליד מספר ברקוד','אם הסריקה לא עובדת','fpMore(\'barcodeType\')'));
 };
 window.fpMore=function(k){
   const s=$('fpAddMoreSheet');if(s)s.remove();
@@ -77,7 +77,7 @@ if(typeof estimateMealPhoto==='function'){const o=estimateMealPhoto;estimateMeal
 /* ---------- photo of a recipe or an ingredient list ---------- */
 let SERV=4;
 function recipePhotoSheet(){
-  sheet('fpRecipePhoto','🖼 תמונה של מתכון',`<p class="muted" style="margin:0 0 8px">מצלמים את המתכון או את רשימת המרכיבים (גם צילום מסך). ה-AI מפרק לרכיבים, ואז כותבים כמה גרם אכלת מכל רכיב: עוף, תפוחי אדמה, אורז…</p>
+  sheet('fpRecipePhoto','תמונה של מתכון',`<p class="muted" style="margin:0 0 8px">מצלמים את המתכון או את רשימת המרכיבים (גם צילום מסך). ה-AI מפרק לרכיבים, ואז כותבים כמה גרם אכלת מכל רכיב: עוף, תפוחי אדמה, אורז…</p>
     <input id="fpRpFile" type="file" accept="image/*" style="display:none">
     <button type="button" class="btn full" onclick="document.getElementById('fpRpFile').click()">בחר תמונה או צלם</button>`);
   $('fpRpFile').onchange=e=>{const f=e.target.files&&e.target.files[0];const s=$('fpRecipePhoto');if(s)s.remove();if(f)recipeFromPhoto(f,0)};
@@ -117,7 +117,7 @@ if(typeof renderDishEstimate==='function'){
       if(!d._base||d._base.length!==d.items.length)setBase(d);const u=U(d);
       const G=Math.round(d._base.reduce((n,a)=>n+a,0)),now=Math.round(d.items.reduce((n,x)=>n+(Number(x.amount)||0),0));
       const name=`<div class="field fp-dish-name"><label>שם המנה</label><input id="fpDishName" maxlength="60" value="${esc(d.name||'')}" oninput="fpDishName(this.value)"></div>`;
-      const box=`<div class="fp-portion"><b>🍽 כמה אכלת מזה?</b><div class="meal-tabs" style="flex-wrap:wrap">${FR.map(([v,l])=>`<button type="button" class="chip${Math.abs((d._f||1)-v)<0.01?' active':''}" onclick="fpDishScale(${v})"><bdi dir="ltr">${l}</bdi></button>`).join('')}</div>
+      const box=`<div class="fp-portion"><b>כמה אכלת מזה?</b><div class="meal-tabs" style="flex-wrap:wrap">${FR.map(([v,l])=>`<button type="button" class="chip${Math.abs((d._f||1)-v)<0.01?' active':''}" onclick="fpDishScale(${v})"><bdi dir="ltr">${l}</bdi></button>`).join('')}</div>
         <div class="row2"><span>בגרמים:</span><input id="fpDishG" type="number" min="1" step="1" inputmode="numeric" value="${now}" onchange="fpDishGrams(this.value)"><span class="muted">מתוך ${G} ג׳</span></div>
         <div class="row2 fp-units"><span>ביחידות:</span><span class="muted">כל המנה =</span>${step('n',u.n,1)}<span class="muted">${u.n===1?'יחידה':'יחידות'}</span></div><div class="row2 fp-units"><span style="visibility:hidden">ביחידות:</span><span class="muted">אכלתי</span>${step('k',u.k,0.5)}<span class="muted">${u.k===1?'יחידה':'יחידות'}</span></div>
         <p class="muted" style="margin:8px 0 0;font-size:12.5px">למשל בצל ממולא, קציצות, פרוסות פיצה. אפשר גם לשנות כל רכיב בנפרד למטה.</p>
@@ -146,7 +146,7 @@ function split(d){const w=x=>Number(x.amount)||0,W=d.items.reduce((n,x)=>n+w(x),
   return {mains,minors:d.items.map((x,i)=>i).filter(i=>mains.indexOf(i)<0)}}
 function partsBox(d){if(d&&d._full)return `<div class="fp-parts" style="margin-top:10px"><p class="muted" style="margin:0 0 6px;font-size:12.5px">חושב לפי מה שאכלת מכל רכיב.</p><button type="button" class="btn light full" onclick="fpDishBack()">↩ חזרה לכל המתכון</button></div>`;
   if(!d||!d.items||d.items.length<2)return '';const {mains,minors}=split(d),eat=d._eat||{},skip=d._skip||{};
-  return `<details class="fp-parts"${d._recipe||d._eat?' open':''} style="margin-top:10px"><summary><b style="display:inline">🍗 אכלתי לפי רכיבים</b> <span class="muted" style="font-size:12.5px">כמה גרם מכל אחד</span></summary>
+  return `<details class="fp-parts"${d._recipe||d._eat?' open':''} style="margin-top:10px"><summary><b style="display:inline">אכלתי לפי רכיבים</b> <span class="muted" style="font-size:12.5px">כמה גרם מכל אחד</span></summary>
     <p class="muted" style="margin:6px 0;font-size:12.5px">${minors.length?`השמן, הרוטב והתבלינים (${minors.map(i=>esc(d.items[i].label)).slice(0,4).join(', ')}) מתחלקים בין הרכיבים, כך ש-100 ג׳ עוף כולל את החלק שלו.`:'כותבים כמה גרם אכלת מכל רכיב.'} לא אכלת משהו? ״דלג״.</p>
     ${mains.map(i=>`<div class="row2"${skip[i]?' style="opacity:.5"':''}><span style="flex:1;min-width:0">${skip[i]?'<s>':''}${esc(d.items[i].label)}${skip[i]?'</s>':''}</span><input type="number" min="0" step="1" inputmode="numeric" data-i="${i}" class="fpPartG" placeholder="${Math.round(Number(d.items[i].amount)||0)}" value="${!skip[i]&&eat[i]>0?eat[i]:''}" style="width:80px"${skip[i]?' disabled':''}><span class="muted">ג׳</span><button type="button" class="chip${skip[i]?' active':''}" style="padding:4px 9px;font-size:12.5px" onclick="fpDishSkip(${i})">${skip[i]?'↩ אכלתי':'דלג'}</button></div>`).join('')}
     <button type="button" class="btn secondary full" style="margin-top:8px" onclick="fpDishParts()">חשב לפי מה שאכלתי</button></details>`}
@@ -236,9 +236,9 @@ if(typeof saveDishOnly==='function'){
     d.name=p.name;queueSaveMine([p],`״${p.name}״ נשמר. בפעם הבאה תמצא אותו בחיפוש`)};
 }
 
-/* ---------- "💾 שמור כמוצר משלי" for a sentence or a logged meal ---------- */
+/* ---------- "שמור כמוצר משלי" for a sentence or a logged meal ---------- */
 function askName(def,sub,cb){
-  sheet('fpNameProd','💾 שמור כמוצר משלי',`<p class="muted" style="margin:0 0 8px">${sub}</p><div class="field"><label>איך לקרוא לו?</label><input id="fpProdName" maxlength="60" value="${esc(def)}"></div><button type="button" class="btn full" id="fpProdGo">שמור</button>`);
+  sheet('fpNameProd','שמור כמוצר משלי',`<p class="muted" style="margin:0 0 8px">${sub}</p><div class="field"><label>איך לקרוא לו?</label><input id="fpProdName" maxlength="60" value="${esc(def)}"></div><button type="button" class="btn full" id="fpProdGo">שמור</button>`);
   const go=()=>{const v=($('fpProdName').value||'').trim();if(!v)return toast('כתוב שם',true);$('fpNameProd').remove();cb(v)};
   $('fpProdGo').onclick=go;$('fpProdName').addEventListener('keydown',e=>{if(e.key==='Enter')go()});setTimeout(()=>{try{$('fpProdName').select()}catch(_){}},200);
 }
@@ -253,7 +253,7 @@ function sentenceTotals(){const t={calories:0,protein:0,carbs:0,fat:0};sentenceR
 function sentenceGrams(){let g=0;for(const r of sentenceRows()){const per=r.unit==='גרם'||r.unit==='מ״ל'?1:foodUnitGrams(r.food,r.unit);if(!(per>0))return 0;g+=r.amount*per}return g}
 window.fpSaveSentenceProduct=function(){const t=sentenceTotals();if(!t.calories)return toast('לא נבחר כלום',true);
   askName(($('foodQuery').value||'').trim().slice(0,60),`${kc(t.calories)} קל׳ · ${fmt(n1(t.protein))} ג׳ חלבון. נשמר כמנה אחת.`,v=>saveProduct(v,t,sentenceGrams()))};
-if(typeof renderSentence==='function'){const o=renderSentence;renderSentence=function(){const r=o.apply(this,arguments);try{const L=$('sentenceList');if(L&&!$('fpSentProd'))L.insertAdjacentHTML('afterend','<button type="button" class="btn light full" id="fpSentProd" style="margin-top:8px" onclick="fpSaveSentenceProduct()">💾 שמור כמוצר משלי</button>')}catch(_){}return r}}
+if(typeof renderSentence==='function'){const o=renderSentence;renderSentence=function(){const r=o.apply(this,arguments);try{const L=$('sentenceList');if(L&&!$('fpSentProd'))L.insertAdjacentHTML('afterend','<button type="button" class="btn light full" id="fpSentProd" style="margin-top:8px" onclick="fpSaveSentenceProduct()">שמור כמוצר משלי</button>')}catch(_){}return r}}
 
 /* ---------- several foods added together = one meal ---------- */
 async function groupFresh(before,name,category){
@@ -278,7 +278,7 @@ if(typeof addSentence==='function'){
 function mealTools(){
   document.querySelectorAll('#entries .fp-meal-tools').forEach(t=>{
     if(t.dataset.fpq)return;const b=t.querySelector('button[onclick^="fpAddToMeal"]');if(!b)return;const m=String(b.getAttribute('onclick')).match(/fpAddToMeal\('([^']+)'\)/);if(!m)return;
-    t.dataset.fpq='1';t.insertAdjacentHTML('beforeend',`<button type="button" class="chip" onclick="fpMealQty('${m[1]}')">⚖ כמות</button><button type="button" class="chip" onclick="fpMealProduct('${m[1]}')">💾 כמוצר</button>`);
+    t.dataset.fpq='1';t.insertAdjacentHTML('beforeend',`<button type="button" class="chip" onclick="fpMealQty('${m[1]}')">כמות</button><button type="button" class="chip" onclick="fpMealProduct('${m[1]}')">כמוצר</button>`);
   });
 }
 if(typeof renderEntries==='function'){const o=renderEntries;renderEntries=function(){const r=o.apply(this,arguments);try{mealTools()}catch(e){console.error(e)}return r}}
@@ -286,7 +286,7 @@ const items=gid=>(state.data.entries||[]).filter(x=>String(x.groupId)===String(g
 window.fpMealQty=function(gid){
   const its=items(gid);if(!its.length)return;const name=its[0].mealOption||its[0].name||'הארוחה';
   const kcal=its.reduce((n,x)=>n+(Number(x.calories)||0),0),allG=its.every(x=>x.unit==='גרם'),G=allG?Math.round(its.reduce((n,x)=>n+(Number(x.amount)||0),0)):0;
-  sheet('fpMealQtySheet','⚖ כמות של '+esc(name),`<p class="muted" style="margin:0 0 8px">עכשיו: ${kc(kcal)} קל׳${G?` · ${G} ג׳`:''}. כל הפריטים בארוחה משתנים ביחד.</p>
+  sheet('fpMealQtySheet','כמות של '+esc(name),`<p class="muted" style="margin:0 0 8px">עכשיו: ${kc(kcal)} קל׳${G?` · ${G} ג׳`:''}. כל הפריטים בארוחה משתנים ביחד.</p>
     <div class="meal-tabs" style="flex-wrap:wrap">${[[0.5,'חצי'],[0.75,'¾'],[1.5,'פי 1.5'],[2,'פי 2'],[3,'פי 3']].map(([v,l])=>`<button type="button" class="chip" onclick="fpMealScale('${gid}',${v})">${l}</button>`).join('')}</div>
     ${G?`<div class="field" style="margin-top:12px"><label>או כמה גרם אכלת בסך הכל</label><div style="display:flex;gap:8px"><input id="fpMealG" type="number" min="1" step="1" inputmode="numeric" value="${G}" style="flex:1"><button type="button" class="btn" onclick="fpMealScale('${gid}',Number(document.getElementById('fpMealG').value)/${G})">שמור</button></div></div>`:''}`);
 };

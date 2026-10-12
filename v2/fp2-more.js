@@ -57,7 +57,7 @@ document.addEventListener('click',e=>{
     const id=host.dataset.sel||(host.dataset.lp||'').replace(/^entry:/,'');if(!id||/^tmp/.test(id))return;openEntryEdit(id)}catch(err){console.error(err)}});
 if(typeof openEntryEdit==='function'){const o=openEntryEdit;openEntryEdit=function(){const r=o.apply(this,arguments);try{const E=state.entryEdit;if(!E)return r;E.manual=null;
     let box=$('fpEditManual');if(box)box.remove();const tot=$('entryEditTotals');if(!tot)return r;
-    tot.insertAdjacentHTML('afterend',`<details id="fpEditManual" style="margin:0 0 10px"><summary class="muted">✎ לתקן קלוריות וחלבון ידנית</summary><div class="row" style="margin-top:8px"><div class="field"><label>קלוריות</label><input id="fpEdK" type="number" min="0" step="1" inputmode="numeric" oninput="fpEditManual()"></div><div class="field"><label>חלבון (ג׳)</label><input id="fpEdP" type="number" min="0" step="0.1" inputmode="decimal" oninput="fpEditManual()"></div></div><p class="muted" style="margin:0;font-size:12.5px">מה שתכתוב כאן נשמר כמו שהוא, במקום החישוב.</p></details>`);
+    tot.insertAdjacentHTML('afterend',`<details id="fpEditManual" style="margin:0 0 10px"><summary class="muted">לתקן קלוריות וחלבון ידנית</summary><div class="row" style="margin-top:8px"><div class="field"><label>קלוריות</label><input id="fpEdK" type="number" min="0" step="1" inputmode="numeric" oninput="fpEditManual()"></div><div class="field"><label>חלבון (ג׳)</label><input id="fpEdP" type="number" min="0" step="0.1" inputmode="decimal" oninput="fpEditManual()"></div></div><p class="muted" style="margin:0;font-size:12.5px">מה שתכתוב כאן נשמר כמו שהוא, במקום החישוב.</p></details>`);
     const m=entryEditMacros();$('fpEdK').placeholder=Math.round(m.calories);$('fpEdP').placeholder=n1(m.protein);}catch(e){console.error(e)}return r}}
 window.fpEditManual=function(){const E=state.entryEdit;if(!E)return;const k=$('fpEdK').value,p=$('fpEdP').value;E.manual=(k!==''||p!=='')?{k:k===''?null:Number(k),p:p===''?null:Number(p)}:null;updateEntryEditTotals()};
 if(typeof entryEditMacros==='function'){const o=entryEditMacros;entryEditMacros=function(){const m=o.apply(this,arguments);try{const E=state.entryEdit;if(E&&E.manual){const out=Object.assign({},m);if(E.manual.k!=null&&E.manual.k>=0)out.calories=E.manual.k;if(E.manual.p!=null&&E.manual.p>=0)out.protein=E.manual.p;return out}}catch(_){}return m}}
@@ -78,9 +78,9 @@ window.fpMealUnitsStep=function(i,d){const meals=(state.data.meals||{})[state.ca
   const k=Math.max(0.5,(Number(u&&u.textContent)||n)+d);fpMealX(i,k/n);if(u)u.textContent=fmt(k)};
 if(typeof renderMeals==='function'){const o=renderMeals;renderMeals=function(){const r=o.apply(this,arguments);try{const meals=(state.data.meals||{})[state.category]||[];meals.forEach((_,i)=>mealX(i))}catch(e){console.error(e)}return r}}
 
-/* ---------- 5. meal builder: ✨ add with AI ---------- */
+/* ---------- 5. meal builder: add with AI ---------- */
 function builderAiBtn(){const q=$('customFoodQuery');if(!q||$('fpBuildAi'))return;const row=q.closest('.search-row');if(!row)return;
-  row.insertAdjacentHTML('afterend','<button type="button" class="btn light full" id="fpBuildAi" style="margin-top:8px" onclick="fpBuilderAI()">✨ להוסיף עם AI (למשל: 200 גרם עוף, 150 גרם תפוחי אדמה)</button>')}
+  row.insertAdjacentHTML('afterend','<button type="button" class="btn light full" id="fpBuildAi" style="margin-top:8px" onclick="fpBuilderAI()">להוסיף עם AI (למשל: 200 גרם עוף, 150 גרם תפוחי אדמה)</button>')}
 builderAiBtn();setInterval(builderAiBtn,2000);
 window.fpBuilderAI=async function(){
   const q=($('customFoodQuery').value||'').trim();if(q.length<2){toast('כתוב מה להוסיף, ואז לחץ שוב',true);$('customFoodQuery').focus();return}
@@ -92,7 +92,7 @@ window.fpBuilderAI=async function(){
       recalcCustomIngredient(ing);state.customIngredients.push(ing);n++});
     if(!n)throw new Error('לא נמצאו ערכים');renderCustomIngredients();$('customFoodQuery').value='';$('customFoodResults').innerHTML='';
     toast(`נוספו ${n} רכיבים${got?' · '+got:''}. בדוק את הכמויות`)}
-  catch(e){toast(e.message,true)}finally{if(b){b.disabled=false;b.textContent='✨ להוסיף עם AI (למשל: 200 גרם עוף, 150 גרם תפוחי אדמה)'}}
+  catch(e){toast(e.message,true)}finally{if(b){b.disabled=false;b.textContent='להוסיף עם AI (למשל: 200 גרם עוף, 150 גרם תפוחי אדמה)'}}
 };
 
 /* ---------- 6. the days on top: week back / forward ---------- */

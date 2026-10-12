@@ -2093,8 +2093,8 @@ const EXMAP={"שכיבות סמיכה": ["pushup", 0], "שכיבות סמיכה 
 const SHEET_HTML=`<div class="sheet an-sheet"><div class="sheet-head"><h3 id="an_title" style="margin:0"></h3><button class="btn light mini" id="an_x" type="button">✕</button></div>
 <div class="an-chips" id="an_vchips"></div><div class="an-row2"><button id="an_vs" type="button"></button><button id="an_vf" type="button"></button></div>
 <svg viewBox="0 0 380 270" id="an_s" class="good"></svg><div class="an-phase" id="an_ph"></div>
-<div class="an-row2"><button class="g on" id="an_mg" type="button">✅ ככה עושים</button><button class="b" id="an_mb" type="button">❌ טעויות נפוצות</button></div><div class="an-chips" id="an_chips"></div>
-<ul id="an_cues" class="good"></ul><div class="an-note g" id="an_note"></div><button class="an-pb" id="an_pb" type="button">⏸ עצור</button></div>`;
+<div class="an-row2"><button class="g on" id="an_mg" type="button">✓ ככה עושים</button><button class="b" id="an_mb" type="button">טעויות נפוצות</button></div><div class="an-chips" id="an_chips"></div>
+<ul id="an_cues" class="good"></ul><div class="an-note g" id="an_note"></div><button class="an-pb" id="an_pb" type="button">עצור</button></div>`;
 const CSS=`#anOv{z-index:140}#anOv .an-sheet{max-height:92vh}#anOv svg{width:100%;height:auto;background:#1F262E;border-radius:16px;display:block;margin-top:8px}#anOv svg.bad{box-shadow:0 0 0 2px #E5484D inset}#anOv svg.good{box-shadow:0 0 0 2px #3FB950 inset}
 #anOv h3 small{display:block;color:#FF8A80;font-weight:600;font-size:13px;margin-top:2px}
 .an-row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 0}.an-row2 button{border:2px solid transparent;border-radius:12px;padding:9px;font:inherit;font-weight:700;background:#1F262E;color:#A3ADB8}
@@ -2113,10 +2113,10 @@ function mount(){if(document.getElementById('anOv'))return;const st=document.cre
  ov.addEventListener('click',e=>{if(e.target===ov)closeAn()});A$('x').onclick=closeAn;
  A$('mg').onclick=()=>{bad=-1;ui()};A$('mb').onclick=()=>{bad=0;ui()};A$('vs').onclick=()=>{view=0;bad=-1;ui()};A$('vf').onclick=()=>{view=1;bad=-1;ui()};
  A$('vchips').onclick=e=>{const b=e.target.closest('.vc');if(b){vi=+b.dataset.i;bad=-1;ui()}};A$('chips').onclick=e=>{const b=e.target.closest('.chip');if(b){bad=+b.dataset.i;ui()}};
- A$('pb').onclick=()=>{play=!play;A$('pb').textContent=play?'⏸ עצור':'▶ הפעל'}}
+ A$('pb').onclick=()=>{play=!play;A$('pb').textContent=play?'עצור':'▶ הפעל'}}
 function ui(){const x=PAT[cur];const vs=x.variants||[];if(vi>=vs.length)vi=0;A$('vchips').innerHTML=vs.length>1?vs.map((v,i)=>`<button type="button" class="chip vc ${i===vi?'on':''}" data-i="${i}">${v.n}</button>`).join(''):'';VAR=vs.length?vs[vi].V:null;
- A$('title').innerHTML=`${exName||x.n}<small>🔴 שריר עובד: ${(window.FP2Lib&&FP2Lib.worksOf(exName))||x.m}</small>`;
- A$('vs').textContent='👁 '+x.v[0];A$('vf').style.display=x.views[1]?'':'none';if(x.views[1])A$('vf').textContent='👁 '+x.v[1];
+ A$('title').innerHTML=`${exName||x.n}<small>שריר עובד: ${(window.FP2Lib&&FP2Lib.worksOf(exName))||x.m}</small>`;
+ A$('vs').textContent=x.v[0];A$('vf').style.display=x.views[1]?'':'none';if(x.views[1])A$('vf').textContent=x.v[1];
  A$('vs').classList.toggle('on',view===0);A$('vf').classList.toggle('on',view===1);
  const bl=x.bad[view]||[];if(bad>=bl.length)bad=-1;
  A$('mg').classList.toggle('on',bad<0);A$('mb').classList.toggle('on',bad>=0);A$('mb').style.display=bl.length?'':'none';
@@ -2140,26 +2140,33 @@ function render(){const x=PAT[cur];if(!x.views[view])view=0;const d=x.loop?T:dep
  svg.querySelectorAll('rect').forEach(r=>{if(+r.getAttribute('width')>=900){r.setAttribute('x',vb.x-300);r.setAttribute('width',vb.w+600);if(+r.getAttribute('height')>=900){r.setAttribute('y',vb.y-300);r.setAttribute('height',vb.h+600)}}});
  A$('ph').textContent=x.loop?x.ph[0]:T<.42?x.ph[0]:T<.52?x.ph[1]:T<.92?x.ph[2]:x.ph[3]}
 function frame(n){if(!anOpen)return;const dt=Math.min(.1,(n-last)/1000);last=n;if(play)T=(T+dt/((PAT[cur]&&PAT[cur].period)||5.2))%1;try{render()}catch(e){}rafId=requestAnimationFrame(frame)}
-const norm=s=>String(s||'').replace(/^\s*\d+\s*[.)]\s*/,'').replace(/[▾◂▸›‹←→🎬✓]/g,'').replace(/\s+/g,' ').trim();
+const norm=s=>String(s||'').replace(/^\s*\d+\s*[.)]\s*/,'').replace(/[▾◂▸›‹←→✓]/g,'').replace(/\s+/g,' ').trim();
 function openAn(name){const n=norm(name);const m=EXMAP[n];mount();exName=n;
- if(!m){requestExercise(n);toast0('עוד אין הדגמה לתרגיל הזה. שלחתי למנהל בקשה להוסיף');return}
- const i=PAT.findIndex(x=>x.id===m[0]);if(i<0)return;cur=i;T=0;bad=-1;view=0;vi=Math.min(m[1]|0,(PAT[i].variants||[1]).length-1);play=true;A$('pb').textContent='⏸ עצור';
+ if(!m){requestExercise(n).then(ok=>toast0(ok?'עוד אין הדגמה לתרגיל הזה. הבקשה נשלחה למנהל.':'עוד אין הדגמה לתרגיל הזה. הבקשה תישלח למנהל כשיהיה חיבור.'));return}
+ const i=PAT.findIndex(x=>x.id===m[0]);if(i<0)return;cur=i;T=0;bad=-1;view=0;vi=Math.min(m[1]|0,(PAT[i].variants||[1]).length-1);play=true;A$('pb').textContent='עצור';
  const ov=document.getElementById('anOv');ov.classList.remove('hide');anOpen=true;ui();last=performance.now();now0=last;cancelAnimationFrame(rafId);rafId=requestAnimationFrame(frame)}
 function closeAn(){anOpen=false;cancelAnimationFrame(rafId);const ov=document.getElementById('anOv');if(ov)ov.classList.add('hide')}
 function toast0(m){try{if(typeof toast==='function')toast(m);else alert(m)}catch(_){}}
 /* ----- exercise requests to admin ----- */
-const ASKED=new Set();
-function requestExercise(name,group,equipment){name=norm(name);if(!name||EXMAP[name]||ASKED.has(name))return;ASKED.add(name);try{if(window.FP2&&FP2.push)FP2.push('logExerciseRequest',{name,group:group||'',equipment:equipment||''})}catch(_){}}
+/* 2.22: the request is really sent (and checked). If it fails it waits in a queue and is sent again later. */
+const ASKED=new Set();const QK='fp2.exReqQ';
+const qGet=()=>{try{return JSON.parse(localStorage.getItem(QK)||'[]')}catch(_){return []}},qSet=a=>{try{localStorage.setItem(QK,JSON.stringify(a.slice(-30)))}catch(_){}};
+async function sendReq(x){if(!window.FP2||!FP2.push)throw new Error('no push');await FP2.push('logExerciseRequest',x);return true}
+async function requestExercise(name,group,equipment){name=norm(name);if(!name||EXMAP[name])return true;if(ASKED.has(name))return true;
+  const x={name,group:group||'',equipment:equipment||''};
+  try{await sendReq(x);ASKED.add(name);return true}catch(e){const q=qGet();if(!q.some(y=>y.name===name))q.push(x);qSet(q);return false}}
+async function flushReq(){const q=qGet();if(!q.length)return;const left=[];for(const x of q){try{await sendReq(x);ASKED.add(x.name)}catch(_){left.push(x)}}qSet(left)}
+setTimeout(flushReq,20000);setInterval(flushReq,10*60*1000);
 function hookSave(){if(!window.FP2||!FP2.call||FP2.__anHook)return false;const orig=FP2.call;FP2.call=async function(fn,args){const r=await orig.apply(this,arguments);if(fn==='saveExercise'&&args&&args[0]&&args[0].name)requestExercise(args[0].name,args[0].muscleGroup,args[0].equipment);return r};FP2.__anHook=true;return true}
 /* ----- arrows ----- */
 const ROOTS='#workoutHome,#workoutLibrary,#workouts,#workoutDiary,#workoutPlans,.overlay:not(#anOv)';
 let scanT=0,mo=null;
 function scan(){if(!mo)return;mo.disconnect();try{document.querySelectorAll(ROOTS).forEach(root=>{
   const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const hits=[];let t;while(t=w.nextNode()){const s=t.nodeValue;if(!s||s.length>60)continue;const n=norm(s);if(n&&EXMAP[n]){const el=t.parentElement;if(el&&!el.closest('.exAnim,#anOv,option,select,.exfam-h,button.exAnimBtn,input,textarea,script,style')&&!hits.includes(el))hits.push(el)}}
-  hits.forEach(el=>{const nx=el.nextElementSibling;if(nx&&nx.classList.contains('exAnim'))return;if(el.querySelector(':scope>.exAnim'))return;const b=document.createElement('span');b.className='exAnim';b.setAttribute('role','button');b.setAttribute('aria-label','הדגמה');b.dataset.ex=norm(el.textContent);b.textContent='🎬';
+  hits.forEach(el=>{const nx=el.nextElementSibling;if(nx&&nx.classList.contains('exAnim'))return;if(el.querySelector(':scope>.exAnim'))return;const b=document.createElement('span');b.className='exAnim';b.setAttribute('role','button');b.setAttribute('aria-label','הדגמה');b.dataset.ex=norm(el.textContent);b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linejoin:round"><path d="M8 5v14l11-7z"/></svg>';
    if(el.tagName==='B'||el.tagName==='SPAN'||el.tagName==='STRONG'||el.tagName==='DIV'||el.tagName==='SMALL'||el.tagName==='H4'||el.tagName==='H3')el.appendChild(b);else el.after(b)})});
  /* the runner pick-line */
- const pl=document.querySelector('.pick-line');if(pl&&!pl.querySelector('.exAnimBtn')){const b=document.createElement('button');b.type='button';b.className='btn secondary pick-plus exAnimBtn';b.textContent='🎬';b.setAttribute('aria-label','הדגמה');pl.insertBefore(b,pl.querySelector('.pick-plus'))}
+ const pl=document.querySelector('.pick-line');if(pl&&!pl.querySelector('.exAnimBtn')){const b=document.createElement('button');b.type='button';b.className='btn secondary pick-plus exAnimBtn';b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linejoin:round"><path d="M8 5v14l11-7z"/></svg>';b.setAttribute('aria-label','הדגמה');pl.insertBefore(b,pl.querySelector('.pick-plus'))}
  }catch(e){}
  observe()}
 function observe(){mo.observe(document.body,{childList:true,subtree:true,characterData:true})}
@@ -2177,6 +2184,8 @@ const up=(H,deg)=>add(H,rot([0,-D.torso],deg));               /* shoulder from h
 const legA=(H,thighDeg,shinDeg)=>{const kn=polar(H,thighDeg,D.thigh);return{kn,an:polar(kn,shinDeg,D.shin)}};
 const armA=(S,uDeg,fDeg)=>{const el=polar(S,uDeg,D.uarm);return{el,wr:polar(el,fDeg,D.farm)}};
 const wave=e=>Math.sin(e*2*Math.PI);
+/* 2.22: a stretch moves in, is held, and lets go */
+const hold=e=>{const t=((e%1)+1)%1;return t<.3?ease(t/.3):t<.75?1:t<.95?1-ease((t-.75)/.2):0};
 const fig=o=>C.sideC(o);
 const wall=x=>`<rect x="${x}" y="40" width="16" height="${G-40}" fill="#2B3540"/><line x1="${x}" y1="40" x2="${x}" y2="${G}" stroke="#46525F" stroke-width="2"/>`;
 const box=(x0,x1,y)=>`<rect x="${x0}" y="${y}" width="${x1-x0}" height="${G-y}" rx="4" fill="#2B3540"/><line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="#46525F" stroke-width="3"/>`;
@@ -2200,42 +2209,42 @@ function lsSide(e,bd){const w=wave(e),H=[190,G-9-SPAN+2],S=up(H,bd===1?-18:2),am
   return floorSvg()+wall(270)+fig({H,S,hot:{hams:true,quads:true},near:{el,wr,kn:sw.kn,an:sw.an,f:[1,0]},far:{el:af.el,wr:af.wr,kn:st.kn,an:st.an,f:[1,0]}})+
    (bd===0?mark(sw.an,18)+cross('זורקים את הרגל חזק מדי'):bd===1?mark(S,18)+cross('הגוף נשען אחורה'):tick('תנועה רכה, הגוף יציב'))}
 /* calf stretch at the wall: back leg straight, heel down */
-function stCalf(e,bd){const br=wave(e)*.6,H=[202+br,G-9-SPAN+12],S=up(H,32+br);
+function stCalf(e,bd){const k=hold(e),br=k*12,H=[196+br,G-9-SPAN+12+k*2],S=up(H,22+k*14);
   const back=[148,G-9],front=[232,G-9],kb=ik(H,back,D.thigh,D.shin,[1,-.2]),kf=ik(H,front,D.thigh,D.shin,[1,-1]);
   const wr=[268,S[1]-14],el=ik(S,wr,D.uarm,D.farm,[0,1]);
   const heel=bd===0?[back[0]+4,back[1]-12]:back;const kb2=bd===0?ik(H,heel,D.thigh,D.shin,[1,-.2]):kb;
   return floorSvg()+wall(278)+fig({H,S,hot:{calves:true},near:{el,wr,kn:kb2,an:heel,f:bd===0?[.75,.6]:[1,0]},far:{el:add(el,[-2,-1]),wr:add(wr,[-2,0]),kn:kf,an:front,f:[1,0]}})+
    (bd===0?mark(heel,18)+cross('העקב האחורי מתרומם'):tick('עקב על הרצפה, רגל אחורית ישרה'))}
 /* quad stretch: stand on one leg, pull the foot to the glute */
-function stQuad(e,bd){const br=wave(e)*.6,H=[190,G-9-SPAN+2],S=up(H,3+br);
-  const th=bd===0?62:94;const kn=polar(H,th,D.thigh),an=polar(kn,th-180+12,D.shin);
-  const wr=add(an,[-2,2]),el=ik(S,wr,D.uarm,D.farm,[-1,0]),af=armA(S,60,10);
+function stQuad(e,bd){const k=hold(e),H=[190,G-9-SPAN+2],S=up(H,3+k*2);
+  const th=92+((bd===0?62:94)-92)*k;const kn=polar(H,th,D.thigh),an=polar(kn,th+(-180+12)*k,D.shin);
+  const hand0=armA(S,92,92).wr,wr=lerp(hand0,add(an,[-2,2]),Math.min(1,k*1.4)),el=ik(S,wr,D.uarm,D.farm,[-1,0]),af=armA(S,92-32*k,92-82*k);
   const st={kn:polar(H,92,D.thigh)};st.an=polar(st.kn,92,D.shin);
   return floorSvg()+fig({H,S,hot:{quads:true},near:{el,wr,kn,an,f:[-.3,-1]},far:{el:af.el,wr:af.wr,kn:st.kn,an:st.an,f:[1,0]}})+
    (bd===0?mark(kn,18)+cross('הברך בורחת קדימה'):tick('הברכיים צמודות, מותן ישר'))}
 /* hamstring: heel on a low step, straight leg, hinge forward with a flat back */
-function stHam(e,bd){const br=wave(e)*.8,H=[182,G-9-SPAN+4],S=up(H,(bd===0?70:48)+br);
+function stHam(e,bd){const k=hold(e),H=[182,G-9-SPAN+4],S=up(H,8+((bd===0?70:48)-8)*k);
   const heel=[262,206],kn=ik(H,heel,D.thigh,D.shin,[0,-1]);const st={an:[178,G-9]};st.kn=ik(H,st.an,D.thigh,D.shin,[1,0]);
   const wr=lerp(kn,heel,.25),el=ik(S,wr,D.uarm,D.farm,[0,1]);
   const hd=bd===0?add(S,rot([0,-(D.neck+D.headR)],120)):null;
   return floorSvg()+box(236,300,214)+fig({H,S,hd,hot:{hams:true},near:{el,wr,kn,an:heel,f:[0,-1]},far:{el:add(el,[-2,-1]),wr:add(wr,[-3,0]),kn:st.kn,an:st.an,f:[1,0]}})+
    (bd===0?mark(S,20)+cross('הגב מתעגל, הראש יורד'):tick('גב ישר, מתכופפים מהמותן'))}
 /* hip flexor: half-kneeling, push the hips forward */
-function stHip(e,bd){const br=wave(e)*1.2,H=[184+br,G-58],S=up(H,bd===0?-22:2);
+function stHip(e,bd){const k=hold(e),H=[176+k*16,G-58+k*4],S=up(H,bd===0?-22*k:2);
   const knB=[150,G-7],anB=[106,G-9],front=[240,G-9],knF=ik(H,front,D.thigh,D.shin,[0,-1]);
   const wr=add(H,[18,-6]),el=ik(S,wr,D.uarm,D.farm,[1,1]);
   return floorSvg()+fig({H,S,hot:{quads:true},near:{el,wr,kn:knB,an:anB,f:[-.2,1]},far:{el:add(el,[-2,-1]),wr:add(wr,[-2,0]),kn:knF,an:front,f:[1,0]}})+
    (bd===0?mark(add(H,[0,-30]),20)+cross('הגב מתקמר אחורה'):tick('גב זקוף, האגן נדחף קדימה'))}
 /* glute: seated, one leg straight, hug the other knee to the opposite shoulder */
-function stGlute(e,bd){const br=wave(e)*.8,H=[170,G-14],S=up(H,(bd===0?-6:12)+br+(bd===0?0:0));
-  const anF=[268,G-9],knF=add(H,[50,2]);const anN=[214,G-9],knN=ik(H,anN,D.thigh,D.shin,[.3,-1]);
+function stGlute(e,bd){const k=hold(e),H=[170,G-14],S=up(H,(bd===0?-6:12)*k);
+  const anF=[268,G-9],knF=add(H,[50,2]);const anN=lerp([250,G-9],[214,G-9],k),knN=ik(H,anN,D.thigh,D.shin,[.3,-1]);
   const wr=add(knN,[-6,8]),el=ik(S,wr,D.uarm,D.farm,[.2,1]);
   const S2=bd===0?add(S,[-8,6]):S;
   return floorSvg()+fig({H,S:S2,hot:{glutes:true,hams:true},near:{el,wr,kn:knN,an:anN,f:[1,0]},far:{el:add(el,[-2,-1]),wr:add(wr,[-3,-2]),kn:knF,an:anF,f:[0,-1]}})+
    (bd===0?mark(S2,20)+cross('הגב מתעגל אחורה'):tick('גב זקוף, מחבקים את הברך לחזה'))}
 
 const drill=(id,n,m,fn,good,bad)=>PAT.push({id,n,m,v:['מהצד'],ph:[n,'','',''],loop:true,period:.8,good,bad:[bad],views:[fn]});
-const stretch=(id,n,m,fn,good,bad)=>PAT.push({id,n,m,v:['מהצד'],ph:['מחזיקים 30 שניות','','',''],loop:true,period:4,good,bad:[bad],views:[fn]});
+const stretch=(id,n,m,fn,good,bad)=>PAT.push({id,n,m,v:['מהצד'],ph:['מחזיקים 30 שניות','','',''],loop:true,period:5,good,bad:[bad],views:[fn]});
 drill('high_knees','הרמת ברכיים','ירכיים ובטן',hkSide,['ברך עד גובה המותן','גוף זקוף','ידיים זזות הפוך לרגליים'],[{t:'נשענים אחורה',fix:'החזה קדימה, הגוף זקוף.'},{t:'הברך לא עולה',fix:'מרימים עד גובה המותן, גם אם לאט יותר.'}]);
 drill('butt_kicks','עקבים לישבן','ירך קדמית',bkSide,['העקב עולה לכיוון הישבן','הירך נשארת למטה','צעדים קטנים ומהירים'],[{t:'הגב מתכופף קדימה',fix:'גוף זקוף, מבט קדימה.'},{t:'הברך עולה קדימה',fix:'הברך מצביעה לרצפה, רק השוק זזה.'}]);
 drill('leg_swing','נדנוד רגל','ירך אחורית ומפשעה',lsSide,['יד על הקיר','רגל ישרה מתנדנדת קדימה ואחורה','10 לכל רגל'],[{t:'זורקים את הרגל חזק מדי',fix:'תנועה רכה, מגדילים את הטווח לאט.'},{t:'הגוף נשען אחורה',fix:'הגוף יציב וזקוף, רק הרגל זזה.'}]);

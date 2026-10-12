@@ -39,7 +39,7 @@ async function remote(fn,args){
   if(!oldConf())throw new Error('לפעולה הזו צריך חיבור לשרת הישן. חבר אותו בהגדרות');
   if(AI_ONCE.has(fn)){const t0=Date.now();try{return await postOld(fn,args,100000)}catch(e){if(!/^NET:/.test(e.message))throw e;
     if(fn==='estimateFoodWithOpenAI'&&Date.now()-t0<20000){try{return await window.httpCall(fn,args||[])}catch(_){}}
-    throw new Error(/timeout/.test(e.message)?'ה-AI לא ענה תוך דקה וחצי. נסה שוב, או בדוק בהגדרות ← 🤖 בדיקת AI':'אין חיבור לשרת ה-AI ('+e.message.slice(4)+')')}}
+    throw new Error(/timeout/.test(e.message)?'ה-AI לא ענה תוך דקה וחצי. נסה שוב, או בדוק בהגדרות ← בדיקת AI':'אין חיבור לשרת ה-AI ('+e.message.slice(4)+')')}}
   let first;
   for(let k=0;k<3;k++){
     try{return await postOld(fn,args)}catch(e){if(!/^NET:/.test(e.message))throw e;first=first||e.message.slice(4)}
@@ -50,8 +50,8 @@ async function remote(fn,args){
 
 /* ---------- saving to Firebase ---------- */
 let syncState={pending:0,error:''};
-function syncNote(){const el=$id('fp2Sync');if(el)el.innerHTML=syncState.error?'⚠️ '+syncState.error:syncState.pending?'⏳ שומר בענן…':'✓ הכול שמור בענן';
-  let bar=$id('fp2SyncErr');if(syncState.error){if(!bar){bar=document.createElement('div');bar.id='fp2SyncErr';bar.style.cssText='position:fixed;z-index:9000;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));background:#8f3434;color:#fff;padding:10px 12px;border-radius:12px;font:14px/1.4 -apple-system,sans-serif;direction:rtl;text-align:right';bar.onclick=()=>bar.remove();document.body.appendChild(bar)}bar.textContent='⚠️ השמירה לענן נכשלה: '+syncState.error+' (נוגע כדי לסגור)'}else if(bar)bar.remove()}
+function syncNote(){const el=$id('fp2Sync');if(el)el.innerHTML=syncState.error?''+syncState.error:syncState.pending?'שומר בענן…':'✓ הכול שמור בענן';
+  let bar=$id('fp2SyncErr');if(syncState.error){if(!bar){bar=document.createElement('div');bar.id='fp2SyncErr';bar.style.cssText='position:fixed;z-index:9000;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));background:#8f3434;color:#fff;padding:10px 12px;border-radius:12px;font:14px/1.4 -apple-system,sans-serif;direction:rtl;text-align:right';bar.onclick=()=>bar.remove();document.body.appendChild(bar)}bar.textContent='השמירה לענן נכשלה: '+syncState.error+' (נוגע כדי לסגור)'}else if(bar)bar.remove()}
 function persist(ch,wait,retried){
   if(!col)return Promise.resolve();
   const ops=[];
@@ -107,7 +107,7 @@ function showAuth(mode){
 }
 function showImport(){
   const c=oldConf();
-  overlay(`<h1>ברוך הבא 👋</h1><p>פעם ראשונה פה? כמה שאלות קצרות, סיור קצר, ומתחילים.</p>
+  overlay(`<h1>ברוך הבא </h1><p>פעם ראשונה פה? כמה שאלות קצרות, סיור קצר, ומתחילים.</p>
     <button class="fp2-btn" id="fp2Fresh">בוא נתחיל</button>
     <details style="margin-top:18px;text-align:right"><summary style="color:#8a9690;font-size:14px;cursor:pointer">יש לי נתונים באפליקציה הישנה</summary>
     <div style="margin-top:10px">${c?'<p style="color:#5DCAA5">✓ השרת הישן מחובר בטלפון הזה</p>':`<input id="fp2Url" placeholder="כתובת השרת הישן (מסתיימת ב-/exec)"><input id="fp2Code" type="password" placeholder="הקוד האישי מהאפליקציה הישנה">`}
@@ -153,11 +153,11 @@ function pullHealth(){if(!oldConf()||Date.now()-lastHealth<30*1000)return;lastHe
 function accountCard(){
   const view=$id('settings');if(!view||$id('fp2Account'))return;
   const card=document.createElement('details');card.className='settings-section';card.id='fp2Account';card.open=false;
-  card.innerHTML=`<summary>👤 חשבון וענן</summary><div class="settings-body"><p class="muted">מחובר בתור <b dir="ltr">${(user.email||'').replace(/[<>&"]/g,'')}</b>. הנתונים נשמרים בטלפון ומסתנכרנים ל-Firebase.</p>
+  card.innerHTML=`<summary>חשבון וענן</summary><div class="settings-body"><p class="muted">מחובר בתור <b dir="ltr">${(user.email||'').replace(/[<>&"]/g,'')}</b>. הנתונים נשמרים בטלפון ומסתנכרנים ל-Firebase.</p>
     <p class="muted" id="fp2Sync"></p>
     <p class="muted">השרת הישן (ל-AI, לתמונות ולשעון): <b>${oldConf()?'✓ מחובר':'לא מחובר'}</b></p>
     ${oldConf()?'':`<div class="field"><input id="fp2OldUrl" placeholder="כתובת השרת הישן (מסתיימת ב-/exec)" dir="ltr"></div><div class="field"><input id="fp2OldCode" type="password" placeholder="הקוד האישי מהאפליקציה הישנה" dir="ltr"></div><button class="btn full" id="fp2Connect">חבר</button>`}
-    <button class="btn secondary full" style="margin-top:10px" id="fp2Repair">🔄 השלם נתונים מהאפליקציה הישנה</button>
+    <button class="btn secondary full" style="margin-top:10px" id="fp2Repair">השלם נתונים מהאפליקציה הישנה</button>
     <p class="muted" id="fp2RepairMsg">מוסיף מהאפליקציה הישנה כל מה שחסר כאן: ארוחות, מזונות, אימונים, משקלים ועוד. מה שרשמת באפליקציה החדשה נשאר.</p>
     <button class="btn light full" id="fp2Out">התנתק</button></div>`;
   const h=view.querySelector('h2');(h||view.firstChild).insertAdjacentElement(h?'afterend':'beforebegin',card);

@@ -1,7 +1,7 @@
 /* FitPro 2.14.0 — setup:
    - questionnaire order: details (+BMI) → goal → activity & training (+type) → workout length → meals → summary with
      the short settings: calendars (several), holidays (several), Shabbat.
-   - settings "🎯 היעד והאירועים": how much the goal may move after yesterday (or off), how much to save before an event.
+   - settings "היעד והאירועים": how much the goal may move after yesterday (or off), how much to save before an event.
    - the first day: no "יש לך אירוע השבוע?". */
 (function(){
 'use strict';
@@ -25,8 +25,8 @@ const DUR={strength:{30:'3–4 תרגילים, 2–3 סטים. מספיק כדי
 function durRec(k,d){const days=Number(d.days)||3;if(k==='strength')return days>=4?40:50;if(k==='cardio')return 30;return 40}
 window.fpOnbTT=function(k){const d=state.onb.d,a=d.trainTypes||(d.trainTypes=[]);const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);d.trainType=a.join(',');const e=$('fpOnbType');if(e)e.remove();renderOnb()};
 window.fpOnbDur=function(k,v){const d=state.onb.d;d.durs=d.durs||{};d.durs[k]=v;const e=$('fpOnbDur');if(e)e.remove();renderOnb()};
-const CALS={apple:'📱 אפל (iCloud)',google:'Google Calendar',other:'סמסונג / Outlook / אחר'};
-const HOLS={jewish:'✡️ יהודיים',muslim:'☪️ מוסלמיים',christian:'✝️ נוצריים',civil:'🎆 לועזיים'};
+const CALS={apple:'אפל (iCloud)',google:'Google Calendar',other:'סמסונג / Outlook / אחר'};
+const HOLS={jewish:'יהודיים',muslim:'מוסלמיים',christian:'נוצריים',civil:'לועזיים'};
 function bmi(d){const h=Number(d.height)/100,w=Number(d.weight);if(!(h>1&&w>20))return '';const b=w/(h*h);const t=b<18.5?'מתחת לתקין':b<25?'תקין':b<30?'מעל התקין':'גבוה';return `BMI: <b>${b.toFixed(1)}</b> · ${t}`}
 if(typeof renderOnb==='function'){
   const o=renderOnb;
@@ -48,7 +48,7 @@ if(typeof renderOnb==='function'){
         const panel=fs.querySelector('.onb-panel');if(panel){const lab=panel.querySelector(':scope > label'),opts=panel.querySelector(':scope > .onb-options');if(lab)lab.style.display='none';if(opts)opts.style.display='none';
           panel.querySelectorAll('.onb-info').forEach(x=>x.style.display='none');
           const h=fs.querySelector('h2'),pi=fs.querySelector('.onb-intro');if(h)h.textContent='כמה זמן יש לך לאימון?';if(pi)pi.textContent='בחר, ותראה מה מקבלים בכל אורך.';
-          panel.insertAdjacentHTML('afterbegin',`<div id="fpOnbDur">${types.map(k=>{const rec=durRec(k,d);return `<div class="field"><label>כמה זמן ${TTN[k]}?</label><div class="onb-options">${[30,40,50].map(v=>`<button type="button" class="onb-choice ${Number(d.durs[k])===v?'selected':''}" onclick="fpOnbDur('${k}',${v})">${v} דקות${v===rec?' ⭐':''}</button>`).join('')}</div><p style="font-size:13.5px;margin:6px 0 0">${DUR[k][d.durs[k]]||''}</p><p class="muted" style="font-size:12.5px;margin:4px 0 0">⭐ מומלץ לך: ${rec} דקות${k==='strength'?` (לפי ${Number(d.days)||3} אימונים בשבוע)`:''}.</p></div>`}).join('')}</div>`)}}
+          panel.insertAdjacentHTML('afterbegin',`<div id="fpOnbDur">${types.map(k=>{const rec=durRec(k,d);return `<div class="field"><label>כמה זמן ${TTN[k]}?</label><div class="onb-options">${[30,40,50].map(v=>`<button type="button" class="onb-choice ${Number(d.durs[k])===v?'selected':''}" onclick="fpOnbDur('${k}',${v})">${v} דקות${v===rec?' · מומלץ':''}</button>`).join('')}</div><p style="font-size:13.5px;margin:6px 0 0">${DUR[k][d.durs[k]]||''}</p><p class="muted" style="font-size:12.5px;margin:4px 0 0">מומלץ לך: ${rec} דקות${k==='strength'?` (לפי ${Number(d.days)||3} אימונים בשבוע)`:''}.</p></div>`}).join('')}</div>`)}}
       if(st===5&&!$('fpOnbSet')){
         if(!Array.isArray(d.calKinds)){let k=[];try{k=JSON.parse(LS.get('fp2.calKinds')||'[]')}catch(_){}if(!k.length&&d.calKind)k=[d.calKind];d.calKinds=k.length?k:[/iPhone|iPad|Mac/.test(navigator.userAgent)?'apple':'google']}
         if(!Array.isArray(d.hol))d.hol=['jewish'];if(d.shab===undefined)d.shab=null;if(!Array.isArray(d.shabPick))d.shabPick=['fri','satB'];
@@ -57,7 +57,7 @@ if(typeof renderOnb==='function'){
           <div class="field"><label>באיזה יומן אתה משתמש בטלפון? (אפשר כמה)</label>${multi('calKinds',CALS,d.calKinds)}<p class="muted" style="font-size:12px;margin:4px 0 0">אירועים כמו מסעדות וחתונות עוברים בין היומן לאפליקציה.</p></div>
           <div class="field"><label>אילו חגים לחגוג באפליקציה? (אפשר כמה)</label>${multi('hol',HOLS,d.hol)}<p class="muted" style="font-size:12px;margin:4px 0 0">שבוע לפני חג תישאל אם לשמור לו קלוריות.</p></div>
           <div class="field"><label>שהאפליקציה תלמד כמה אתה אוכל בשבת ותמלא את זה לבד?</label><p class="muted" style="font-size:12.5px;margin:0 0 6px">האפליקציה עוקבת כמה קלוריות אתה אוכל בארוחות שבת. אחרי כמה שבועות היא יודעת את הממוצע, ויכולה למלא את זה לבד ולחסוך לזה במהלך השבוע.</p>${chipRow('shab',[[true,'כן'],[false,'לא צריך']])}
-            ${d.shab===true?`<label style="display:block;margin-top:10px">אילו ארוחות?</label><div class="onb-options">${[['fri','שישי בערב'],['satB','שבת בבוקר'],['satL','שבת בצהריים']].map(([k,l])=>`<button type="button" class="onb-choice ${d.shabPick.indexOf(k)>=0?'selected':''}" aria-pressed="${d.shabPick.indexOf(k)>=0}" onclick="fpOnbMulti('shabPick','${k}')">${l}</button>`).join('')}</div>`:''}</div></div>`);
+            ${d.shab===true?`<label style="display:block;margin-top:10px">אילו ארוחות?</label><div class="onb-options">${[['friD','שישי'],['fri','ערב שבת'],['satB','שבת בוקר'],['satL','שבת צהריים']].map(([k,l])=>`<button type="button" class="onb-choice ${d.shabPick.indexOf(k)>=0?'selected':''}" aria-pressed="${d.shabPick.indexOf(k)>=0}" onclick="fpOnbMulti('shabPick','${k}')">${l}</button>`).join('')}</div>`:''}</div></div>`);
       }
     }catch(e){console.error(e)}
     return r;
@@ -101,7 +101,7 @@ function renderGoalSet(){
   const open=box.open,c=bankCtx(),mx=Number(c.shiftMax)||15,cur=Number.isFinite(Number(c.shiftPct))?Number(c.shiftPct):mx;
   const shiftOpts=[...new Set([0,5,10,mx].filter(v=>v<=mx))];
   const range=c.saveRange||[10,15],saveOpts=[...new Set([range[0],Math.round((range[0]+range[1])/2),range[1]])],sp=c.saveOff?-1:(Number(c.savePct)||range[1]);
-  box.innerHTML=`<summary>🎯 היעד והאירועים</summary><div class="settings-body">
+  box.innerHTML=`<summary>היעד והאירועים</summary><div class="settings-body">
     <label style="font-weight:700">היעד מתאזן לפי אתמול</label>
     <p class="muted" style="margin:2px 0 6px;font-size:13px">לא אכלת מספיק אתמול? היום מקבל את ההפרש. עברת? היום יורד. בחרת ${esc(c.goalName||'')}, אז ברירת המחדל היא עד ${mx}% ביום.</p>
     <p class="muted" style="margin:0 0 6px;font-size:13px"><b>למה ${mx}% מומלץ?</b> ${({gain:'במסה כל יום שחסר בו אוכל מאט את בניית השריר, אז מחזירים כמעט את כל ההפרש למחרת.',lose:'בחיטוב מספיק 10% כדי לאזן, בלי יום ענק שמקשה לשמור על הגירעון.',recomp:'בשמירה על שריר וירידה בשומן רוצים יציבות: מאזנים, אבל בלי קפיצות גדולות.',maintain:'בשמירה רוצים יציבות: מאזנים, אבל בלי קפיצות גדולות.'})[c.goalType]||''}</p>
@@ -114,7 +114,7 @@ function renderGoalSet(){
 }
 window.fpGoalSetRender=()=>{try{renderGoalSet()}catch(_){}};
 window.fpSetShift=async v=>{try{state.data=await call('saveSettings',{shift_pct:v});renderGoalSet();toast(v===0?'היעד לא ישתנה לפי אתמול':'היעד יזוז עד '+v+'% ביום');try{const d=await call('getDayView',state.date);applyDay(d);renderDay()}catch(_){}}catch(e){toast(e.message,true)}};
-function logoutBtn(){const sec=$('settings');if(!sec||$('fpLogout'))return;sec.insertAdjacentHTML('beforeend','<button type="button" class="btn light full" id="fpLogout" style="margin-top:16px" onclick="fpLogout()">🚪 התנתק / כניסה למשתמש אחר</button>')}
+function logoutBtn(){const sec=$('settings');if(!sec||$('fpLogout'))return;sec.insertAdjacentHTML('beforeend','<button type="button" class="btn light full" id="fpLogout" style="margin-top:16px" onclick="fpLogout()">התנתק / כניסה למשתמש אחר</button>')}
 window.fpLogout=function(){if(window.FP2Logout)return FP2Logout();const b=$('fp2Out');if(b){b.click();return}try{if(typeof logoutApp==='function')return logoutApp()}catch(_){}toast('אין כאן חשבון להתנתק ממנו',true)};
 if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{renderGoalSet()}catch(e){console.error(e)}try{logoutBtn()}catch(_){}return r}}
 })();

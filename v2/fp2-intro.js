@@ -1,5 +1,5 @@
 /* FitPro 2.14.0 — the intro for a new user: learn by doing, on the real screens.
-   The screen dims, one thing glows. Green glow = what every app has. Purple glow ✨ = only here.
+   The screen dims, one thing glows. Green glow = what every app has. Purple glow = only here.
    Tap what glows (it really works) or press "הבא". Shown once after the questionnaire; again from Settings. */
 (function(){
 'use strict';
@@ -15,26 +15,26 @@ const STEPS=[
   {kind:'b',view:'add',t:()=>q('#foodQuery'),title:'כותבים מה אכלת',text:'כמו בוואטסאפ: ״2 ביצים וקוטג׳״. כמה דברים ביחד נשמרים כארוחה אחת.'},
   {kind:'b',view:'add',t:()=>q('#fpAddMoreBtn'),title:'עוד דרכים',text:'צילום של הצלחת, ברקוד, תמונה של מתכון, או קישור למתכון.',tap:true,tapText:'לחץ ותראה'},
   {kind:'b',view:'add',before:()=>{if(!q('#fpAddMoreSheet'))try{fpAddMore()}catch(_){}},t:()=>q('#fpAddMoreSheet .sheet'),title:'הכל פה',text:'כל אחת מהדרכים נותנת ערכים שאפשר לתקן לפני ששומרים.',after:closeAll},
-  {kind:'s',view:'today',t:null,title:'✨ ככה נראה משהו שיש רק אצלנו',text:'כשמשהו זוהר בסגול, זה משהו שלא תמצא באפליקציות אחרות. בוא נראה מה.'},
+  {kind:'s',view:'today',t:null,title:'ככה נראה משהו שיש רק אצלנו',text:'כשמשהו זוהר בסגול, זה משהו שלא תמצא באפליקציות אחרות. בוא נראה מה.'},
   {kind:'b',view:'today',t:null,mock:'<div class="fpI-mock"><b>חזה עוף בגריל</b> · 150 ג׳ · 248 קל׳<div class="fpI-oil">כולל 5 ג׳ שמן · <u>לשנות</u></div></div>',title:'השמן כבר בפנים',text:'מאכל מבושל כבר כולל את השמן בקלוריות. בישלת עם יותר או בלי? לוחצים על השורה ומשנים.'},
   {kind:'s',view:'today',t:()=>q('#hdrCal'),title:'אירוע? חוסכים מראש',text:'יש חתונה או מסעדה? שמים ביומן של הטלפון, והאפליקציה קולטת את זה ושואלת איך להתכונן.'},
   {kind:'s',view:'today',before:()=>{try{fpUnplannedPreview()}catch(_){}},t:()=>q('#fpUnplanned .sheet'),title:'אתה מחליט כמה לחסוך',text:'בוחרים כמה פחות ביום ואיך. מה שנחסך מחכה לך באירוע. אפשר לשנות גם בהגדרות.',after:closeAll},
-  {kind:'s',view:'today',t:null,mock:'<div class="fpI-mock"><b>🎉 היום: חתונה</b> · שמורים לך <b>+960</b> קל׳<div style="margin-top:8px"><span class="fpI-btn">התחלתי את האירוע</span></div></div>',title:'ביום האירוע',text:'מגיעים לאירוע? לוחצים ״התחלתי את האירוע״, ומה ששמרת נכנס לעיגול.'},
+  {kind:'s',view:'today',t:null,mock:'<div class="fpI-mock"><b>היום: חתונה</b> · שמורים לך <b>+960</b> קל׳<div style="margin-top:8px"><span class="fpI-btn">התחלתי את האירוע</span></div></div>',title:'ביום האירוע',text:'מגיעים לאירוע? לוחצים ״התחלתי את האירוע״, ומה ששמרת נכנס לעיגול.'},
   {kind:'s',view:'today',before:()=>{try{fpEvSumPreview(false)}catch(_){}},t:()=>q('#fpEvSum .sheet'),title:'למחרת: סיכום',text:'כמה שמרת, כמה אכלת, ועמדת או לא. בלי לייפות.',after:closeAll},
   {kind:'s',view:'today',t:()=>q('#calRing'),title:'היעד מתאזן לבד',text:()=>{const c=ctx();return `לא סיימת אתמול? ההפרש עובר להיום. עברת? היום קצת פחות. בחרת ${c.goalName||'מטרה'}, אז עד ${c.shiftPct!=null?c.shiftPct:15}% ביום. לא רוצה? משנים או מכבים בהגדרות.`}},
   {kind:'s',view:'today',before:()=>{try{fpStreakPreview('under')}catch(_){}},t:()=>q('#fpStreak .sheet'),title:'3 ימים ברצף? שואלים מה קרה',text:'אם 3 ימים אתה רחוק מהיעד באותו כיוון, האפליקציה לא ממשיכה להעביר, ושואלת מה קרה.',after:closeAll},
   {kind:'s',view:'today',before:()=>{try{fpHolidayPreview()}catch(_){}},t:()=>q('#fpHoliday .sheet'),title:'חגים',text:'שבוע לפני חג: ״לשמור לך?״. מכל הלוחות שבחרת.',after:closeAll},
   {kind:'s',view:'today',before:()=>{try{fpShabPreview()}catch(_){}},t:()=>q('#fpShab .sheet'),title:'שבת',text:'אחרי כמה שבתות האפליקציה יודעת כמה אתה אוכל, ויכולה לחסוך לזה ולמלא לבד.',after:closeAll},
   {kind:'s',view:'today',before:()=>{try{openPlusMenu()}catch(_){}},t:()=>byText('#plusList button, #plusList .plus-item, #plusList [onclick]',/בקשה|רעיון/)||q('#plusList'),title:'חסר לך משהו? תגיד',text:'בכפתור הפלוס: ״בקשה או רעיון״. מקליטים או כותבים. כשהבקשה מאושרת, מקבלים התראה.',after:closeAll},
-  {kind:'b',view:'workoutHome',t:()=>q('#startWorkoutCard'),title:'🏋 מתחילים אימון',text:'בוחרים סוג, מקום וציוד, או אימון מוכן מהספרייה, ולוחצים ״התחל״.'},
+  {kind:'b',view:'workoutHome',t:()=>q('#startWorkoutCard'),title:'מתחילים אימון',text:'בוחרים סוג, מקום וציוד, או אימון מוכן מהספרייה, ולוחצים ״התחל״.'},
   {kind:'b',view:'workoutHome',t:()=>byText('#workoutHome > button',/צור אימון חדש/),title:'אימון משלך',text:'בונים פעם אחת את התרגילים לפי הסדר. בפעם הבאה מתחילים בלחיצה, ו״שמור ועבור לתרגיל הבא״ מעביר אותך הלאה.'},
-  {kind:'b',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="border-color:rgba(215,243,107,.45)"><b>לחיצת חזה</b><div style="margin-top:6px">סט 1 · <b>20</b> ק״ג × <b>8</b></div><div class="muted" style="font-size:13px;margin-top:4px">📝 הערה / תת־סט (שינוי משקל בתוך הסט)</div></div>',title:'רושמים סטים',text:'משקל וחזרות לכל סט. ירדת במשקל באמצע הסט? ״תת־סט״. ואפשר הערה.'},
-  {kind:'s',view:'workoutHome',t:null,mock:'<div class="fpI-mock"><b>בפעם הקודמת · יום ג׳</b><div style="margin-top:4px">סט 1: 14 ק״ג × 7 ← 10 ק״ג × 4</div><div style="margin-top:8px"><span class="fpI-btn">לאימון הקודם ←</span></div></div>',title:'✨ מה עשית בפעם הקודמת',text:'בכל תרגיל רואים את הפעם הקודמת, כולל תת־סטים. לחיצה פותחת את האימון הקודם, וכפתור אחד מחזיר לסט.'},
-  {kind:'b',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="text-align:center;border-color:rgba(215,243,107,.45)"><div style="font-size:30px;font-weight:800">1:30</div><div>⏱ מנוחה · <b>+30 שנ׳</b> · <b>⏹ עצור</b></div></div>',title:'מנוחה',text:'המנוחה מתחילה לבד: כשממלאים סט, כשמוסיפים סט או כששומרים תרגיל. לחיצה על השעון: לעצור או להוסיף חצי דקה. בסוף יש צליל, קול או הקלטה שלך.'},
-  {kind:'b',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="text-align:center;font-size:18px;border-color:rgba(215,243,107,.45)">🎉🏆🎉<div style="font-weight:800;margin-top:4px">שיא חדש בלחיצת חזה!</div></div>',title:'שיא חדש',text:'שברת שיא במשקל או בחזרות? קונפטי.'},
+  {kind:'b',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="border-color:rgba(215,243,107,.45)"><b>לחיצת חזה</b><div style="margin-top:6px">סט 1 · <b>20</b> ק״ג × <b>8</b></div><div class="muted" style="font-size:13px;margin-top:4px">הערה / תת־סט (שינוי משקל בתוך הסט)</div></div>',title:'רושמים סטים',text:'משקל וחזרות לכל סט. ירדת במשקל באמצע הסט? ״תת־סט״. ואפשר הערה.'},
+  {kind:'s',view:'workoutHome',t:null,mock:'<div class="fpI-mock"><b>בפעם הקודמת · יום ג׳</b><div style="margin-top:4px">סט 1: 14 ק״ג × 7 ← 10 ק״ג × 4</div><div style="margin-top:8px"><span class="fpI-btn">לאימון הקודם ←</span></div></div>',title:'מה עשית בפעם הקודמת',text:'בכל תרגיל רואים את הפעם הקודמת, כולל תת־סטים. לחיצה פותחת את האימון הקודם, וכפתור אחד מחזיר לסט.'},
+  {kind:'b',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="text-align:center;border-color:rgba(215,243,107,.45)"><div style="font-size:30px;font-weight:800">1:30</div><div>מנוחה · <b>+30 שנ׳</b> · <b>עצור</b></div></div>',title:'מנוחה',text:'המנוחה מתחילה לבד: כשממלאים סט, כשמוסיפים סט או כששומרים תרגיל. לחיצה על השעון: לעצור או להוסיף חצי דקה. בסוף יש צליל, קול או הקלטה שלך.'},
+  {kind:'b',view:'workoutHome',t:null,mock:'<div class="fpI-mock" style="text-align:center;font-size:18px;border-color:rgba(215,243,107,.45)"><div style="font-weight:800;margin-top:4px">שיא חדש בלחיצת חזה!</div></div>',title:'שיא חדש',text:'שברת שיא במשקל או בחזרות? קונפטי.'},
   {kind:'b',view:'workoutDiary',t:()=>q('#workoutHistory .journal-day')||q('#workoutHistory'),title:'יומן האימונים',text:'כל אימון נשמר עם הסטים. אפשר לערוך, להעביר תרגיל, או להוסיף תרגיל לאימון שכבר נגמר.'},
   {kind:'b',view:'process',t:()=>q('#fpWeekCard')||q('#photoCard'),title:'ההתקדמות שלך',text:'כל שבוע במקום אחד: תמונות, משקל והיקף טבור, עם השוואה.'},
-  {kind:'b',view:'settings',before:()=>{try{const d=q('#fpGoalSet');if(d)d.open=false}catch(_){}},t:()=>q('#fpGoalSet'),title:'⚙️ ההגדרות: היעד',text:'״🎯 היעד והאירועים״: כמה היעד זז לפי אתמול (או לכבות), וכמה לחסוך לפני אירוע.'},
+  {kind:'b',view:'settings',before:()=>{try{const d=q('#fpGoalSet');if(d)d.open=false}catch(_){}},t:()=>q('#fpGoalSet'),title:'ההגדרות: היעד',text:'״היעד והאירועים״: כמה היעד זז לפי אתמול (או לכבות), וכמה לחסוך לפני אירוע.'},
   {kind:'b',view:'settings',t:()=>q('#fpWeekSet'),title:'יום, חגים ושבת',text:'מתי היום שלך מתחיל (אם אתה אוכל אחרי חצות), אילו חגים, ושבת.'},
   {kind:'b',view:'settings',t:()=>q('#fpRestSet'),title:'צליל סוף מנוחה',text:'צפצוף, קול, משפט שלך או הקלטה. ועוצמה.'},
   {kind:'b',view:'settings',t:()=>q('#notificationSettings'),title:'התראות',text:'תזכורת לאירועי השבוע, גם כשהאפליקציה סגורה.'},
@@ -53,7 +53,7 @@ const css=`#fpI{position:fixed;inset:0;z-index:2147482400;pointer-events:none}
 #fpI .fpI-tag{font-weight:800;border-radius:99px;padding:3px 10px;font-size:12px}
 #fpI .fpI-tag.b{background:rgba(215,243,107,.15);color:#D7F36B}#fpI .fpI-tag.s{background:rgba(182,147,255,.18);color:#C9B2FF}
 #fpI h3{margin:2px 0 6px;font-size:19px}#fpI p{margin:0;font-size:15.5px;line-height:1.55}
-#fpI .fpI-tap{margin-top:8px;font-size:13.5px;font-weight:700}
+#fpI .fpI-tap{margin-top:8px;font-size:13.5px;font-weight:700}#fpI .fpI-hint{margin:8px 0 0;font-size:12px;color:#6B7682}#fpI .fpI-card.swap{animation:fpIsw .3s ease}@keyframes fpIsw{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 #fpI .fpI-tap.b{color:#D7F36B}#fpI .fpI-tap.s{color:#C9B2FF}
 #fpI .fpI-back{border:1px solid var(--line,#2A333C);border-radius:14px;padding:13px 14px;font:inherit;font-weight:700;background:none;color:inherit}
 #fpI .fpI-next{margin-top:12px;width:100%;border:0;border-radius:14px;padding:13px;font:inherit;font-weight:800;font-size:16px;background:var(--brand,#D7F36B);color:#14190a}
@@ -62,7 +62,7 @@ const css=`#fpI{position:fixed;inset:0;z-index:2147482400;pointer-events:none}
 .fpI-mock{margin:10px 0 2px;padding:12px;border-radius:12px;background:#11161b;border:1px solid rgba(182,147,255,.45);font-size:14.5px;line-height:1.5}
 .fpI-oil{margin-top:4px;color:#C9B2FF;font-size:13px}
 .fpI-btn{display:inline-block;background:var(--brand,#D7F36B);color:#14190a;border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
-@media (prefers-reduced-motion:reduce){#fpI .fpI-ring{animation:none}#fpI .fpI-blk,#fpI .fpI-ring,#fpI .fpI-card{transition:none}}`;
+@media (prefers-reduced-motion:reduce){#fpI .fpI-card.swap{animation:none}#fpI .fpI-ring{animation:none}#fpI .fpI-blk,#fpI .fpI-ring,#fpI .fpI-card{transition:none}}`;
 let I=-1,root=null,timer=null,tgt=null,clickHook=null,ST=STEPS,OPT={},doneAt=-1,scrolled=-1,lastRect='';
 function el(){return document.getElementById('fpI')}
 function place(){
@@ -75,7 +75,7 @@ function place(){
   set(b0,0,0,innerWidth,r.t);set(b1,0,r.b,innerWidth,innerHeight-r.b);set(b2,0,r.t,r.l,r.b-r.t);set(b3,r.r,r.t,innerWidth-r.r,r.b-r.t);
   ring.style.display='block';ring.className='fpI-ring '+(s.kind==='s'?'s':'b');set(ring,r.l,r.t,r.r-r.l,r.b-r.t);
   /* the glowing thing is clickable only when the step says so; otherwise a clear layer covers it */
-  const cover=root.querySelector('.fpI-cover');if(s.tap){set(cover,0,0,0,0)}else set(cover,r.l,r.t,r.r-r.l,r.b-r.t);
+  const cover=root.querySelector('.fpI-cover');if(s.tap||s.free){set(cover,0,0,0,0)}else set(cover,r.l,r.t,r.r-r.l,r.b-r.t);
   const below=innerHeight-r.b,above=r.t,gap=12;let top;
   if(below>=ch+gap+10)top=r.b+gap;else if(above>=ch+gap+10)top=r.t-ch-gap;else top=below>above?innerHeight-ch-12:12;
   card.style.top=Math.max(8,Math.min(innerHeight-ch-8,top))+'px';
@@ -83,8 +83,8 @@ function place(){
 function draw(){
   const s=ST[I],kind=s.kind==='s'?'s':'b',card=root.querySelector('.fpI-card'),n=ST.length,text=typeof s.text==='function'?s.text():s.text;
   card.className='fpI-card '+kind;
-  card.innerHTML=`<div class="fpI-bar" style="color:${kind==='s'?'#B693FF':'#D7F36B'}"><i style="width:${Math.round((I+1)/n*100)}%"></i></div><div class="fpI-top"><span class="fpI-tag ${kind}">${kind==='s'?'✨ רק אצלנו':'הבסיס'}</span><span>${I+1} / ${n}</span></div>
-    <h3>${esc(s.title)}</h3><p>${esc(text)}</p>${s.mock||''}${s.tap?`<div class="fpI-tap ${kind}">👆 ${esc(s.tapText||'לחץ על מה שזוהר')}</div>`:''}
+  card.innerHTML=`<div class="fpI-bar" style="color:${kind==='s'?'#B693FF':'#D7F36B'}"><i style="width:${Math.round((I+1)/n*100)}%"></i></div><div class="fpI-top"><span class="fpI-tag ${kind}">${kind==='s'?'רק אצלנו':'הבסיס'}</span><span>${I+1} / ${n}</span></div>
+    <h3>${esc(s.title)}</h3><p>${esc(text)}</p>${s.mock||''}${s.tap||s.free?`<div class="fpI-tap ${kind}">${esc(s.tapText||'לחץ על מה שזוהר')}</div>`:''}${s.hint?'<p class="fpI-hint">ניתן לשינוי בהגדרות</p>':''}
     <div style="display:flex;gap:8px;margin-top:12px">${I>0?'<button type="button" class="fpI-back">‹ חזרה</button>':''}<button type="button" class="fpI-next" style="margin-top:0;flex:1">${s.kind==='end'?(OPT.endLabel||'יאללה, לרשום ארוחה ראשונה'):s.done?'דלג על זה':'הבא'}</button></div>`;
   card.querySelector('.fpI-next').onclick=()=>go(I+1);const bk=card.querySelector('.fpI-back');if(bk)bk.onclick=()=>go(I-1);
 }
@@ -95,10 +95,11 @@ function go(n){
   try{if(s.view&&!(q('#'+s.view)||{}).classList?.contains('active'))showView(s.view)}catch(_){}
   try{window.scrollTo(0,0)}catch(_){}
   if(s.before)try{s.before()}catch(_){}
-  draw();lastRect='';place();
+  draw();lastRect='';place();try{const c=root.querySelector('.fpI-card');c.classList.remove('swap');void c.offsetWidth;c.classList.add('swap')}catch(_){}
+  {const t0=performance.now();const follow=()=>{if(!root||ST[I]!==s)return;if(tgt&&vis(tgt))place();if(performance.now()-t0<900)requestAnimationFrame(follow)};requestAnimationFrame(follow)}
   let tries=0;clearInterval(timer);
   doneAt=-1;try{if(s.start)s.start()}catch(_){}
-  timer=setInterval(()=>{if(!root)return clearInterval(timer);const s2=ST[I];try{if(s2.done&&doneAt!==I&&s2.done()){doneAt=I;const at=I;const c=root.querySelector('.fpI-card');if(c)c.querySelector('.fpI-next').textContent='✓ יופי';setTimeout(()=>{if(I===at)go(I+1)},700)}}catch(_){}if(s2.t&&(!tgt||!tgt.isConnected||!vis(tgt))){tries++;try{const e=s2.t();if(e&&vis(e)){tgt=e;if(scrolled!==I){scrolled=I;try{e.scrollIntoView({block:'center'})}catch(_){}}}}catch(_){}}const rr=tgt&&vis(tgt)?(()=>{const b=tgt.getBoundingClientRect();return [b.left,b.top,b.width,b.height].map(Math.round).join(',')})():'-';if(rr!==lastRect){lastRect=rr;place()}},250);
+  timer=setInterval(()=>{if(!root)return clearInterval(timer);const s2=ST[I];try{if(s2.done&&doneAt!==I&&s2.done()){doneAt=I;const at=I;const c=root.querySelector('.fpI-card');if(c)c.querySelector('.fpI-next').textContent='✓ יופי';setTimeout(()=>{if(I===at)go(I+1)},700)}}catch(_){}if(s2.t&&(!tgt||!tgt.isConnected||!vis(tgt))){tries++;try{const e=s2.t();if(e&&vis(e)){tgt=e;if(scrolled!==I){scrolled=I;try{e.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}catch(_){}{const t1=performance.now();const fl=()=>{if(!root)return;place();if(performance.now()-t1<800)requestAnimationFrame(fl)};requestAnimationFrame(fl)}}}}catch(_){}}const rr=tgt&&vis(tgt)?(()=>{const b=tgt.getBoundingClientRect();return [b.left,b.top,b.width,b.height].map(Math.round).join(',')})():'-';if(rr!==lastRect){lastRect=rr;place()}},250);
 }
 function finish(toAdd){
   clearInterval(timer);closeAll();if(clickHook)document.removeEventListener('click',clickHook,true);clickHook=null;

@@ -135,18 +135,18 @@ showView=function(v){
 };
 })();
 
-/* ---------- 2.11.0: "📅 הוסף ליומן שלי" — per phone/calendar ----------
+/* ---------- 2.11.0: "הוסף ליומן שלי" — per phone/calendar ----------
    iPhone (and Samsung, Outlook): subscribe ONCE to the app's own calendar link; from then on every event made in the app
    appears in the phone calendar by itself. Google: the "add event" page opens with the details filled in. */
 (function(){
 const KEY='fp2.calAdd';
 const get=()=>{try{return localStorage.getItem(KEY)||''}catch(_){return ''}};
 const set=v=>{try{if(v)localStorage.setItem(KEY,v);else localStorage.removeItem(KEY)}catch(_){}};
-function evInfo(){const ev=state.ev||{};const t=(typeof BANK_TYPES_UI!=='undefined'&&BANK_TYPES_UI.find(x=>x[0]===ev.type))||['','🎉','אירוע'];return {date:ev.date,title:String(ev.note||(t[1]+' '+t[2])).replace(/[\r\n]+/g,' ').trim()}}
+function evInfo(){const ev=state.ev||{};const t=(typeof BANK_TYPES_UI!=='undefined'&&BANK_TYPES_UI.find(x=>x[0]===ev.type))||['','','אירוע'];return {date:ev.date,title:String(ev.note||(t[1]+' '+t[2])).replace(/[\r\n]+/g,' ').trim()}}
 function googleUrl(i){const d=String(i.date||'').replace(/-/g,''),x=new Date(i.date+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+1);const e=x.toISOString().slice(0,10).replace(/-/g,'');return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(i.title)+'&dates='+d+'/'+e}
 async function feed(){if(!window.FP2||!FP2.calendarFeed)throw new Error('שרת ההתראות לא מחובר');const r=await FP2.calendarFeed();if(!r||!r.url)throw new Error('לא הצלחתי לקבל קישור');return r}
 /* 2.11.1: which calendar the user uses is asked once (questionnaire / settings) and used from then on */
-const KIND_KEY='fp2.calKind',KINDS={apple:'📱 אפל (iCloud)',google:'Google Calendar',other:'סמסונג / Outlook / אחר'};
+const KIND_KEY='fp2.calKind',KINDS={apple:'אפל (iCloud)',google:'Google Calendar',other:'סמסונג / Outlook / אחר'};
 function guessKind(){try{return /iPhone|iPad|Macintosh/.test(navigator.userAgent)?'apple':/Android/.test(navigator.userAgent)?'google':''}catch(_){return ''}}
 function kind(){let k='';try{k=(state.data&&state.data.settings&&state.data.settings.calendar_kind)||localStorage.getItem(KIND_KEY)||''}catch(_){}return KINDS[k]?k:''}
 async function setKind(k,silent){
@@ -160,29 +160,29 @@ async function setKind(k,silent){
 window.fpSetCalKind=setKind;window.fpCalKind=kind;window.fpCalKinds=KINDS;window.fpGuessCalKind=guessKind;
 async function addByKind(k,i){
   if(k==='google'){window.open(googleUrl(i),'_blank');return}
-  if(get()==='feed')return toast('📅 האירוע יופיע ביומן שלך לבד, תוך כמה דקות');
+  if(get()==='feed')return toast('האירוע יופיע ביומן שלך לבד, תוך כמה דקות');
   // first time with Apple / other: subscribe once to the app's calendar link
   try{loading();const f=await feed();loading(false);
     if(k==='apple'){set('feed');location.href=f.webcal;setTimeout(()=>toast('אשר "הירשם" ביומן. מעכשיו האירועים של האפליקציה יופיעו שם לבד'),800);return}
     try{await navigator.clipboard.writeText(f.url)}catch(_){}
     set('feed');
     const old=$('fpCalAdd');if(old)old.remove();
-    document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpCalAdd" onclick="if(event.target===this)this.remove()"><div class="sheet"><h3 style="margin:0 0 8px">📋 הקישור הועתק</h3><p>ביומן: <b>הוספת יומן ← מקישור / מכתובת URL</b>, מדביקים ושומרים. פעם אחת, ומאז האירועים של האפליקציה מופיעים שם לבד.</p><input readonly value="${esc(f.url)}" style="width:100%;box-sizing:border-box;font-size:12px" onclick="this.select()"><button type="button" class="btn full" style="margin-top:10px" onclick="document.getElementById('fpCalAdd').remove()">הבנתי</button></div></div>`);
+    document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpCalAdd" onclick="if(event.target===this)this.remove()"><div class="sheet"><h3 style="margin:0 0 8px">הקישור הועתק</h3><p>ביומן: <b>הוספת יומן ← מקישור / מכתובת URL</b>, מדביקים ושומרים. פעם אחת, ומאז האירועים של האפליקציה מופיעים שם לבד.</p><input readonly value="${esc(f.url)}" style="width:100%;box-sizing:border-box;font-size:12px" onclick="this.select()"><button type="button" class="btn full" style="margin-top:10px" onclick="document.getElementById('fpCalAdd').remove()">הבנתי</button></div></div>`);
   }catch(e){loading(false);toast(e.message,true)}
 }
 window.addEventToPhoneCalendar=function(){
   const i=evInfo();if(!i.date)return toast('בחר תאריך',true);
   const k=kind();
   if(k)return addByKind(k,i);
-  if(get()==='feed')return toast('📅 האירוע יופיע ביומן שלך לבד, תוך כמה דקות');
+  if(get()==='feed')return toast('האירוע יופיע ביומן שלך לבד, תוך כמה דקות');
   if(get()==='google'){window.open(googleUrl(i),'_blank');return}
   fpCalAddChooser(i);
 };
 window.fpCalAddChooser=function(i){
   i=i||evInfo();const old=$('fpCalAdd');if(old)old.remove();
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpCalAdd" onclick="if(event.target===this)this.remove()"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">📅 לאיזה יומן להוסיף?</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpCalAdd').remove()">✕</button></div>
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpCalAdd" onclick="if(event.target===this)this.remove()"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">לאיזה יומן להוסיף?</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpCalAdd').remove()">✕</button></div>
     <p class="muted" style="margin:4px 0 10px">בוחרים פעם אחת, והאפליקציה זוכרת.</p>
-    <button type="button" class="remind-opt rec" onclick="fpCalAddPick('apple')"><b>📱 יומן של אפל (אייפון)</b><span>פעם אחת מאשרים "הירשם", ומאז כל אירוע שתוסיף באפליקציה מופיע ביומן לבד.</span></button>
+    <button type="button" class="remind-opt rec" onclick="fpCalAddPick('apple')"><b>יומן של אפל (אייפון)</b><span>פעם אחת מאשרים "הירשם", ומאז כל אירוע שתוסיף באפליקציה מופיע ביומן לבד.</span></button>
     <button type="button" class="remind-opt" onclick="fpCalAddPick('google')"><b>Google Calendar</b><span>נפתח דף "הוסף אירוע" עם הפרטים, לוחצים "שמור".</span></button>
     <button type="button" class="remind-opt" onclick="fpCalAddPick('other')"><b>סמסונג / Outlook / אחר</b><span>מעתיקים קישור אחד ומוסיפים אותו ביומן כ"יומן מקישור". פעם אחת, ומאז הכול לבד.</span></button>
   </div></div>`);
@@ -193,13 +193,13 @@ window.fpCalAddChooser=function(i){
       if(kind==='apple'){set('feed');if(s)s.remove();location.href=f.webcal;setTimeout(()=>toast('אשר "הירשם" ביומן. מעכשיו האירועים של האפליקציה יופיעו שם לבד'),800);return}
       try{await navigator.clipboard.writeText(f.url)}catch(_){}
       set('feed');
-      if(s)s.querySelector('.sheet').innerHTML=`<h3 style="margin:0 0 8px">📋 הקישור הועתק</h3><p>ביומן: <b>הוספת יומן ← מקישור / מכתובת URL</b>, מדביקים ושומרים.</p><input readonly value="${esc(f.url)}" style="width:100%;box-sizing:border-box;font-size:12px" onclick="this.select()"><button type="button" class="btn full" style="margin-top:10px" onclick="document.getElementById('fpCalAdd').remove()">הבנתי</button>`;
+      if(s)s.querySelector('.sheet').innerHTML=`<h3 style="margin:0 0 8px">הקישור הועתק</h3><p>ביומן: <b>הוספת יומן ← מקישור / מכתובת URL</b>, מדביקים ושומרים.</p><input readonly value="${esc(f.url)}" style="width:100%;box-sizing:border-box;font-size:12px" onclick="this.select()"><button type="button" class="btn full" style="margin-top:10px" onclick="document.getElementById('fpCalAdd').remove()">הבנתי</button>`;
     }catch(e){loading(false);toast(e.message,true)}
   };
 };
-/* in Settings → "📅 חיבור יומן": which calendar is mine, and help that fits it */
+/* in Settings → "חיבור יומן": which calendar is mine, and help that fits it */
 const HELP={apple:'<b>איך מחברים יומן אפל:</b> באפליקציית היומן ← יומנים ← ⓘ ליד היומן ← הפעל "יומן ציבורי" ← "שתף קישור" ← העתק, והדבק כאן.',
-  google:'<b>איך מחברים Google Calendar:</b> במחשב, calendar.google.com ← ⚙️ הגדרות ← בוחרים את היומן ← "כתובת סודית בפורמט iCal" ← העתק, והדבק כאן.',
+  google:'<b>איך מחברים Google Calendar:</b> במחשב, calendar.google.com ← הגדרות ← בוחרים את היומן ← "כתובת סודית בפורמט iCal" ← העתק, והדבק כאן.',
   other:'<b>איך מחברים:</b> ברוב היומנים (סמסונג, Outlook) יש בהגדרות של היומן "שיתוף" או "פרסום" עם קישור iCal (מסתיים ב-.ics). מעתיקים ומדביקים כאן.'};
 function injectCalSettings(force){
   const s=$('settings');if(!s)return;
@@ -209,7 +209,7 @@ function injectCalSettings(force){
   if(!el){body.insertAdjacentHTML('afterbegin','<div id="fpCalAddSet" style="margin-bottom:12px"></div>');el=$('fpCalAddSet')}
   const k=kind();
   el.innerHTML=`<b>היומן שלי</b><div class="meal-tabs" style="flex-wrap:wrap;margin-top:6px">${Object.keys(KINDS).map(x=>`<button type="button" class="chip${k===x?' active':''}" onclick="fpSetCalKind('${x}')">${KINDS[x]}</button>`).join('')}</div>
-    <p class="muted" style="margin:6px 0 0;font-size:13px">${k?'אירוע שתוסיף באפליקציה ייכנס ליומן הזה, וההסבר למטה מתאים אליו.':'בחר, ואז "📅 הוסף ליומן שלי" יעבוד בלי לשאול.'}</p>
+    <p class="muted" style="margin:6px 0 0;font-size:13px">${k?'אירוע שתוסיף באפליקציה ייכנס ליומן הזה, וההסבר למטה מתאים אליו.':'בחר, ואז "הוסף ליומן שלי" יעבוד בלי לשאול.'}</p>
     ${k?`<p class="muted" style="margin:8px 0 0;font-size:13px">${HELP[k]}</p>`:''}`;
 }
 if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{injectCalSettings()}catch(_){}return r}}

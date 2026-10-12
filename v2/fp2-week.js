@@ -15,7 +15,7 @@ function whenFree(fn,tries){tries=tries||0;if(busy()){if(tries<200)setTimeout(()
 const S=k=>String((state.data&&state.data.settings&&state.data.settings[k])??'');
 
 /* ---------------- holidays ---------------- */
-const CALS={jewish:'✡️ יהודיים',muslim:'☪️ מוסלמיים',christian:'✝️ נוצריים',civil:'🎆 לועזיים'};
+const CALS={jewish:'יהודיים',muslim:'מוסלמיים',christian:'נוצריים',civil:'לועזיים'};
 function easter(y,orth){
   if(orth){const a=y%4,b=y%7,c=y%19,d=(19*c+15)%30,e=(2*a+4*b-d+34)%7,m=Math.floor((d+e+114)/31),day=((d+e+114)%31)+1;const j=new Date(Date.UTC(y,m-1,day));j.setUTCDate(j.getUTCDate()+13);return j.toISOString().slice(0,10)}
   const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
@@ -26,7 +26,7 @@ function easter(y,orth){
    - Muslim: the phone's built-in Umm al-Qura calendar (the official Saudi calendar). The real day can still move by one, by moon sighting.
    - Christian: computed (Easter by the church's own rule). Civil: fixed dates. */
 const PARTS=(cal,d)=>{try{const o={};new Intl.DateTimeFormat('en-u-ca-'+cal,{day:'numeric',month:cal==='hebrew'?'long':'numeric',timeZone:'UTC'}).formatToParts(d).forEach(x=>o[x.type]=x.value);return o}catch(_){return {}}};
-const JEW=[['Tishri',1,-1,'ראש השנה','🍎','large'],['Tishri',15,-1,'סוכות','🌿','medium'],['Kislev',25,-1,'חנוכה','🕎','medium'],['ADAR',14,0,'פורים','🎭','medium'],['Nisan',15,-1,'ליל הסדר','🍷','large'],['Nisan',22,-1,'מימונה','🥞','medium'],['Iyar',5,0,'יום העצמאות','🇮🇱','medium'],['Sivan',6,-1,'שבועות','🧀','medium']];
+const JEW=[['Tishri',1,-1,'ראש השנה','','large'],['Tishri',15,-1,'סוכות','','medium'],['Kislev',25,-1,'חנוכה','','medium'],['ADAR',14,0,'פורים','','medium'],['Nisan',15,-1,'ליל הסדר','','large'],['Nisan',22,-1,'מימונה','','medium'],['Iyar',5,0,'יום העצמאות','','medium'],['Sivan',6,-1,'שבועות','','medium']];
 const LOCAL={};
 function localYear(y){
   if(LOCAL[y])return LOCAL[y];const out=[];
@@ -34,13 +34,13 @@ function localYear(y){
     JEW.forEach(([mon,day,off,name,emoji,size])=>{const ok=mon==='ADAR'?(h.month==='Adar'||h.month==='Adar II'):h.month===mon;if(ok&&Number(h.day)===day){let date=addD(iso,off);
       if(name==='יום העצמאות'){const w=dow(date);if(w===5)date=addD(date,-1);else if(w===6)date=addD(date,-2);else if(w===1)date=addD(date,1)}
       out.push({date,name,emoji,cal:'jewish',size})}});
-    if(m.month==='10'&&m.day==='1')out.push({date:iso,name:'עיד אל-פיטר',emoji:'🌙',cal:'muslim',size:'large',approx:true});
-    if(m.month==='12'&&m.day==='10')out.push({date:iso,name:'עיד אל-אדחא',emoji:'🐑',cal:'muslim',size:'large',approx:true});
+    if(m.month==='10'&&m.day==='1')out.push({date:iso,name:'עיד אל-פיטר',emoji:'',cal:'muslim',size:'large',approx:true});
+    if(m.month==='12'&&m.day==='10')out.push({date:iso,name:'עיד אל-אדחא',emoji:'',cal:'muslim',size:'large',approx:true});
   }
   return LOCAL[y]=out;
 }
 /* hebcal.com: [title in the feed, name, emoji, size] */
-const HEB=[["Erev Rosh Hashana",'ראש השנה','🍎','large'],["Erev Sukkot",'סוכות','🌿','medium'],["Chanukah: 1 Candle",'חנוכה','🕎','medium'],["Purim",'פורים','🎭','medium'],["Erev Pesach",'ליל הסדר','🍷','large'],["Pesach VII",'מימונה','🥞','medium'],["Yom HaAtzma",'יום העצמאות','🇮🇱','medium'],["Erev Shavuot",'שבועות','🧀','medium']];
+const HEB=[["Erev Rosh Hashana",'ראש השנה','','large'],["Erev Sukkot",'סוכות','','medium'],["Chanukah: 1 Candle",'חנוכה','','medium'],["Purim",'פורים','','medium'],["Erev Pesach",'ליל הסדר','','large'],["Pesach VII",'מימונה','','medium'],["Yom HaAtzma",'יום העצמאות','','medium'],["Erev Shavuot",'שבועות','','medium']];
 function hebcalYear(y){try{const c=JSON.parse(LS.get('fp2.hebcal.'+y)||'null');return c&&Array.isArray(c.list)?c:null}catch(_){return null}}
 async function fetchHebcal(y){
   const c=hebcalYear(y);if(c&&Date.now()-c.t<30*864e5)return;
@@ -54,10 +54,10 @@ function holidayList(){
   for(let y=y0-1;y<=y0+2;y++){
     const web=hebcalYear(y),loc=localYear(y);
     out.push(...(web?web.list:loc.filter(h=>h.cal==='jewish')),...loc.filter(h=>h.cal==='muslim'));
-    out.push({date:`${y}-12-24`,name:'ערב חג המולד',emoji:'🎄',cal:'christian',size:'large'});
-    out.push({date:easter(y),name:'פסחא',emoji:'🐣',cal:'christian',size:'large'});
-    const o=easter(y,true);if(o!==easter(y))out.push({date:o,name:'פסחא (אורתודוקסי)',emoji:'🐣',cal:'christian',size:'large'});
-    out.push({date:`${y}-12-31`,name:'סילבסטר',emoji:'🎆',cal:'civil',size:'medium'});
+    out.push({date:`${y}-12-24`,name:'ערב חג המולד',emoji:'',cal:'christian',size:'large'});
+    out.push({date:easter(y),name:'פסחא',emoji:'',cal:'christian',size:'large'});
+    const o=easter(y,true);if(o!==easter(y))out.push({date:o,name:'פסחא (אורתודוקסי)',emoji:'',cal:'christian',size:'large'});
+    out.push({date:`${y}-12-31`,name:'סילבסטר',emoji:'',cal:'civil',size:'medium'});
   }
   return out.sort((a,b)=>a.date.localeCompare(b.date));
 }
@@ -93,11 +93,11 @@ function showHoliday(h){
       if(r&&r.savedId)await chooseMethodUI(r.savedId,m);}catch(e){toast(e.message,true)}
     setTimeout(()=>whenFree(daily),900)};
 }
-window.fpHolidayPreview=()=>showHoliday({date:addD(todayISO(),5),name:'ראש השנה',emoji:'🍎',cal:'jewish',size:'large',demo:true});
+window.fpHolidayPreview=()=>showHoliday({date:addD(todayISO(),5),name:'ראש השנה',emoji:'',cal:'jewish',size:'large',demo:true});
 
 /* ---------------- Shabbat ---------------- */
 const AUTO='שבת אוטומטי';
-const MEALS=[{k:'fri',day:5,cat:'ערב',name:'שישי בערב'},{k:'satB',day:6,cat:'בוקר',name:'שבת בבוקר'},{k:'satL',day:6,cat:'צהריים',name:'שבת בצהריים'}];
+const MEALS=[{k:'friD',day:5,cat:'צהריים',name:'שישי'},{k:'fri',day:5,cat:'ערב',name:'ערב שבת'},{k:'satB',day:6,cat:'בוקר',name:'שבת בוקר'},{k:'satL',day:6,cat:'צהריים',name:'שבת צהריים'}];
 function shab(){try{return JSON.parse(S('shabbat_json')||'{}')||{}}catch(_){return {}}}
 /* 2.17: which Shabbat meals to learn (default: Friday night and Saturday morning) */
 const pickK=()=>{const p=shab().pick;return Array.isArray(p)&&p.length?p:['fri','satB']};const pickM=()=>MEALS.filter(m=>pickK().indexOf(m.k)>=0);
@@ -118,7 +118,7 @@ async function shabbatCheck(){
   const t=todayISO(),o=shab();if(!t)return false;
   if(!o.asked){
     if(LS.get('fp2.shabLook')===t)return false;LS.set('fp2.shabLook',t);
-    const L=await learnShabbat();if(!L.meals.fri&&!L.meals.satB&&!L.meals.satL)return false;
+    const L=await learnShabbat();if(!L.meals.friD&&!L.meals.fri&&!L.meals.satB&&!L.meals.satL)return false;
     whenFree(()=>showShabOffer(L));return true;
   }
   // every Friday: fill the meals in?
@@ -128,16 +128,16 @@ async function shabbatCheck(){
     if(fri>=t&&LS.get('fp2.shabSaved')!==key){LS.set('fp2.shabSaved',key);const evs=bankEvents();let made=0;
       for(const [d,amt,label] of [[fri,o.over&&o.over.fri,'ארוחת שישי'],[addD(fri,1),o.over&&o.over.sat,'שבת']]){
         if(Number(amt)>=150&&!evs.some(e=>e.date===d)){try{const r=await call('saveBankEvent',{date:d,type:'family',size:'medium',extra:amt,method:'none',note:label,viewDate:state.date});if(r&&r.savedId&&d>t){await call('chooseBankMethod',{id:r.savedId,method:'spread',viewDate:state.date})}made++}catch(e){console.warn('shab save',e&&e.message)}}}
-      if(made){try{const r=await call('getBootstrapData');state.data.bank=r.bank;const v=await call('getDayView',state.date);applyDay(v);renderDay()}catch(_){}toast('🕯️ התחלתי לשמור לך לשבת')}}}
+      if(made){try{const r=await call('getBootstrapData');state.data.bank=r.bank;const v=await call('getDayView',state.date);applyDay(v);renderDay()}catch(_){}toast('התחלתי לשמור לך לשבת')}}}
   return false;
 }
 function mealRows(meals){return MEALS.filter(m=>meals[m.k]).map(m=>`<div class="bank-line"><span>${m.name}</span><span><b>בערך ${kc(meals[m.k].calories)}</b> קל׳</span></div>`).join('')}
 function showShabOffer(L){
   const old=$('fpShab');if(old)old.remove();
   const over=(L.over.fri||0)+(L.over.sat||0),canSave=over>=150;let save=canSave,fill=true;
-  const draw=()=>{$('fpShabChoices').innerHTML=`${canSave?`<button type="button" class="remind-opt${save?' rec':''}" onclick="fpShabT('save')"><b>${save?'☑':'☐'} לחסוך לזה במהלך השבוע</b><span>כל שבוע, בלי קשר לאירועים אחרים. אם יש גם אירוע, האפליקציה חוסכת לשניהם.</span></button>`:''}
-    <button type="button" class="remind-opt${fill?' rec':''}" onclick="fpShabT('fill')"><b>${fill?'☑':'☐'} למלא את הארוחות לבד</b><span>בכל שישי בבוקר תישאל אם למלא. אחרי שבת אפשר לתקן.</span></button>`};
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpShab"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">🕯️ הבנתי מה אתה אוכל בשבת</h3><button type="button" class="trash" aria-label="סגור" onclick="fpShabDone(false)">✕</button></div>
+  const draw=()=>{$('fpShabChoices').innerHTML=`${canSave?`<button type="button" class="remind-opt${save?' rec':''}" onclick="fpShabT('save')"><b>${save?'':''} לחסוך לזה במהלך השבוע</b><span>כל שבוע, בלי קשר לאירועים אחרים. אם יש גם אירוע, האפליקציה חוסכת לשניהם.</span></button>`:''}
+    <button type="button" class="remind-opt${fill?' rec':''}" onclick="fpShabT('fill')"><b>${fill?'':''} למלא את הארוחות לבד</b><span>בכל שישי בבוקר תישאל אם למלא. אחרי שבת אפשר לתקן.</span></button>`};
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpShab"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">הבנתי מה אתה אוכל בשבת</h3><button type="button" class="trash" aria-label="סגור" onclick="fpShabDone(false)">✕</button></div>
     <p class="muted" style="margin:0 0 6px">הממוצע שלך מהשבועות האחרונים:</p>${mealRows(L.meals)}
     ${over>0?`<p style="margin:8px 0 0">בשישי ובשבת אתה עובר בממוצע ב-<b>${kc(over)}</b> קל׳ מעל היעד.</p>`:''}
     <div id="fpShabChoices" style="margin-top:10px"></div>
@@ -151,7 +151,7 @@ function showShabOffer(L){
 window.fpShabPreview=()=>showShabOffer({demo:true,meals:{fri:{calories:1100},satB:{calories:600}},over:{fri:650,sat:300}});
 function showShabFill(o){
   const old=$('fpShabFill');if(old)old.remove();
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpShabFill"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">🕯️ למלא את ארוחות שבת?</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpShabFill').remove()">✕</button></div>
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpShabFill"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">למלא את ארוחות שבת?</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpShabFill').remove()">✕</button></div>
     ${mealRows(o.meals||{})}<p class="muted" style="margin:8px 0 0">לפי הממוצע שלך. אחרי שבת אפשר לתקן.</p>
     <button type="button" class="btn full" style="margin-top:12px" onclick="fpShabFillGo(true)">כן, למלא</button>
     <button type="button" class="btn secondary full" style="margin-top:8px" onclick="fpShabFillGo(false)">לא השבוע</button></div></div>`);
@@ -159,7 +159,7 @@ function showShabFill(o){
     const t=todayISO(),fri=addD(t,(5-dow(t)+7)%7);
     try{for(const m of MEALS){const v=(o.meals||{})[m.k];if(!v)continue;
         await call('saveFood',{date:m.day===5?fri:addD(fri,1),category:m.cat,name:`ארוחת ${m.name} (ממוצע)`,amount:1,baseQty:1,unit:'מנה',calories:v.calories,protein:v.protein,carbs:v.carbs,fat:v.fat,source:AUTO})}
-      const d=await call('getDayView',state.date);applyDay(d);renderDay();toast('מילאתי את ארוחות שבת. שבת שלום 🕯️')}catch(e){toast(e.message,true)}};
+      const d=await call('getDayView',state.date);applyDay(d);renderDay();toast('מילאתי את ארוחות שבת. שבת שלום ')}catch(e){toast(e.message,true)}};
 }
 window.fpShabFillPreview=()=>showShabFill({demo:true,meals:{fri:{calories:1100},satB:{calories:600}}});
 
@@ -170,12 +170,12 @@ function renderSet(){
   const sec=$('settings');if(!sec||!state.data)return;let box=$('fpWeekSet');
   if(!box){box=document.createElement('details');box.className='settings-section';box.id='fpWeekSet';const anchor=$('calendarSettings')||$('notificationSettings');if(anchor)anchor.insertAdjacentElement('afterend',box);else{const h=sec.querySelector('h2');if(!h)return;h.insertAdjacentElement('afterend',box)}}
   const open=box.open,h=curHour(),cals=myCals(),o=shab();
-  box.innerHTML=`<summary>🗓 היום, חגים ושבת</summary><div class="settings-body">
+  box.innerHTML=`<summary>היום, חגים ושבת</summary><div class="settings-body">
     <label style="font-weight:700">מתי להתחיל לך יום חדש?</label><p class="muted" style="margin:2px 0 6px;font-size:13px">בשעה הזאת העיגול מתאפס. עובד במשמרות לילה? בחר שעה מאוחרת.</p>
     <div class="meal-tabs" style="flex-wrap:wrap">${HOURS.map(([v,l])=>`<button type="button" class="chip${h===v?' active':''}" onclick="fpSetDayStart(${v})">${l}</button>`).join('')}${HOURS.some(x=>x[0]===h)?'':`<button type="button" class="chip active">${h}:00</button>`}</div>
     <label style="font-weight:700;display:block;margin-top:14px">אילו חגים?</label><p class="muted" style="margin:2px 0 6px;font-size:13px">שבוע לפני חג תישאל אם לשמור לו קלוריות.</p>
     <div class="meal-tabs" style="flex-wrap:wrap">${Object.keys(CALS).map(k=>`<button type="button" class="chip${cals.indexOf(k)>=0?' active':''}" onclick="fpToggleCal('${k}')">${CALS[k]}</button>`).join('')}</div>
-    <label style="font-weight:700;display:block;margin-top:14px">🕯️ שבת</label>
+    <label style="font-weight:700;display:block;margin-top:14px">שבת</label>
     <p class="muted" style="margin:2px 0 6px;font-size:13px">אילו ארוחות האפליקציה לומדת וממלאת?</p><div class="meal-tabs" style="flex-wrap:wrap">${MEALS.map(m=>`<button type="button" class="chip${pickK().indexOf(m.k)>=0?' active':''}" onclick="fpShabPick('${m.k}')">${m.name}</button>`).join('')}</div>
     ${o.asked?`${mealRows(o.meals||{})}<div class="meal-tabs" style="flex-wrap:wrap;margin-top:6px"><button type="button" class="chip${o.save?' active':''}" onclick="fpShabSet('save')">לחסוך במהלך השבוע</button><button type="button" class="chip${o.fill?' active':''}" onclick="fpShabSet('fill')">למלא את הארוחות לבד</button></div><button type="button" class="linkish muted" style="margin-top:6px" onclick="fpShabRelearn()">ללמוד מחדש</button>`
       :`<p class="muted" style="margin:2px 0 0;font-size:13px">רושמים את ארוחות שישי ושבת כרגיל (שומר שבת? ממלאים מראש). אחרי 3 שבועות האפליקציה תדע כמה אתה אוכל, ותציע לשמור לזה ולמלא לבד.</p>`}

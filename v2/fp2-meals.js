@@ -142,7 +142,7 @@ function addMode(){
   ['add','meals'].forEach(v=>{const sec=$(v);if(!sec)return;let b=sec.querySelector('.fp-addmode');
     if(!T){if(b)b.remove();return}
     if(!b){sec.insertAdjacentHTML('afterbegin','<div class="card fp-addmode" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;margin-bottom:10px;border:1.5px solid var(--brand,#D7F36B)"></div>');b=sec.querySelector('.fp-addmode')}
-    b.innerHTML=`<span style="font-size:14px">🍽 מוסיף ל<b>״${esc(T.name)}״</b><br><small class="muted">כל מה שתבחר ייכנס לארוחה</small></span><button type="button" class="btn mini" style="flex:none" onclick="fpAddModeDone()">✓ סיום</button>`;});
+    b.innerHTML=`<span style="font-size:14px">מוסיף ל<b>״${esc(T.name)}״</b><br><small class="muted">כל מה שתבחר ייכנס לארוחה</small></span><button type="button" class="btn mini" style="flex:none" onclick="fpAddModeDone()">✓ סיום</button>`;});
 }
 window.fpAddModeDone=function(){state.fpAddToGroup=null;addMode();showView('today')};
 window.fpAddModeRefresh=addMode;
@@ -219,7 +219,7 @@ window.fpOpenMove=function(){
   const sel=new Set(ids.map(String)),groups={};
   (state.data.entries||[]).forEach(x=>{if(x.groupId&&['meal','dish'].includes(x.sourceType)&&!x.pending)(groups[x.groupId]||(groups[x.groupId]=[])).push(x)});
   const meals=Object.entries(groups).filter(([g,xs])=>!xs.every(x=>sel.has(String(x.id)))).map(([g,xs])=>({gid:g,name:xs[0].mealOption||xs[0].name||'ארוחה',cat:xs[0].category,kcal:Math.round(xs.reduce((n,x)=>n+(Number(x.calories)||0),0))}));
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpMoveSheet" onclick="if(event.target===this)this.remove()"><div class="sheet"><h3 style="margin:0 0 10px">להעביר ל…</h3>${meals.length?`<div class="muted" style="margin-top:4px">לתוך ארוחה:</div>${meals.map(m=>`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpMoveIntoMeal('${esc(m.gid)}')">🍽 ${esc(m.name)} <small class="muted">· ${esc(m.cat)} · ${fmt(m.kcal)} קל׳</small></button>`).join('')}<div class="muted" style="margin-top:12px">או לחלק אחר ביום:</div>`:''}${[['בוקר','בוקר'],['צהריים','צהריים'],['ערב','ערב'],['נוסף','ביניים ונוספים']].map(([v,l])=>`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpMoveTo('${v}')">${l}</button>`).join('')}<button type="button" class="btn secondary full" style="margin-top:12px" onclick="document.getElementById('fpMoveSheet').remove()">ביטול</button></div></div>`);
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpMoveSheet" onclick="if(event.target===this)this.remove()"><div class="sheet"><h3 style="margin:0 0 10px">להעביר ל…</h3>${meals.length?`<div class="muted" style="margin-top:4px">לתוך ארוחה:</div>${meals.map(m=>`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpMoveIntoMeal('${esc(m.gid)}')">${esc(m.name)} <small class="muted">· ${esc(m.cat)} · ${fmt(m.kcal)} קל׳</small></button>`).join('')}<div class="muted" style="margin-top:12px">או לחלק אחר ביום:</div>`:''}${[['בוקר','בוקר'],['צהריים','צהריים'],['ערב','ערב'],['נוסף','ביניים ונוספים']].map(([v,l])=>`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpMoveTo('${v}')">${l}</button>`).join('')}<button type="button" class="btn secondary full" style="margin-top:12px" onclick="document.getElementById('fpMoveSheet').remove()">ביטול</button></div></div>`);
 };
 window.fpMoveTo=async function(cat){
   const ids=selectedIds();const s=$('fpMoveSheet');if(s)s.remove();

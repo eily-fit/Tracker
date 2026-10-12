@@ -6,7 +6,7 @@
 (function(){
 'use strict';
 const LS={get(k){try{return localStorage.getItem(k)}catch(_){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(_){}},del(k){try{localStorage.removeItem(k)}catch(_){}}};
-const SOUNDS=[['chime','🎐 פעמונים רכים'],['marimba','🎵 מרימבה'],['softbell','🛎 צלצול עדין'],['beeps','📢 3 צפצופים חזקים'],['whistle','😗 שריקה'],['bell','🔔 פעמון'],['voice','🗣 קול'],['mine','🎙 ההקלטה שלי'],['none','🔇 שקט']];
+const SOUNDS=[['chime','פעמונים רכים'],['marimba','מרימבה'],['softbell','צלצול עדין'],['beeps','3 צפצופים חזקים'],['whistle','שריקה'],['bell','פעמון'],['voice','קול'],['mine','ההקלטה שלי'],['none','שקט']];
 const PHRASES=['סט חדש!','יאללה, סט הבא!','המנוחה נגמרה, לעבודה!','קדימה, עוד סט!'];
 const STYLES=[['normal','רגיל',1,1],['radio','רדיו',0.92,0.75],['fast','אנרגטי',1.2,1.15]];
 const cfg=()=>{let c={};try{c=JSON.parse(LS.get('fp2.restSound')||'{}')||{}}catch(_){}c=Object.assign({kind:'chime',phrase:0,style:'normal',voice:'',vol:1},c);if(c.kind==='beepvoice')c.kind='voice';if(c.kind==='horn')c.kind='chime';return c};
@@ -39,7 +39,6 @@ function out(c){const comp=c.createDynamicsCompressor();comp.threshold.value=-10
 function tone(c,dst,t,f,len,type,vol,f2){const o=c.createOscillator(),g=c.createGain();o.type=type||'square';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+len);
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.02);g.gain.setValueAtTime(vol,t+len*0.7);g.gain.exponentialRampToValueAtTime(0.0001,t+len);o.connect(g);g.connect(dst);o.start(t);o.stop(t+len+0.02)}
 function playTones(kind,oc){
-  if(!oc&&useEl())return playEl(kind);
   const c=oc||ctx();if(!c)return 0;const d=out(c),t=c.currentTime+0.03,v=Math.max(0.1,Math.min(1,cfg().vol))*0.9;
   if(kind==='beeps'){for(let i=0;i<3;i++)tone(c,d,t+i*0.32,1250,0.2,'square',v);return 1.1}
   if(kind==='whistle'){tone(c,d,t,900,0.28,'sine',v,1900);tone(c,d,t+0.38,900,0.42,'sine',v,2200);return 0.9}
@@ -52,43 +51,53 @@ function playTones(kind,oc){
   return 0;
 }
 
-/* 2.20 iPad: there the web sound often stays locked (or silenced by mute) when it starts on its own at the end of rest.
-   So on iPad (and anywhere the web sound is not running) the tone is rendered once to a small WAV and played by an <audio>
-   element that was unlocked by a tap. Such an element plays like a song, also over music. */
+/* 2.22: one <audio> element for every end-of-rest sound (tones rendered to WAV, and your own recording).
+   iPhone lets a page start sound later only on an element that once played from a tap, and plays one element at a time,
+   so the same element is unlocked on every tap (with a silent clip, not muted) and used for everything.
+   After it starts we check that it really plays; if not, the web sound plays instead. */
 const IPAD=/iPad/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-function useEl(){if(IPAD)return true;const c=state.audioCtx;return !!(c&&c.state!=='running'&&elReady)}
-let toneEl=null,elReady=false;const wavs={};
+function useEl(){return true}
+let sndEl=null,elReady=false;const wavs={};
 const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+function el(){if(!sndEl){sndEl=new Audio();sndEl.preload='auto';try{sndEl.setAttribute('playsinline','')}catch(_){}}return sndEl}
 function wavOf(buf){const d=buf.getChannelData(0),n=d.length,b=new ArrayBuffer(44+n*2),v=new DataView(b),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
   w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,buf.sampleRate,true);v.setUint32(28,buf.sampleRate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
   for(let i=0;i<n;i++){const x=Math.max(-1,Math.min(1,d[i]));v.setInt16(44+i*2,x<0?x*0x8000:x*0x7FFF,true)}return URL.createObjectURL(new Blob([b],{type:'audio/wav'}))}
 async function wavFor(kind){const key=kind+'|'+cfg().vol;if(wavs[key])return wavs[key];const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!OAC)return null;
   const sr=44100,oc=new OAC(1,Math.round(sr*2.2),sr);playTones(kind,oc);const buf=await new Promise((ok,no)=>{const r=oc.startRendering();if(r&&r.then)r.then(ok,no);else oc.oncomplete=e=>ok(e.renderedBuffer)});return (wavs[key]=wavOf(buf))}
-function unlockEl(){try{if(!toneEl){toneEl=new Audio();toneEl.preload='auto'}if(elReady)return;toneEl.src=SILENT;toneEl.muted=true;const p=toneEl.play();const done=()=>{toneEl.pause();toneEl.muted=false;elReady=true};if(p&&p.then)p.then(done).catch(()=>{toneEl.muted=false});else done()}catch(_){}
+let busyUntil=0;
+function unlockEl(){
+  try{const a=el();if(Date.now()>busyUntil&&(a.paused||a.ended)){a.muted=false;a.src=SILENT;const p=a.play();if(p&&p.then)p.then(()=>{elReady=true}).catch(()=>{});else elReady=true}}catch(_){}
   try{const c=ctx();if(c&&!c.__fpUnlock){c.__fpUnlock=1;const b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0)}}catch(_){}
   const k=cfg().kind;if(k!=='voice'&&k!=='mine'&&k!=='none')wavFor(k).catch(()=>{})}
-document.addEventListener('touchend',unlockEl,{passive:true});document.addEventListener('click',unlockEl,true);
-function playEl(kind){wavFor(kind).then(u=>{if(!u||!toneEl)return;toneEl.muted=false;toneEl.volume=1;toneEl.src=u;toneEl.currentTime=0;const p=toneEl.play();if(p&&p.catch)p.catch(()=>{try{const c=ctx();if(c)playTones(kind,c)}catch(_){}})}).catch(()=>{});return {beeps:1.1,whistle:.9,bell:1.5,chime:1.7,marimba:.9,softbell:1.9}[kind]||1}
+document.addEventListener('touchend',unlockEl,{passive:true});document.addEventListener('click',unlockEl,true);document.addEventListener('keydown',unlockEl,true);
+document.addEventListener('visibilitychange',()=>{try{if(document.visibilityState==='visible'&&state.audioCtx&&state.audioCtx.state!=='running')state.audioCtx.resume()}catch(_){}});
+/* play a source on the element; if it did not really start within a moment, run the fallback */
+function playSrc(src,len,fallback){const a=el();let fell=false;const fb=()=>{if(fell)return;fell=true;busyUntil=0;try{fallback&&fallback()}catch(_){}};
+  try{busyUntil=Date.now()+Math.max(1500,(len||2)*1000+800);a.muted=false;a.volume=1;a.src=src;try{a.currentTime=0}catch(_){}const p=a.play();if(p&&p.catch)p.catch(fb);
+    setTimeout(()=>{if(!fell&&(a.paused&&!a.ended||a.currentTime===0&&!a.ended))fb()},900)}catch(_){fb()}}
+function webTones(kind){try{const c=ctx();if(!c)return;const go=()=>playTones(kind,c);if(c.state==='running')go();else if(c.resume)c.resume().then(go).catch(()=>{})}catch(_){}}
+function playEl(kind){const len={beeps:1.1,whistle:.9,bell:1.5,chime:1.7,marimba:.9,softbell:1.9}[kind]||1;
+  wavFor(kind).then(u=>{if(!u)return webTones(kind);playSrc(u,len,()=>webTones(kind))}).catch(()=>webTones(kind));return len}
 window.fp2SoundInfo=()=>({ipad:IPAD,ctx:state.audioCtx&&state.audioCtx.state,el:elReady});
 function heVoices(){try{return speechSynthesis.getVoices().filter(v=>/^he|^iw/i.test(v.lang))}catch(_){return []}}
 function speak(text,quiet){try{if(!('speechSynthesis' in window))return false;const c=cfg(),u=new SpeechSynthesisUtterance(text);u.lang='he-IL';const vs=heVoices(),pick=vs.find(v=>v.name===c.voice)||vs[0];if(pick)u.voice=pick;
   const st=STYLES.find(s=>s[0]===c.style)||STYLES[0];u.rate=st[2];u.pitch=st[3];u.volume=quiet?0:Math.max(0.1,Math.min(1,c.vol));speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(_){return false}}
-/* 2.17: the recording plays through an <audio> element that was unlocked by a tap, so it is heard over music too */
-let mineEl=null,mineSrc='';
-function mineAudio(){const data=LS.get('fp2.restRec');if(!data)return null;if(!mineEl||mineSrc!==data){mineEl=new Audio(data);mineEl.preload='auto';mineSrc=data;mineEl.fpReady=false}return mineEl}
-function primeMine(){try{if(cfg().kind!=='mine')return;const a=mineAudio();if(!a||a.fpReady)return;a.muted=true;const p=a.play();if(p&&p.then)p.then(()=>{a.pause();a.currentTime=0;a.muted=false;a.fpReady=true}).catch(()=>{a.muted=false});else{a.pause();a.muted=false;a.fpReady=true}}catch(_){}}
-document.addEventListener('touchend',primeMine,{passive:true});document.addEventListener('click',primeMine,true);
-async function playMine(){const a=mineAudio();if(a){try{a.muted=false;a.volume=1;a.currentTime=0;await a.play();return}catch(_){}}return playMineWA()}
-async function playMineWA(){const data=LS.get('fp2.restRec');if(!data)return playTones('beeps');const c=ctx();if(!c)return;
-  try{const b=await fetch(data).then(r=>r.arrayBuffer());const buf=await new Promise((ok,no)=>c.decodeAudioData(b,ok,no));const s=c.createBufferSource(),g=c.createGain();g.gain.value=Math.max(0.1,Math.min(1,cfg().vol))*1.6;s.buffer=buf;s.connect(g);g.connect(out(c));s.start()}catch(e){try{const a=new Audio(data);a.play()}catch(_){}}}
+/* your own recording: the same element; if it does not start, through the web sound */
+let mineEl=null;
+function playMine(){const data=LS.get('fp2.restRec');if(!data)return playEl('beeps');playSrc(data,4,playMineWA)}
+async function playMineWA(){const data=LS.get('fp2.restRec');if(!data)return webTones('beeps');const c=ctx();if(!c)return;
+  try{if(c.state!=='running'&&c.resume)await c.resume()}catch(_){}
+  try{const b=await fetch(data).then(r=>r.arrayBuffer());const buf=await new Promise((ok,no)=>c.decodeAudioData(b,ok,no));const s=c.createBufferSource(),g=c.createGain();g.gain.value=Math.max(0.1,Math.min(1,cfg().vol))*1.6;s.buffer=buf;s.connect(g);g.connect(out(c));s.start()}catch(e){webTones('beeps')}}
 function restSound(kindOverride){
   const c=cfg(),kind=kindOverride||c.kind;if(kind==='none')return;
   duck(true);setTimeout(()=>{if(($('workouts')||{}).classList&&$('workouts').classList.contains('active'))duck(false);else idle()},kind==='mine'?6000:3500);
   const phrase=c.phrase==='custom'&&String(c.custom||'').trim()?String(c.custom).trim():(PHRASES[c.phrase]||PHRASES[0]);
-  if(kind==='voice'){if(!speak(phrase))playTones('beeps');return}
-  if(kind==='beepvoice'){const len=playTones('beeps');setTimeout(()=>{if(!speak(phrase))playTones('beeps')},len*1000);return}
+  if(kind==='voice'){if(!speak(phrase))playEl('beeps');return}
+  if(kind==='beepvoice'){const len=playEl('beeps');setTimeout(()=>{if(!speak(phrase))playEl('beeps')},len*1000);return}
   if(kind==='mine'){playMine();return}
-  playTones(kind);
+  /* the web sound when it runs (it mixes best with music); otherwise the element */
+  const ac=state.audioCtx;if(ac&&ac.state==='running'&&!IPAD)playTones(kind,ac);else playEl(kind);
 }
 window.fpRestSound=restSound;
 /* the end of rest calls beep(): play the chosen sound instead */
@@ -108,7 +117,7 @@ function confetti(text){
   const old=$('fpPR');if(old)old.remove();
   const reduce=matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   const w=document.createElement('div');w.id='fpPR';w.style.cssText='position:fixed;inset:0;z-index:2147483000;pointer-events:none';
-  w.innerHTML=`<canvas style="position:absolute;inset:0;width:100%;height:100%"></canvas><div style="position:absolute;left:16px;right:16px;top:32%;text-align:center;pointer-events:auto" onclick="this.parentNode.remove()"><div style="display:inline-block;background:var(--card,#171C22);border:2px solid var(--brand,#D7F36B);border-radius:20px;padding:16px 22px;box-shadow:0 18px 50px rgba(0,0,0,.55);animation:fpPRpop .45s cubic-bezier(.2,1.6,.4,1)"><div style="font-size:30px;font-weight:800">🏆 שיא חדש!</div><div style="font-size:16px;margin-top:6px">${esc(text)}</div></div></div><style>@keyframes fpPRpop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}</style>`;
+  w.innerHTML=`<canvas style="position:absolute;inset:0;width:100%;height:100%"></canvas><div style="position:absolute;left:16px;right:16px;top:32%;text-align:center;pointer-events:auto" onclick="this.parentNode.remove()"><div style="display:inline-block;background:var(--card,#171C22);border:2px solid var(--brand,#D7F36B);border-radius:20px;padding:16px 22px;box-shadow:0 18px 50px rgba(0,0,0,.55);animation:fpPRpop .45s cubic-bezier(.2,1.6,.4,1)"><div style="font-size:30px;font-weight:800">שיא חדש!</div><div style="font-size:16px;margin-top:6px">${esc(text)}</div></div></div><style>@keyframes fpPRpop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}</style>`;
   document.body.appendChild(w);setTimeout(()=>{if(w.isConnected)w.remove()},4200);
   try{hapticTick()}catch(_){}
   if(reduce)return;
@@ -121,7 +130,7 @@ function confetti(text){
     if(el<3900)requestAnimationFrame(f)})(t0);
 }
 window.fpConfetti=confetti;
-if(typeof toast==='function'){const o=toast;toast=function(msg){try{const m=String(msg||'').match(/^🏆 שיא חדש ב(.+)$/);if(m){confetti(m[1]);return}}catch(_){}return o.apply(this,arguments)}}
+if(typeof toast==='function'){const o=toast;toast=function(msg){try{const m=String(msg||'').match(/^[^א-ת]*שיא חדש ב(.+)$/);if(m){confetti(m[1]);return}}catch(_){}return o.apply(this,arguments)}}
 
 /* ---------- settings ---------- */
 let rec=null;
@@ -129,14 +138,14 @@ function renderSet(){
   const sec=$('settings');if(!sec||!state.data)return;let box=$('fpRestSet');
   if(!box){box=document.createElement('details');box.className='settings-section';box.id='fpRestSet';const a=$('fpWeekSet')||$('calendarSettings')||$('notificationSettings');if(a)a.insertAdjacentElement('afterend',box);else{const h=sec.querySelector('h2');if(!h)return;h.insertAdjacentElement('afterend',box)}}
   const open=box.open,c=cfg(),vs=heVoices(),hasRec=!!LS.get('fp2.restRec'),voiceOn=c.kind==='voice';
-  box.innerHTML=`<summary>🔔 צליל סוף מנוחה</summary><div class="settings-body">
+  box.innerHTML=`<summary>צליל סוף מנוחה</summary><div class="settings-body">
     <div class="meal-tabs" style="flex-wrap:wrap">${SOUNDS.map(([k,l])=>`<button type="button" class="chip${c.kind===k?' active':''}" onclick="fpRestSet('kind','${k}')">${l}</button>`).join('')}</div>
-    ${voiceOn?`<label style="font-weight:700;display:block;margin-top:12px">מה הקול אומר?</label><div class="meal-tabs" style="flex-wrap:wrap">${PHRASES.map((p,i)=>`<button type="button" class="chip${c.phrase===i?' active':''}" onclick="fpRestSet('phrase',${i})">${p}</button>`).join('')}<button type="button" class="chip${c.phrase==='custom'?' active':''}" onclick="fpRestSet('phrase','custom')">✏️ משפט שלי</button></div>
+    ${voiceOn?`<label style="font-weight:700;display:block;margin-top:12px">מה הקול אומר?</label><div class="meal-tabs" style="flex-wrap:wrap">${PHRASES.map((p,i)=>`<button type="button" class="chip${c.phrase===i?' active':''}" onclick="fpRestSet('phrase',${i})">${p}</button>`).join('')}<button type="button" class="chip${c.phrase==='custom'?' active':''}" onclick="fpRestSet('phrase','custom')">משפט שלי</button></div>
       ${c.phrase==='custom'?`<div style="display:flex;gap:8px;margin-top:8px"><input id="fpRestCustom" maxlength="60" placeholder="למשל: יאללה אילי, סט אחרון!" value="${esc(c.custom||'')}" style="flex:1" oninput="fpRestSet('custom',this.value,true)"><button type="button" class="btn light" onclick="fpRestTest()">▶</button></div><p class="muted" style="font-size:12.5px;margin:4px 0 0">הטלפון יקריא את מה שכתבת בסוף כל מנוחה.</p>`:''}
       <label style="font-weight:700;display:block;margin-top:12px">סגנון</label><div class="meal-tabs" style="flex-wrap:wrap">${STYLES.map(s=>`<button type="button" class="chip${c.style===s[0]?' active':''}" onclick="fpRestSet('style','${s[0]}')">${s[1]}</button>`).join('')}</div>
       ${vs.length>1?`<label style="font-weight:700;display:block;margin-top:12px">קול</label><div class="meal-tabs" style="flex-wrap:wrap">${vs.map(v=>`<button type="button" class="chip${(c.voice||vs[0].name)===v.name?' active':''}" onclick="fpRestSet('voice',${JSON.stringify(v.name).replace(/"/g,'&quot;')})">${esc(v.name)}</button>`).join('')}</div>`:''}`:''}
-    ${c.kind==='mine'?`<div style="margin-top:12px">${hasRec?'<p class="muted" style="margin:0 0 6px">יש הקלטה שמורה.</p>':''}<button type="button" class="btn light full" id="fpRecBtn" onclick="fpRestRec()">${rec?'⏹ עצור':hasRec?'🎙 להקליט מחדש (עד 4 שניות)':'🎙 להקליט (עד 4 שניות)'}</button>
-      <label class="btn light full" style="margin-top:8px;display:block;text-align:center">📁 או לבחור קובץ קול<input type="file" accept="audio/*" style="display:none" onchange="fpRestFile(this.files&&this.files[0])"></label>
+    ${c.kind==='mine'?`<div style="margin-top:12px">${hasRec?'<p class="muted" style="margin:0 0 6px">יש הקלטה שמורה.</p>':''}<button type="button" class="btn light full" id="fpRecBtn" onclick="fpRestRec()">${rec?'עצור':hasRec?'להקליט מחדש (עד 4 שניות)':'להקליט (עד 4 שניות)'}</button>
+      <label class="btn light full" style="margin-top:8px;display:block;text-align:center">או לבחור קובץ קול<input type="file" accept="audio/*" style="display:none" onchange="fpRestFile(this.files&&this.files[0])"></label>
       ${hasRec?'<button type="button" class="btn light full" style="margin-top:8px" onclick="fpRestTest()">▶ לשמוע את ההקלטה</button>':''}</div>`:''}
     <label style="font-weight:700;display:block;margin-top:12px">עוצמה</label><input type="range" id="fpRestVol" min="0.2" max="1" step="0.1" value="${c.vol}" oninput="fpRestSet('vol',Number(this.value),true)" style="width:100%">
     <button type="button" class="btn full" style="margin-top:12px" onclick="fpRestTest()">▶ לשמוע</button>
@@ -150,7 +159,7 @@ window.fpMakeRecorder=function(st,extra){const tries=[];['audio/mp4','audio/aac'
   let last=null;for(const o of tries){try{return new MediaRecorder(st,o)}catch(e){last=e}}throw Object.assign(new Error('ההקלטה לא נתמכת בטלפון הזה ('+((last&&last.name)||'')+')'),{fpMsg:'ההקלטה לא נתמכת בטלפון הזה. אפשר לבחור קובץ קול במקום.'})};
 /* 2.20: a progress bar while recording (fixed at the bottom, survives re-renders) */
 window.fpRecBar={t:0,start(total){this.stop();const t0=Date.now(),mm=x=>Math.floor(x/60)+':'+String(Math.floor(x%60)).padStart(2,'0');
-  document.body.insertAdjacentHTML('beforeend',`<div id="fpRecBar" role="status" style="position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:2147482000;background:#171C22;border:1px solid #E5484D;border-radius:14px;padding:10px 12px;direction:rtl;color:#F2F5F7;font:600 14px/1.3 -apple-system,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.45)"><div style="display:flex;justify-content:space-between;gap:8px"><span>🔴 מקליט…</span><span id="fpRecBarT" dir="ltr">0:00 / ${mm(total)}</span></div><div style="height:8px;background:#2C3640;border-radius:6px;overflow:hidden;margin-top:7px"><i id="fpRecBarF" style="display:block;height:100%;width:0;background:#E5484D;transition:width .2s linear"></i></div></div>`);
+  document.body.insertAdjacentHTML('beforeend',`<div id="fpRecBar" role="status" style="position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:2147482000;background:#171C22;border:1px solid #E5484D;border-radius:14px;padding:10px 12px;direction:rtl;color:#F2F5F7;font:600 14px/1.3 -apple-system,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.45)"><div style="display:flex;justify-content:space-between;gap:8px"><span>מקליט…</span><span id="fpRecBarT" dir="ltr">0:00 / ${mm(total)}</span></div><div style="height:8px;background:#2C3640;border-radius:6px;overflow:hidden;margin-top:7px"><i id="fpRecBarF" style="display:block;height:100%;width:0;background:#E5484D;transition:width .2s linear"></i></div></div>`);
   this.t=setInterval(()=>{const e=(Date.now()-t0)/1000,f=$('fpRecBarF'),tx=$('fpRecBarT');if(!f){clearInterval(this.t);return}f.style.width=Math.min(100,e/total*100)+'%';if(tx)tx.textContent=mm(Math.min(e,total))+' / '+mm(total)},200)},
  stop(){clearInterval(this.t);const b=$('fpRecBar');if(b)b.remove()}};
 window.fpRestRec=async()=>{

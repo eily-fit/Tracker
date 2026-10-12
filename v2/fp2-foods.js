@@ -340,7 +340,7 @@ if(typeof renderOnb==='function'){
 /* 2.18: its own section in Settings, for everyone (it was inside the database section) */
 function injectSettings(force){
   const sec=$('settings');if(!sec)return;
-  let box=$('fpCookSet');if(!box){box=document.createElement('details');box.className='settings-section';box.id='fpCookSet';box.innerHTML='<summary>🍳 איך אתה מבשל</summary><div class="settings-body"><div id="fpOilSettings"></div></div>';
+  let box=$('fpCookSet');if(!box){box=document.createElement('details');box.className='settings-section';box.id='fpCookSet';box.innerHTML='<summary>איך אתה מבשל</summary><div class="settings-body"><div id="fpOilSettings"></div></div>';
     const a=$('fpGoalSet')||$('fpWeekSet')||$('notificationSettings');if(a)a.insertAdjacentElement('afterend',box);else{const h=sec.querySelector('h2');if(!h)return;h.insertAdjacentElement('afterend',box)}}
   let el=$('fpOilSettings');
   if(!el)return;
@@ -378,7 +378,7 @@ function showCalib(s){
   const lines=[`לפי היומן אכלת בממוצע <b>${s.intake}</b> קל׳ ביום.`];
   if(est){const exp=(s.intake-est)*7/7700;lines.push(`לפי זה היית אמור: <b>${kgWeek(exp)}</b>.`)}
   lines.push(`בפועל: <b>${kgWeek(s.actualWeek)}</b>.`);
-  lines.push(`🎯 ${goalMonthLine(s)}.`);
+  lines.push(`${goalMonthLine(s)}.`);
   let why='';
   if(est){const gap=Math.round((est-s.tdee)/10)*10;
     if(gap>=50)why=`כלומר בערך <b>${gap} קל׳ ביום</b> לא נכנסים לחשבון: שמן, רטבים, יחידות גדולות ממה שחשבנו. זה קורה כמעט לכולם, ולכן מתקנים את היעד ולא את הרישום.`;
