@@ -138,6 +138,11 @@ function loadWarn(d){const wt=wantT(d),S=strPW(d),R=runsPW(d),C=carPW(d),tot=S+R
   else if(fresh.length===1){const t=fresh[0];if(goal[t]>=3)out.push(`<b>${goal[t]} ${TT[t]} בשבוע, מאפס.</b> זה הרבה להתחלה. עדיף 1–2 בשבוע בחודש הראשון.`)}
   if(!out.length&&tot>=tot0+3)out.push(`<b>שים לב:</b> זה ${tot-tot0} אימונים בשבוע יותר ממה שאתה עושה היום. אפשר, רק להתחיל בעדינות.`);
   return out.length?`<div class="fpq-warn">${out.join('<br><br>')}<p style="margin:8px 0 0;font-size:12.5px;color:#A3ADB8">אפשר להמשיך בכל זאת. זו רק המלצה.</p></div>`:''}
+let WSEEN='';
+function warnPop(html){const sig=html.replace(/<[^>]+>/g,'').slice(0,200);if(!html){WSEEN='';return}if(sig===WSEEN)return;WSEEN=sig;
+  const old=document.getElementById('fpqWarnPop');if(old)old.remove();
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpqWarnPop" style="z-index:2147483000" onclick="if(event.target===this)this.remove()"><div class="sheet" style="direction:rtl"><h3 style="margin:0 0 8px;display:flex;gap:8px;align-items:center"><svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:#F09595;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.2v.3"/></svg>שים לב</h3>${html.replace('class="fpq-warn"','class="fpq-warn" style="background:rgba(240,149,149,.1);border:1px solid rgba(240,149,149,.45);border-radius:14px;padding:10px 12px;line-height:1.6"')}<button type="button" class="btn full" style="margin-top:10px" onclick="document.getElementById('fpqWarnPop').remove()">הבנתי</button></div></div>`);
+  const b=document.querySelector('#fpqWarnPop button[onclick="fpQ.easy()"]');if(b)b.setAttribute('onclick',"document.getElementById('fpqWarnPop').remove();fpQ.easy()")}
 function trainHtml(){
   const d=Q.d,w=d.want;let h=`<h2>איך אתה רוצה להתאמן?</h2><p class="onb-intro">בחר מה מעניין אותך. אפשר כמה. מה שתבחר ייפתח למטה.</p>
     <div class="onb-options">${tg('want','str','כוח')}${tg('want','car','אירובי')}${tg('want','run','ריצה')}</div>`;
@@ -166,7 +171,8 @@ function trainHtml(){
       ${d.wplan==='weekly'?`<label style="margin-top:12px">באיזה יום לשאול אותך על השבוע הבא?</label><div class="onb-options">${[['ci','ביום הצ׳ק-אין ('+DN[ci]+')']].concat(DN.map((n,i)=>[i,n])).map(([k,l])=>`<button type="button" class="onb-choice chip${String(d.ask)===String(k)?' selected':''}" onclick="fpQ.set('ask',${typeof k==='number'?k:"'ci'"})">${l}</button>`).join('')}</div>`:''}
       ${d.wplan==='none'?'':daysPicker(d)}
       <p class="muted" style="margin:6px 0 0;font-size:12px;color:#6B7682">ניתן לשינוי בהגדרות</p></div>`;
-    h+=loadWarn(d)}
+    /* 2.23.1: the warning pops up when a limit is crossed, and does not stay on the screen */
+    const lw=loadWarn(d);setTimeout(()=>warnPop(lw),0)}
   const t=targets(d);if(t)h+=`<div class="onb-info"><b>יעד יומי לפי האימונים: ${t.cal.toLocaleString('he-IL')} קלוריות</b><p>קבוע כל יום. האימונים מחולקים על כל השבוע.</p></div>`;
   return h;
 }

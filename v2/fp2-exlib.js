@@ -53,6 +53,10 @@ function render(){
   const sheet=document.getElementById('exPickSheet'),listEl=document.getElementById('exPickList');if(!pm||!sheet||!listEl)return;
   let q=document.getElementById('exPickQ');
   if(!q){q=document.createElement('input');q.id='exPickQ';q.type='search';q.placeholder='חפש תרגיל לפי שם או שריר';q.autocomplete='off';q.addEventListener('input',()=>{state.pickQuery=q.value;renderList()});listEl.parentNode.insertBefore(q,listEl)}
+  /* 2.23.1 (sketch B): muscle chips under the search, so you can browse without typing */
+  let mc=document.getElementById('exPickM');if(!mc){mc=document.createElement('div');mc.id='exPickM';mc.className='fpChips';mc.style.margin='0 0 8px';listEl.parentNode.insertBefore(mc,listEl)}
+  {const base=['חזה','גב','כתפיים','יד קדמית','יד אחורית','רגליים','בטן'],gs=base.concat(Object.keys(catalog).filter(g=>!base.includes(g)&&g!=='אירובי'));
+   mc.innerHTML=gs.map(g=>`<button type="button" class="${g===pm.group?'on':''}" onclick="FP2Lib.group('${esc2(g)}')">${esc2(g)}</button>`).join('')}
   document.getElementById('exPickTitle').textContent='בחר תרגיל · '+pm.group;
   if(state.pickQuery===undefined||state.pickFresh!==pm){q.value='';state.pickQuery='';state.pickFresh=pm}
   renderList();sheet.classList.remove('hide');
@@ -62,7 +66,8 @@ function renderList(){
   if(qv){
     const terms=qv.split(/\s+/).filter(Boolean),hits=[];
     Object.keys(catalog).forEach(g=>(catalog[g]||[]).forEach(x=>{const hay=(x.name+' '+worksOf(x.name)+' '+g+' '+(x.equipment||'')).replace(/\s+/g,' ');if(terms.every(t=>hay.includes(t)))hits.push(Object.assign({},x,{__g:g}))}));
-    listEl.innerHTML=hits.length?hits.slice(0,60).map(x=>rowHtml(x,pm,true,null)).join(''):'<div class="empty">לא נמצא תרגיל כזה. אפשר ללחוץ ״＋ תרגיל חדש״ למטה.</div>';return}
+    const exact=hits.some(x=>x.name.trim()===qv);
+    listEl.innerHTML=(hits.length?hits.slice(0,60).map(x=>rowHtml(x,pm,true,null)).join(''):'<div class="empty">לא נמצא תרגיל כזה.</div>')+(exact?'':`<button type="button" class="pick-row" style="border-style:dashed" onclick="FP2Lib.addNew()"><b>＋ להוסיף ״${esc2(qv)}״ כתרגיל חדש</b></button>`);return}
   const bucket=typeof equipmentBucket==='function'?equipmentBucket(pm.equipment||state.equipment):null;
   const list=(catalog[pm.group]||[]).filter(x=>bucket===null||equipmentBucket(x.equipment)===bucket);
   if(!list.length){listEl.innerHTML='<div class="empty">אין עדיין תרגילים כאן. לחץ ״＋ תרגיל חדש״.</div>';return}
@@ -74,6 +79,8 @@ function renderList(){
     const has=m.some(x=>x.id===pm.current),isOpen=open.has(s);/* 2.16: everything starts closed */
     return `<div class="exfam ${isOpen?'open':''}" data-fam="${esc2(s)}"><button type="button" class="exfam-h" onclick="FP2Lib.toggle(this)"><span><b>${has?'✓ ':''}${esc2(s)}</b> <small>· ${m.length} וריאציות</small></span><span class="chev">‹</span></button><div class="exfam-b">${m.map(x=>rowHtml(x,pm,false,s)).join('')}</div></div>`}).join('');
 }
+window.FP2Lib.group=function(g){const pm=state.pickMode;if(!pm)return;pm.group=g;state.pickQuery='';const q=document.getElementById('exPickQ');if(q)q.value='';render()};
+window.FP2Lib.addNew=function(){const n=String(state.pickQuery||'').trim(),g=state.pickMode&&state.pickMode.group;closeSheet('exPickSheet');openNewExerciseSheet(g);setTimeout(()=>{const i=document.getElementById('newExName');if(i&&n)i.value=n},30)};
 window.FP2Lib.toggle=function(btn){const f=btn.closest('.exfam');if(!f)return;f.classList.toggle('open');const s=f.dataset.fam,o=state.pickOpen||(state.pickOpen=new Set());f.classList.contains('open')?o.add(s):o.delete(s)};
 if(typeof window.renderExercisePicker==='function')window.renderExercisePicker=render;
 /* picker opens fresh (clears search) */

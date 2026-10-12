@@ -2166,7 +2166,7 @@ function hookSave(){return true}
 const ROOTS='#workoutHome,#workoutLibrary,#workouts,#workoutDiary,#workoutPlans,.overlay:not(#anOv)';
 let scanT=0,mo=null;
 function scan(){if(!mo)return;mo.disconnect();try{document.querySelectorAll(ROOTS).forEach(root=>{
-  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const hits=[];let t;while(t=w.nextNode()){const s=t.nodeValue;if(!s||s.length>60)continue;const n=norm(s);if(n&&EXMAP[n]){const el=t.parentElement;if(el&&!el.closest('.exAnim,#anOv,option,select,.exfam-h,button.exAnimBtn,input,textarea,script,style')&&!hits.includes(el))hits.push(el)}}
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const hits=[];let t;while(t=w.nextNode()){const s=t.nodeValue;if(!s||s.length>60)continue;const n=norm(s);if(n&&EXMAP[n]){const el=t.parentElement;if(el&&!el.closest('.exAnim,#anOv,.fpQ,.fpPPL,option,select,.exfam-h,button.exAnimBtn,input,textarea,script,style')&&!hits.includes(el))hits.push(el)}}
   hits.forEach(el=>{const nx=el.nextElementSibling;if(nx&&nx.classList.contains('exAnim'))return;if(el.querySelector(':scope>.exAnim'))return;const b=document.createElement('span');b.className='exAnim';b.setAttribute('role','button');b.setAttribute('aria-label','הדגמה');b.dataset.ex=norm(el.textContent);b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linejoin:round"><path d="M8 5v14l11-7z"/></svg>';
    if(el.tagName==='B'||el.tagName==='SPAN'||el.tagName==='STRONG'||el.tagName==='DIV'||el.tagName==='SMALL'||el.tagName==='H4'||el.tagName==='H3')el.appendChild(b);else el.after(b)})});
  /* the runner pick-line */

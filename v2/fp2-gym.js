@@ -18,15 +18,17 @@ function ctx(){try{if(!state.audioCtx){const AC=window.AudioContext||window.webk
    "transient" only for the moment of the end-of-rest sound (the music goes down a little and comes back),
    and "play-and-record" only while the microphone records. */
 let recording=0;
+/* 2.23.1: back to the 2.22 audio session, the one that recorded and played on iPhone:
+   "ambient" / "transient" only around the end-of-rest sound, "auto" the rest of the time and while recording. */
 const AS=t=>{try{if(navigator.audioSession&&navigator.audioSession.type!==t)navigator.audioSession.type=t}catch(_){}};
 function duck(on){if(!recording)AS(on?'transient':'ambient')}
-function idle(){if(!recording)AS('ambient')}
+function idle(){if(!recording)AS('auto')}
 idle();
 if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&!navigator.mediaDevices.__fp){
   const gum=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
   navigator.mediaDevices.getUserMedia=async function(c){
     const audio=!!(c&&c.audio);if(!audio)return gum(c);
-    AS('play-and-record');
+    AS('auto');
     recording++;
     try{const st=await gum(c);st.getTracks().forEach(t=>{const o=t.stop.bind(t);t.stop=function(){o();recording=Math.max(0,recording-1);if(!recording)setTimeout(idle,300)}});return st}
     catch(e){recording=Math.max(0,recording-1);if(!recording)idle();
@@ -68,9 +70,9 @@ async function wavFor(kind){const key=kind+'|'+cfg().vol;if(wavs[key])return wav
   const sr=44100,oc=new OAC(1,Math.round(sr*2.2),sr);playTones(kind,oc);const buf=await new Promise((ok,no)=>{const r=oc.startRendering();if(r&&r.then)r.then(ok,no);else oc.oncomplete=e=>ok(e.renderedBuffer)});return (wavs[key]=wavOf(buf))}
 let busyUntil=0;
 /* 2.23: only during a workout (or a running timer). Outside a workout a tap never plays anything, so it never touches your music. */
-const inWorkout=()=>{try{return !!((document.getElementById('workouts')||{}).classList&&document.getElementById('workouts').classList.contains('active'))||!!(state.restEnd&&state.restEnd>Date.now())||!!document.getElementById('fpCarFloat')||!!document.querySelector('#fpTSheet .fpT-timer')||!!document.getElementById('fpRestSet')&&document.getElementById('fpRestSet').open}catch(_){return false}};
+const inWorkout=()=>{try{return !!((document.getElementById('workouts')||{}).classList&&document.getElementById('workouts').classList.contains('active'))||!!(state.restEnd&&state.restEnd>Date.now())||!!document.getElementById('fpCarFloat')||!!document.querySelector('#fpTSheet .fpT-timer,#fpTSheet .fpTm')||!!document.getElementById('fpRestSet')&&document.getElementById('fpRestSet').open}catch(_){return false}};
 function unlockEl(){
-  if(!inWorkout())return;idle();
+  if(!inWorkout())return;
   try{const a=el();if(Date.now()>busyUntil&&(a.paused||a.ended)){a.muted=false;a.src=SILENT;const p=a.play();if(p&&p.then)p.then(()=>{elReady=true}).catch(()=>{});else elReady=true}}catch(_){}
   try{const c=ctx();if(c&&!c.__fpUnlock){c.__fpUnlock=1;const b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0)}}catch(_){}
   const k=cfg().kind;if(k!=='voice'&&k!=='mine'&&k!=='none')wavFor(k).catch(()=>{})}
@@ -96,7 +98,7 @@ function mineBlob(){const data=LS.get('fp2.restRec');if(!data)return '';if(mineS
 function playMine(){const data=LS.get('fp2.restRec');if(!data)return playEl('beeps');playSrc(mineBlob(),4,playMineWA)}
 async function playMineWA(){const data=LS.get('fp2.restRec');if(!data)return webTones('beeps');const c=ctx();if(!c)return;
   try{if(c.state!=='running'&&c.resume)await c.resume()}catch(_){}
-  try{const b=await fetch(mineBlob()||data).then(r=>r.arrayBuffer());const buf=await new Promise((ok,no)=>c.decodeAudioData(b,ok,no));const s=c.createBufferSource(),g=c.createGain();g.gain.value=Math.max(0.1,Math.min(1,cfg().vol));s.buffer=buf;s.connect(g);g.connect(out(c));s.start()}catch(e){webTones('beeps')}}
+  try{const b=await fetch(mineBlob()||data).then(r=>r.arrayBuffer());const buf=await new Promise((ok,no)=>c.decodeAudioData(b,ok,no));const s=c.createBufferSource(),g=c.createGain();g.gain.value=Math.max(0.1,Math.min(1,cfg().vol))*1.6;s.buffer=buf;s.connect(g);g.connect(out(c));s.start()}catch(e){webTones('beeps')}}
 /* clean a recording: decode → mono → cut the silence at the start and the end → low cut (rumble) → even loudness → 22 kHz WAV */
 async function cleanRec(arrayBuffer){const AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!AC||!OAC)throw new Error('no audio');
   const dc=state.audioCtx||new AC();const src=await new Promise((ok,no)=>{const r=dc.decodeAudioData(arrayBuffer.slice(0),ok,no);if(r&&r.then)r.then(ok,no)});
@@ -229,9 +231,10 @@ window.fpRestRec=async()=>{
   if(typeof MediaRecorder==='undefined'){toast('ההקלטה לא נתמכת בטלפון הזה. אפשר לבחור קובץ קול במקום.',true);return}
   let st=null;
   /* 2.23: without the "phone call" processing, it sounds like you and not like a phone line */
-  try{st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}})}
-  catch(e){try{st=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e2){rec=null;toast(fpMicMsg(e2)+(e2&&e2.name&&!e2.fpMsg?' ('+e2.name+')':''),true);renderSet();return}}
-  try{const chunks=[];rec=fpMakeRecorder(st,{audioBitsPerSecond:128000});const mt=rec.mimeType||'';rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+  /* 2.23.1: the plain request, like 2.22 (the special settings did not record on iPhone) */
+  try{st=await navigator.mediaDevices.getUserMedia({audio:true})}
+  catch(e2){rec=null;toast(fpMicMsg(e2)+(e2&&e2.name&&!e2.fpMsg?' ('+e2.name+')':''),true);renderSet();return}
+  try{const chunks=[];rec=fpMakeRecorder(st);const mt=rec.mimeType||'';rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
     rec.onstop=()=>{clearInterval(recInt);fpRecBar.stop();st.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:mt||'audio/mp4'});rec=null;
       if(!blob.size){toast('ההקלטה יצאה ריקה. נסה שוב, או בחר קובץ קול.',true);renderSet();return}
       renderSet();keepRec(blob,'rec')};

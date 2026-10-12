@@ -2,20 +2,31 @@
    Sections are moved (not rebuilt), so everything that looks them up by id keeps working. Runs again whenever new sections appear. */
 (function(){
 'use strict';
+/* 2.23.1: everything sits in a few clear folders (the sections themselves did not change).
+   The "ניהול" folder is for the admin only — a user never sees it. */
 const FOLDERS=[
+  {id:'fpFolderFood',title:'אוכל ויעדים',match:[/היעד והאירועים/,/יעדים יומיים/,/איך אתה מבשל/]},
+  {id:'fpFolderTrain',title:'אימונים',match:[/אימונים: כוח/,/צליל סוף מנוחה/]},
+  {id:'fpFolderDay',title:'היום, השבוע ומדליות',match:[/היום, חגים ושבת/,/מדליות וסיכום שבוע/]},
   {id:'fpFolderAcc',title:'חשבון, התראות ויומן',match:[/השם שלי/,/^[^א-ת]*התראות/,/חיבור יומן/,/צ׳ק-אין שבועי/]},
-  {id:'fpFolderTools',title:'גיבוי, בדיקות והגדרות נוספות',match:[/גיבוי וייצוא/,/בדיקת AI/,/הגדרות נוספות/,/צמרת/]}
+  {id:'fpFolderTools',title:'גיבוי, בדיקות והגדרות נוספות',match:[/גיבוי וייצוא/,/בדיקת AI/,/הגדרות נוספות/,/צמרת/]},
+  {id:'fpFolderAdm',title:'ניהול (רק למנהל)',admin:true,match:[/משתמשים/,/הצעות לתרגילים/,/מכונת זמן/]}
 ];
-/* the order of what stays on top */
-const TOP=[/היעד והאירועים/,/יעדים יומיים/,/איך אתה מבשל/,/היום, חגים ושבת/,/צליל סוף מנוחה/,/מדליות וסיכום שבוע/,/אימונים: כוח/];
+/* the order of what stays on top (now nothing: all in folders) */
+const TOP=[];
 document.head.insertAdjacentHTML('beforeend','<style id="fp220css">#settings details.fp-folder>summary{font-weight:800}#settings details.fp-folder>.settings-body>details.settings-section{margin:8px 0}#settings details.fp-folder>.settings-body{padding-top:4px}</style>');
 const sumOf=d=>{const s=d.querySelector(':scope > summary');return s?s.textContent.trim():''};
 function organize(){
   const root=document.getElementById('settings');if(!root||!document.getElementById('moreSettings'))return; /* the app's own grouping runs first, once */
   const head=root.querySelector(':scope > h2');
-  FOLDERS.forEach(F=>{const ex=document.getElementById(F.id);if(ex&&ex.parentElement!==root)root.appendChild(ex);if(!ex){const d=document.createElement('details');d.id=F.id;d.className='settings-section fp-folder';d.innerHTML=`<summary>${F.title}</summary><div class="settings-body"></div>`;root.appendChild(d)}});
+  FOLDERS.forEach(F=>{const ex=document.getElementById(F.id);if(ex&&ex.parentElement!==root)root.appendChild(ex);if(!ex){const d=document.createElement('details');d.id=F.id;d.className='settings-section fp-folder'+(F.admin?' admin-only':'');d.innerHTML=`<summary>${F.title}</summary><div class="settings-body"></div>`;root.appendChild(d)}});
+  const adm=document.getElementById('fpFolderAdm');
   const top=[...root.querySelectorAll(':scope > details.settings-section:not(.fp-folder)')];
-  top.forEach(d=>{if(d.classList.contains('admin-only')||FOLDERS.some(F=>d.contains(document.getElementById(F.id))))return;const t=sumOf(d);const F=FOLDERS.find(f=>f.match.some(re=>re.test(t)));if(F)document.getElementById(F.id).querySelector(':scope > .settings-body').appendChild(d)});
+  top.forEach(d=>{if(FOLDERS.some(F=>d.contains(document.getElementById(F.id))))return;const t=sumOf(d);let F=FOLDERS.find(f=>f.match.some(re=>re.test(t)));
+    /* anything only for the admin goes to the admin folder */
+    if(d.classList.contains('admin-only')&&(!F||!F.admin))F=FOLDERS.find(f=>f.admin);
+    if(F)document.getElementById(F.id).querySelector(':scope > .settings-body').appendChild(d)});
+  {const b=document.getElementById('fpAdmEntry');if(b&&adm&&b.parentElement!==adm.querySelector(':scope > .settings-body'))adm.querySelector(':scope > .settings-body').prepend(b)}
   /* keep the folders' inner order fixed */
   FOLDERS.forEach(F=>{const body=document.getElementById(F.id).querySelector(':scope > .settings-body');const kids=[...body.children];
     const rank=d=>{const t=sumOf(d);const i=F.match.findIndex(re=>re.test(t));return i<0?99:i};kids.slice().sort((a,b)=>rank(a)-rank(b)).forEach(k=>body.appendChild(k))});

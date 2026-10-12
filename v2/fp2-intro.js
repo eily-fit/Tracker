@@ -47,7 +47,7 @@ const css=`#fpI{position:fixed;inset:0;z-index:2147482400;pointer-events:none}
 #fpI .fpI-ring.s{border:2px solid rgba(182,147,255,.95);box-shadow:0 0 0 4px rgba(182,147,255,.2),0 0 24px rgba(182,147,255,.45);animation:fpIs 1.8s ease-in-out infinite}
 @keyframes fpIb{50%{box-shadow:0 0 0 6px rgba(215,243,107,.12),0 0 30px rgba(215,243,107,.45)}}
 @keyframes fpIs{50%{box-shadow:0 0 0 6px rgba(182,147,255,.14),0 0 32px rgba(182,147,255,.55)}}
-#fpI .fpI-card{position:fixed;left:12px;right:12px;pointer-events:auto;background:var(--card,#171C22);border:1px solid var(--line,#2A333C);border-radius:18px;padding:14px 14px 12px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:top .25s ease}
+#fpI .fpI-card{position:fixed;left:12px;right:12px;pointer-events:auto;background:var(--card,#171C22);border:1px solid var(--line,#2A333C);border-radius:18px;padding:14px 14px 12px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:top .35s ease,bottom .35s ease}
 #fpI .fpI-card.s{border-color:rgba(182,147,255,.6)}
 #fpI .fpI-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;color:var(--muted,#93A09A)}
 #fpI .fpI-tag{font-weight:800;border-radius:99px;padding:3px 10px;font-size:12px}
@@ -105,11 +105,12 @@ function draw(){
 function go(n){
   const prev=ST[I];if(prev&&prev.after)try{prev.after()}catch(_){}
   if(n>=ST.length)return finish(true);
-  I=n;const s=ST[I];tgt=null;FOLD=!!s.free; /* 2.23: on a 'try it' step (the demo) the card starts folded, so it does not hide what you try */
+  I=n;const s=ST[I];tgt=null;FOLD=false; /* 2.23: on a 'try it' step (the demo) the card starts folded, so it does not hide what you try */
   try{if(s.view&&!(q('#'+s.view)||{}).classList?.contains('active'))showView(s.view)}catch(_){}
   try{window.scrollTo(0,0)}catch(_){}
   if(s.before)try{s.before()}catch(_){}
-  draw();lastRect='';place();try{const c=root.querySelector('.fpI-card');c.classList.remove('swap');void c.offsetWidth;c.classList.add('swap')}catch(_){}
+  /* 2.23.1 (sketch B): the card does not fade out and back in; it slides to its new place (CSS transition on top) */
+  draw();lastRect='';place();
   {const t0=performance.now();const follow=()=>{if(!root||ST[I]!==s)return;if(tgt&&vis(tgt))place();if(performance.now()-t0<900)requestAnimationFrame(follow)};requestAnimationFrame(follow)}
   let tries=0;clearInterval(timer);
   doneAt=-1;try{if(s.start)s.start()}catch(_){}

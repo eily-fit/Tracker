@@ -42,14 +42,15 @@ function sheet(id,title,body){
   document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="${id}"><div class="sheet" style="max-height:92vh;overflow:auto"><div class="sheet-head"><h3 style="margin:0">${title}</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('${id}').remove()">✕</button></div>${body}</div></div>`);
   return $(id);
 }
-const opt=(ic,t,sub,fn)=>`<button type="button" class="fp-more-opt" onclick="${fn}"><span class="ic">${ic}</span><div><b>${t}</b><span>${sub}</span></div></button>`;
+/* 2.23.1: a small "AI" mark on the ways that use AI */
+const opt=(ic,t,sub,fn,ai)=>`<button type="button" class="fp-more-opt" onclick="${fn}"><span class="ic">${ic}</span><div><b>${t}${ai?' <i style="font-style:normal;font-size:10.5px;font-weight:800;color:#14190a;background:#D7F36B;border-radius:6px;padding:1px 6px;vertical-align:middle;margin-inline-start:4px">AI</i>':''}</b><span>${sub}</span></div></button>`;
 window.fpAddMore=function(){
   sheet('fpAddMoreSheet','עוד דרכים להוסיף',
-    opt('','לצלם את הארוחה','ה-AI מזהה מה בצלחת וכמה','fpMore(\'photo\')')+
-    opt('','תמונה של הארוחה מהגלריה','תמונה שכבר צילמת','fpMore(\'photoGal\')')+
+    opt('','לצלם את הארוחה','ה-AI מזהה מה בצלחת וכמה','fpMore(\'photo\')',1)+
+    opt('','תמונה של הארוחה מהגלריה','תמונה שכבר צילמת','fpMore(\'photoGal\')',1)+
     opt('','לסרוק ברקוד','מוצר ארוז: הערכים מגיעים לבד','fpMore(\'barcode\')')+
-    opt('','תמונה של מתכון או רשימת מרכיבים','ה-AI קורא את המרכיבים ומחשב','fpMore(\'recipePhoto\')')+
-    opt('','מתכון מקישור','מדביקים קישור לאתר מתכונים','fpMore(\'link\')')+
+    opt('','תמונה של מתכון או רשימת מרכיבים','ה-AI קורא את המרכיבים ומחשב','fpMore(\'recipePhoto\')',1)+
+    opt('','מתכון מקישור','מדביקים קישור לאתר מתכונים','fpMore(\'link\')',1)+
     opt('','להקליד מספר ברקוד','אם הסריקה לא עובדת','fpMore(\'barcodeType\')'));
 };
 window.fpMore=function(k){

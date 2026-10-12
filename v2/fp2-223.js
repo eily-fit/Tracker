@@ -21,6 +21,7 @@ const errMsg=e=>{const m=String((e&&e.message)||e||'');return m==='push-not-conf
 
 document.head.insertAdjacentHTML('beforeend',`<style id="fp223css">
 #workoutLibrary #planPlaceChips,#workoutLibrary #planEquipmentChips,#workoutLibrary #planFilterChips,#workoutLibrary #planLibraryInfo,#workoutLibrary #planHomeOptions,#workoutLibrary>p.muted{display:none!important}
+#workoutLibrary>button.btn.light.full{display:none!important}
 #fpLib{margin:0 0 10px}
 #fpLib .srch{display:flex;align-items:center;gap:8px;background:#1F262E;border:1px solid #3A4652;border-radius:14px;padding:0 12px;margin:0 0 8px}
 #fpLib .srch input{flex:1;min-width:0;background:none;border:0;color:inherit;font:inherit;font-size:15px;padding:12px 0;outline:none}
@@ -79,14 +80,18 @@ if(typeof workoutLibrary==='function'&&typeof planFor==='function'){const o=work
   return plans}}
 function hiddenPlans(){try{const x=JSON.parse(state.data.settings.hidden_workout_plans||'[]');return Array.isArray(x)?x:[]}catch(_){return []}}
 /* which plans the list shows, in this order: favorites, mine, the app's */
+const PPLC=['דחיפה','משיכה','רגליים'];
 if(typeof visibleLibraryPlans==='function'){visibleLibraryPlans=function(){
   const place=curPlace(),mode=curMode(),cat=state.planFilter||'',hidden=hiddenPlans(),F=favs(),exId=state.fpLibEx||'';
-  let L=planList().map((p,i)=>[p,i]).filter(([p])=>!hidden.includes(p.id));
+  let L=planList().map((p,i)=>[p,i]).filter(([p])=>!hidden.includes(p.id)&&p.category!=='אירובי');
   if(exId)L=L.filter(([p])=>(p.items||[]).some(it=>it.exerciseId===exId));
-  else if(cat==='fav')L=L.filter(([p])=>F.includes(favKey(p)));
-  else if(cat==='personal')L=L.filter(([p])=>!p.library);
-  else if(cat)L=L.filter(([p])=>p.category===cat&&(p.library?p.libraryPlace===place&&p.libraryMode===mode:true));
-  else L=[];
+  else{
+    /* 2.23.1: the app's plans follow the place and equipment; my own plans always show */
+    L=L.filter(([p])=>!p.library||(p.libraryPlace===place&&p.libraryMode===mode));
+    if(cat==='fav')L=L.filter(([p])=>F.includes(favKey(p)));
+    else if(cat==='mix')L=L.filter(([p])=>!PPLC.includes(p.category));
+    else if(PPLC.includes(cat))L=L.filter(([p])=>p.category===cat);
+  }
   const rank=([p])=>(F.includes(favKey(p))?0:!p.library?1:2);
   return L.map((x,k)=>[x,k]).sort((a,b)=>rank(a[0])-rank(b[0])||a[1]-b[1]).map(x=>x[0])}}
 /* the header: search, the filter line and the categories */
@@ -103,24 +108,31 @@ function searchHtml(){const q=low(SQ);if(q.length<2)return '';
   if(!ex.length&&!pl.length)h+=`<p class="mu" style="margin:4px 2px 6px">לא מצאנו ״${esc(norm(SQ))}״.</p>`;
   if(!exact)h+=`<button type="button" class="add" onclick="fp223.exAdd()">＋ להוסיף ״${esc(norm(SQ))}״ כתרגיל חדש</button>`;
   return h+'</div>'}
-function libHtml(){const place=curPlace(),mode=curMode(),cat=state.planFilter||'',exId=state.fpLibEx,ex=exId&&exList().find(x=>x.id===exId);
-  return `<div class="srch"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="fpLibQ" type="search" placeholder="חפש תרגיל או תוכנית" value="${esc(SQ)}" oninput="fp223.q(this.value)" aria-label="חיפוש">${SQ?`<button type="button" onclick="fp223.q('',1)" aria-label="ניקוי">✕</button>`:''}</div>
+function libHtml(){const place=curPlace(),mode=curMode(),cat=state.planFilter||'',exId=state.fpLibEx,ex=exId&&exList().find(x=>x.id===exId),opts=state.libraryHomeOptions||{},pr=(typeof getProfile==='function'&&getProfile())||{};
+  const bw=mode==='bodyweight',top=bw?'bw':place;
+  const T=(on,fn,icon,l)=>`<button type="button" class="${on?'on':''}" aria-pressed="${on}" onclick="${fn}">${ic(icon)}${l}</button>`;
+  const ch=(on,fn,l)=>`<button type="button" class="${on?'on':''}" aria-pressed="${on}" onclick="${fn}">${l}</button>`;
+  const hasBar=opts.barbell!=null?!!opts.barbell:pr.equipment==='barbell',hasBench=!!opts.bench;
+  return `<button type="button" class="fpMk" onclick="openWorkoutPlanBuilder()">${ic('plus')}<span class="t"><b>צור אימון קבוע</b><small>בוחרים תרגילים, סטים ומשקל</small></span>${ic('chev')}</button>
+    <div class="fpQ c3">${T(top==='gym',"fp223.top('gym')",'gym','חדר כושר')}${T(top==='home',"fp223.top('home')",'house','בית')}${T(top==='bw',"fp223.top('bw')",'bw','משקל גוף')}</div>
+    ${bw?'':place==='gym'?`<div class="fpChips" style="margin:0 0 10px">${ch(mode==='free',"fp223.flt('mode','free',1)",'משקולות חופשיות')}${ch(mode==='machines',"fp223.flt('mode','machines',1)",'מכונות ומתקנים')}</div>`
+      :`<div class="fpChips" style="margin:0 0 10px"><span class="mu" style="font-size:12.5px;align-self:center">יש לי בבית:</span>${ch(hasBar,"fp223.flt('barbell',"+(!hasBar)+",1)",'מוט')}${ch(hasBench,"fp223.flt('bench',"+(!hasBench)+",1)",'ספסל')}</div>`}
+    ${ex?`<div class="exf"><span class="mu">אימונים עם:</span><div class="cats" style="margin:0"><button type="button" class="on" onclick="fp223.exPick('')">${esc(ex.name)} ✕</button></div></div>`:
+    `<div class="fpQ">${[['דחיפה','push'],['משיכה','pull'],['רגליים','legs'],['mix','mix']].map(([k,i])=>T(cat===k,"fp223.cat('"+k+"')",i,k==='mix'?'משולב':k)).join('')}</div>`}
+    <div class="srch"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="fpLibQ" type="search" placeholder="חיפוש אימון או תרגיל" value="${esc(SQ)}" oninput="fp223.q(this.value)" aria-label="חיפוש">${SQ?`<button type="button" onclick="fp223.q('',1)" aria-label="נקה">✕</button>`:''}</div>
     <div id="fpLibRes">${searchHtml()}</div>
-    <div class="flt"><span><small>מסנן</small><b>${PLACES.find(x=>x[0]===place)[1]} · ${MODES.find(x=>x[0]===mode)[1]}</b></span><button type="button" onclick="fp223.fltOpen()">שנה</button></div>
-    ${ex?`<div class="exf"><span class="mu">תוכניות עם:</span><div class="cats" style="margin:0"><button type="button" class="on" onclick="fp223.exPick('')">${esc(ex.name)} ✕</button></div></div>`:
-    `<div class="cats" role="tablist" aria-label="קטגוריה"><button type="button" class="${cat==='fav'?'on':''}" onclick="fp223.cat('fav')">${ic('star')}מועדפים</button>${CATS().map(c=>`<button type="button" class="${cat===c?'on':''}" onclick="fp223.cat('${c}')">${c}</button>`).join('')}<button type="button" class="${cat==='personal'?'on':''}" onclick="fp223.cat('personal')">כל התוכניות שלי</button></div>`}`}
+    <div class="fpChips" style="margin:0 0 4px">${ch(cat==='fav',"fp223.cat('fav')",ic('star')+' רק מועדפים')}</div>`}
 function mountLib(){const lib=$('workoutLibrary'),plans=$('workoutPlans');if(!lib||!plans)return;let b=$('fpLib');if(!b){const hd=$('fpLibHd');(hd||plans).insertAdjacentHTML(hd?'afterend':'beforebegin','<div id="fpLib"></div>');b=$('fpLib')}
   {const hd=$('fpLibHd');if(hd&&b.previousElementSibling!==hd)hd.after(b)}
   const f=document.activeElement&&document.activeElement.id==='fpLibQ',pos=f?document.activeElement.selectionStart:0;b.innerHTML=libHtml();if(f){const i=$('fpLibQ');i.focus();try{i.setSelectionRange(pos,pos)}catch(_){}}}
 /* stars and the group titles on the list the app drew */
 function decorate(){const box=$('workoutPlans');if(!box)return;const F=favs(),list=planList();let last='';
-  if(!state.planFilter&&!state.fpLibEx){box.innerHTML='<div class="fpCard"><p class="mu" style="margin:0">בחר קטגוריה, או חפש תרגיל למעלה.</p></div>';return}
   box.querySelectorAll(':scope > .plan-line').forEach(el=>{const b=el.querySelector('button[onclick^="startWorkoutPlan"]');if(!b)return;const i=Number((b.getAttribute('onclick').match(/\d+/)||[])[0]),p=list[i];if(!p)return;
     const g=F.includes(favKey(p))?'מועדפים':!p.library?'התוכניות שלי':'של האפליקציה';
     if(g!==last){last=g;if(state.planFilter!=='fav'||g!=='מועדפים')el.insertAdjacentHTML('beforebegin',`<div class="fpSep">${g}</div>`)}
     if(!el.querySelector('.fpStar')){const on=F.includes(favKey(p));el.insertAdjacentHTML('afterbegin',`<button type="button" class="fpStar${on?' on':''}" aria-pressed="${on}" aria-label="${on?'להוציא ממועדפים':'להוסיף למועדפים'}" onclick="event.stopPropagation();fp223.fav(${i})">${ic('star')}</button>`)}
     const t=el.querySelector('.plan-peek-toggle b');if(t&&!t.querySelector('.fpTagS')){if(!p.library&&(state.planFilter==='fav'||state.fpLibEx))t.insertAdjacentHTML('beforeend',`<span class="fpTagS">שלי</span>`);else if(p.library&&(state.planFilter==='fav'||state.fpLibEx))t.insertAdjacentHTML('beforeend',`<span class="fpTagS">${p.libraryPlace==='home'?'בית':'חדר כושר'} · ${esc(MODES.find(m=>m[0]===p.libraryMode)?MODES.find(m=>m[0]===p.libraryMode)[1]:'')}</span>`)}});
-  if(!box.querySelector('.plan-line')){box.innerHTML=`<div class="fpCard"><p class="mu" style="margin:0">${state.planFilter==='fav'?'עוד אין מועדפים. לוחצים על הכוכב ליד תוכנית.':state.fpLibEx?'התרגיל לא מופיע באף תוכנית כאן.':'אין תוכניות בבחירה הזו. נסה ציוד אחר ב״שנה״.'}</p></div>`}}
+  if(!box.querySelector('.plan-line')){box.innerHTML=`<div class="fpCard"><p class="mu" style="margin:0">${state.planFilter==='fav'?'עוד אין מועדפים. לוחצים על הכוכב ליד תוכנית.':state.fpLibEx?'התרגיל לא מופיע באף תוכנית כאן.':'אין אימונים בבחירה הזו. נסה מקום או ציוד אחר למעלה.'}</p></div>`}}
 if(typeof renderWorkoutPlans==='function'){const o=renderWorkoutPlans;renderWorkoutPlans=function(){const r=o.apply(this,arguments);try{mountLib();decorate()}catch(e){console.error(e)}return r}}
 function fltSheet(){const place=curPlace(),mode=curMode(),opts=state.libraryHomeOptions||{},pr=(typeof getProfile==='function'&&getProfile())||{};
   fpT._.sheet('מקום וציוד',`<p class="mu" style="margin:0 0 6px">מקום</p><div class="fpSeg" role="group">${PLACES.map(([k,l])=>`<button type="button" class="${place===k?'on':''}" onclick="fp223.flt('place','${k}')">${l}</button>`).join('')}</div>
@@ -133,15 +145,16 @@ window.fp223={
   exPick(id){state.fpLibEx=id||'';state.planFilter=id?'__ex':'';SQ='';try{renderWorkoutPlans()}catch(_){}setTimeout(()=>{const g=$('workoutPlans');if(g&&id)g.scrollIntoView({behavior:'smooth',block:'start'})},60)},
   planPick(i){const p=planList()[i];if(!p)return;SQ='';state.fpLibEx='';if(p.library){state.libraryPlace=p.libraryPlace;state.libraryMode=p.libraryMode;state.planFilter=p.category||'personal'}else state.planFilter=p.category&&CATS().includes(p.category)?p.category:'personal';state.planPeek=p.id;try{renderWorkoutPlans()}catch(_){}},
   exAdd(){const n=norm(SQ);if(!n)return;try{openNewExerciseSheet();const i=$('newExName');if(i)i.value=n}catch(e){toast(e.message,true)}},
-  cat(c){state.fpLibEx='';state.planPeek='';state.planFilter=state.planFilter===c&&c==='fav'?'':c;try{renderWorkoutPlans()}catch(_){}},
+  cat(c){state.fpLibEx='';state.planPeek='';state.planFilter=state.planFilter===c?'':c;try{renderWorkoutPlans()}catch(_){}},
+  top(k){if(k==='bw')state.libraryMode='bodyweight';else{state.libraryPlace=k;if(state.libraryMode==='bodyweight'||k==='home')state.libraryMode='free'}state.planPeek='';try{renderWorkoutPlans()}catch(_){}},
   fltOpen:fltSheet,
   flt(k,v){if(k==='place')state.libraryPlace=v;else if(k==='mode')state.libraryMode=v;else{state.libraryHomeOptions=Object.assign({},state.libraryHomeOptions||{},{[k]:v});state.libraryCache=null}
-    state.planPeek='';try{renderWorkoutPlans()}catch(_){}fltSheet()},
+    state.planPeek='';try{renderWorkoutPlans()}catch(_){}if(!arguments[2])fltSheet()},
   fav(i){const p=planList()[i];if(!p)return;const k=favKey(p),a=favs(),j=a.indexOf(k);if(j>=0)a.splice(j,1);else a.push(k);setProp('FAV_PLANS',JSON.stringify(a.slice(-200)));try{toast(j>=0?'הוצא מהמועדפים':'נוסף למועדפים')}catch(_){}try{renderWorkoutPlans()}catch(_){}}
 };
 if(typeof chooseLibraryCategory==='function'){const o=chooseLibraryCategory;chooseLibraryCategory=function(){state.fpLibEx='';return o.apply(this,arguments)}}
 /* "שלי" in strength opens on the favorites when there are any */
-if(typeof showView==='function'){const o=showView;showView=function(id){if(id==='workoutLibrary'&&!state.planFilter&&!state.fpLibEx&&favs().length)state.planFilter='fav';const r=o.apply(this,arguments);try{if(id==='workoutLibrary')mountLib()}catch(_){}return r}}
+if(typeof showView==='function'){const o=showView;showView=function(id){const r=o.apply(this,arguments);try{if(id==='workoutLibrary')mountLib()}catch(_){}return r}}
 
 /* =========================================================
    2. exercise videos
@@ -188,15 +201,17 @@ function xvSheet(){const x=XV;if(!x)return;let o=$('fpExV');if(!o){document.body
   if(!x.busy&&sh){h+=`<div class="who"><span class="mu">מי רואה</span><span class="pill all">כולם</span></div>`;
     if(adm)h+=`<label class="btn light full" style="display:block;text-align:center">להחליף את הסרטון לכולם<input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0],'admin')"></label>`;
     else h+=`<p class="mu" style="margin:0">התרגיל והסרטון אושרו לכולם. רק המנהל משנה אותם.</p>`}
-  else if(!x.busy&&mine){const st=mine.status||'private';
-    h+=`<div class="who"><span class="mu">מי רואה</span><span class="pill ${st==='suggested'?'wait':'me'}">${st==='suggested'?'נשלח למנהל':'רק אתה'}</span></div>`;
-    if(st==='suggested')h+=`<p class="mu" style="margin:0 0 8px">ממתין לאישור המנהל. בינתיים רק אתה רואה את הסרטון. תקבל הודעה כשיאושר.</p><button type="button" class="btn light full" onclick="fp223.xvUnsug()">לבטל את ההצעה</button>`;
-    else h+=`<button type="button" class="btn full" onclick="fp223.xvSug()">שלח למנהל כהצעה</button><p class="fpHint" style="margin:6px 2px 10px">אם המנהל יאשר, התרגיל והסרטון ייכנסו לכולם. בלי זה, הסרטון נשאר רק שלך.</p>`;
+  else if(!x.busy&&mine){const st=mine.status||'private',on=st==='suggested'||st==='public';
+    /* 2.23.1 (sketch B): saved for you always, right away. Sharing with everyone is a separate switch, and only the admin approves it. */
+    h+=`<div class="who"><span>${ic('check')} שמור אצלך</span><span class="pill me">רק אתה רואה</span></div>
+      <div class="who"><span><b>לשתף עם כולם</b><br><small class="mu">${st==='suggested'?'ממתין לאישור מנהל. בינתיים רק אתה רואה':st==='public'?'אושר, כולם רואים':'אחרי אישור מנהל, כולם יראו'}</small></span><label class="fpSw"><input type="checkbox" ${on?'checked':''} ${st==='public'?'disabled':''} onchange="this.checked?fp223.xvSug():fp223.xvUnsug()" aria-label="לשתף עם כולם"><span></span></label></div>
+      ${st==='suggested'?'<span class="pill wait" style="display:inline-block;margin:0 0 8px">ממתין לאישור</span>':''}`;
     h+=`<label class="btn light full" style="display:block;text-align:center;margin-top:8px">להחליף סרטון<input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0])"></label>
       <button type="button" class="btn light full" style="margin-top:8px;color:#F09595" onclick="fp223.xvDel()">למחוק את הסרטון</button>`}
   else if(!x.busy){const asked=window.FP2Anim&&FP2Anim.asked&&FP2Anim.asked(x.name);
     h+=`<div class="ph"><div>${ic('film')}<br>לתרגיל הזה עוד אין הדגמה</div></div>
       <div class="tiles"><label class="tile">${ic('cam')}להעלות סרטון שלי<small>מצלמים או בוחרים, עד 30 שנ׳. רק אתה רואה</small><input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0])"></label>
+      <label class="tile">${ic('chat')}להעלות ולשתף עם כולם<small>נשמר אצלך מיד. לכולם אחרי אישור מנהל</small><input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0],'share')"></label></div><div class="tiles">
       <button type="button" class="tile" ${asked?'disabled':''} onclick="fp223.xvAsk()">${ic('chat')}${asked?'הבקשה כבר נשלחה':'לבקש הדגמה מהמנהל'}<small>${asked?'המנהל יראה אותה ברשימה':'פעם אחת, הבקשה נשמרת'}</small></button></div>
       ${!ex?'<p class="fpHint" style="margin:0">כדי להעלות סרטון, התרגיל צריך להיות ברשימת התרגילים שלך.</p>':''}`}
   o.querySelector('.sheet').innerHTML=h;o.classList.remove('hide')}
@@ -213,7 +228,10 @@ Object.assign(window.fp223,{
     try{const s=await shrink(file,p=>{x.p=p*0.8;const b=$('fpXvP');if(b)b.style.width=Math.round(x.p*100)+'%'});x.busy='מעלה';x.p=0.85;xvSheet();
       const b64=await blobToB64(s.blob);const ex=x.ex||{},m=EXV(),k=exKey(ex),old=m[k];
       if(mode==='admin'){const r=await push('adminSetSharedVideo',{b64,type:s.type,name:x.name,group:ex.group||'',equipment:ex.equipment||''});vput(r.fid,s.blob);await loadShared(true);toast('הסרטון הוחלף אצל כולם')}
-      else{const r=await push('exVideoUpload',{b64,type:s.type,name:x.name,group:ex.group||'',equipment:ex.equipment||'',exId:k,replace:old&&old.status!=='public'?old.fid:''});vput(r.fid,s.blob);m[k]={fid:r.fid,status:'private',name:x.name,ts:new Date().toISOString()};exvSave(m);toast('הסרטון נשמר. רק אתה רואה אותו')}
+      else{const r=await push('exVideoUpload',{b64,type:s.type,name:x.name,group:ex.group||'',equipment:ex.equipment||'',exId:k,replace:old&&old.status!=='public'?old.fid:''});vput(r.fid,s.blob);m[k]={fid:r.fid,status:'private',name:x.name,ts:new Date().toISOString()};exvSave(m);
+        /* 2.23.1: "share with everyone": saved for you right away, and the suggestion goes to the admin */
+        if(mode==='share'){try{await push('exVideoSuggest',{fid:r.fid,name:x.name,group:ex.group||'',equipment:ex.equipment||''});m[k].status='suggested';exvSave(m);toast('נשמר אצלך. נשלח למנהל לאישור לכולם')}catch(e){toast('נשמר אצלך. השליחה למנהל נכשלה: '+errMsg(e),true)}}
+        else toast('הסרטון נשמר. רק אתה רואה אותו')}
       x.busy='';if(x.url)URL.revokeObjectURL(x.url);x.url='';xvSheet();xvLoad()}
     catch(e){x.busy='';xvSheet();toast('הסרטון לא נשמר: '+errMsg(e),true)}},
   async xvSug(){const x=XV;if(!x||!x.ex)return;const m=EXV(),k=exKey(x.ex),mine=m[k];if(!mine)return;
@@ -280,20 +298,36 @@ function renderChk(){const box=$('notificationSettings');if(!box)return;const bo
    4. my requests: when the admin handled one, a card in the app too
    ========================================================= */
 const RS_KEY='fp2.reqStatusSeen';
-async function reqInbox(){if(!window.FP2||!FP2.reqList||$('fpReqNews')||$('fpI'))return;let list=[];try{list=await FP2.reqList(false)}catch(_){return}
+/* 2.23.1 (sketch A): a card at the top of "היום" until you close it.
+   Fixed: the first time, everything was marked as seen, so a request handled before that never showed. Now anything handled in the last 14 days shows. */
+let NEWS=[];
+async function reqInbox(){if(!window.FP2||!FP2.reqList||$('fpI'))return;let list=[];try{list=await FP2.reqList(false)}catch(_){return}
   let seen={};try{seen=JSON.parse(LS.get(RS_KEY)||'{}')||{}}catch(_){}
-  const first=!LS.get(RS_KEY),news=list.filter(x=>['progress','done','declined'].includes(x.status)&&seen[x.id]!==x.status);
-  if(first){list.forEach(x=>seen[x.id]=x.status||'new');LS.set(RS_KEY,JSON.stringify(seen));return}
-  if(!news.length)return;const T={progress:'אושרה ונכנסה לטיפול',done:'בוצעה, כבר באפליקציה',declined:'לא אושרה'};
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpReqNews"><div class="sheet" style="max-height:80vh;overflow:auto"><div class="sheet-head"><h3 style="margin:0">עדכון על הבקשות שלך</h3><button type="button" class="trash" aria-label="סגור" onclick="fp223.reqSeen()">✕</button></div>
-    ${news.map(x=>`<div class="fpCard"><b>${esc(T[x.status])}</b><p style="margin:4px 0 0">״${esc((x.text||'הקלטה').slice(0,120))}״</p>${x.note?`<p class="mu" style="margin:6px 0 0">תשובה: ${esc(x.note)}</p>`:''}</div>`).join('')}
-    <button type="button" class="btn full" onclick="fp223.reqSeen()">הבנתי</button></div></div>`);
-  window.fp223.reqSeen=()=>{news.forEach(x=>seen[x.id]=x.status);LS.set(RS_KEY,JSON.stringify(seen));const e=$('fpReqNews');if(e)e.remove()}}
+  const recent=x=>(Number(x.updated||x.ts)||0)>Date.now()-14*864e5;
+  NEWS=list.filter(x=>['progress','done','declined'].includes(x.status)&&seen[x.id]!==x.status&&(seen[x.id]!=null||recent(x)));
+  newsCard()}
+function newsCard(){const old=$('fpReqNews');if(old)old.remove();if(!NEWS.length)return;const home=$('today');if(!home)return;
+  const T={progress:'הבקשה שלך אושרה ונכנסה לטיפול',done:'הבקשה שלך אושרה',declined:'הבקשה שלך לא אושרה'};const x=NEWS[0];
+  home.insertAdjacentHTML('afterbegin',`<div class="fpCard" id="fpReqNews" style="border-color:${x.status==='declined'?'#5A2F2A':'#2F5A3A'};background:${x.status==='declined'?'#24161A':'#16261B'}"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>${x.status==='declined'?'':ic('check')+' '}${esc(T[x.status])}</b><button type="button" class="trash" aria-label="סגור" onclick="fp223.reqSeen()">✕</button></div>
+    <p style="margin:4px 0 0">״${esc((x.text||'הקלטה').slice(0,120))}״</p>${x.note?`<p class="mu" style="margin:6px 0 0">תשובה: ${esc(x.note)}</p>`:''}${NEWS.length>1?`<p class="mu" style="margin:6px 0 0">ועוד ${NEWS.length-1} עדכונים</p>`:''}
+    <button type="button" class="btn full" style="margin-top:10px" onclick="fp223.reqSeen()">הבנתי</button></div>`)}
+window.fp223.reqSeen=()=>{let seen={};try{seen=JSON.parse(LS.get(RS_KEY)||'{}')||{}}catch(_){}const x=NEWS.shift();if(x){seen[x.id]=x.status;LS.set(RS_KEY,JSON.stringify(seen))}newsCard()};
+if(typeof showView==='function'){const o=showView;showView=function(id){const r=o.apply(this,arguments);try{if(id==='today'&&NEWS.length&&!$('fpReqNews'))newsCard()}catch(_){}return r}}
+
+/* 2.23.1 (sketch A): the admin sees a red number on "עוד" and next to what waits: video suggestions and new requests */
+let BADGE={sug:0,req:0};
+async function badgeLoad(){if(!isAdmin())return;try{const r=await push('adminListExSuggestions',{});BADGE.sug=((r&&r.items)||[]).length}catch(_){}
+  try{const l=await FP2.reqList(true);BADGE.req=(l||[]).filter(x=>!x.status||x.status==='new').length}catch(_){}badgeDraw()}
+function badgeDraw(){const n=BADGE.sug+BADGE.req,b=document.querySelector('nav button[data-tab="more"] b');
+  if(b){let e=b.querySelector('.fpBadge');if(!n){if(e)e.remove()}else{if(!e){b.style.position='relative';b.insertAdjacentHTML('beforeend','<span class="fpBadge"></span>');e=b.querySelector('.fpBadge')}e.textContent=n>99?'99+':n}}
+  const sg=document.querySelector('#fpSugSet>summary');if(sg){let e=sg.querySelector('.fpBadge');if(!BADGE.sug){if(e)e.remove()}else{if(!e){sg.insertAdjacentHTML('beforeend',' <span class="fpBadge in"></span>');e=sg.querySelector('.fpBadge')}e.textContent=BADGE.sug}}}
+document.head.insertAdjacentHTML('beforeend','<style>.fpBadge{position:absolute;top:-6px;right:-14px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#FF5A4F;color:#fff;font-size:11px;font-weight:800;display:inline-grid;place-items:center;line-height:1}.fpBadge.in{position:static;vertical-align:middle}</style>');
+setInterval(()=>{if(typeof state!=='undefined'&&state.data)badgeLoad()},10*60*1000);
 
 /* ---------- hooks ---------- */
-if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{renderSugSet()}catch(e){console.error(e)}try{renderChk()}catch(e){console.error(e)}return r}}
+if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{renderSugSet();badgeDraw()}catch(e){console.error(e)}try{renderChk()}catch(e){console.error(e)}return r}}
 if(typeof renderNotificationSettings==='function'){const o=renderNotificationSettings;renderNotificationSettings=function(){const r=o.apply(this,arguments);try{renderChk()}catch(_){}return r}}
 const boot=setInterval(()=>{if(typeof state==='undefined'||!state.data||!window.FP2)return;clearInterval(boot);
-  setTimeout(()=>{syncShared().catch(()=>{})},3000);setTimeout(()=>{reqInbox().catch(()=>{})},5000);
+  setTimeout(()=>{syncShared().catch(()=>{})},3000);setTimeout(()=>{reqInbox().catch(()=>{})},5000);setTimeout(()=>{badgeLoad().catch(()=>{})},4000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>{reqInbox().catch(()=>{})},1500)})},800);
 })();
