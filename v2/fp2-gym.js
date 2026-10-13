@@ -1,4 +1,4 @@
-/* FitPro 2.12.0 — the gym:
+/* FitPro 2.12.0 (sound rebuilt in 2.26, see the audio notes below) — the gym:
    - end of rest: louder sounds, a voice ("סט חדש!"), your own recording, or quiet. Chosen in Settings.
    - the music only gets quieter for a moment (iPhone "transient" audio session, where supported).
    - the screen stays on during a workout, so the timer keeps running and the sound is heard.
@@ -14,23 +14,26 @@ let TY='s';const SFX=()=>TY==='s'?'':'.'+TY,RK=()=>'fp2.restRec'+SFX();
 const cfg=()=>{let c={};try{c=JSON.parse(LS.get('fp2.restSound'+SFX())||LS.get('fp2.restSound')||'{}')||{}}catch(_){}c=Object.assign({kind:'chime',phrase:0,style:'normal',voice:'',vol:1},c);if(c.kind==='beepvoice')c.kind='voice';if(c.kind==='horn')c.kind='chime';return c};
 const setCfg=c=>LS.set('fp2.restSound'+SFX(),JSON.stringify(c));
 
-function ctx(){try{if(!state.audioCtx){const AC=window.AudioContext||window.webkitAudioContext;if(AC)state.audioCtx=new AC()}const c=state.audioCtx;if(c&&c.state==='suspended'&&c.resume)c.resume();return c}catch(_){return null}}
-/* 2.23: the audio session.
-   "auto" + an <audio> element = "playback", and iPhone then PAUSES Spotify. So the app is "ambient" (mixes with your music) all the time,
-   "transient" only for the moment of the end-of-rest sound (the music goes down a little and comes back),
-   and "play-and-record" only while the microphone records. */
-let recording=0;
-/* 2.23.1: back to the 2.22 audio session, the one that recorded and played on iPhone:
-   "ambient" / "transient" only around the end-of-rest sound, "auto" the rest of the time and while recording. */
+function ctx(){try{if(!state.audioCtx){AS('ambient');const AC=window.AudioContext||window.webkitAudioContext;if(AC)state.audioCtx=new AC()}const c=state.audioCtx;if(c&&c.state!=='running'&&c.state!=='closed'&&c.resume)c.resume().catch(()=>{});return c}catch(_){return null}}
+/* 2.26 — the audio, after the sound lab on the iPhone (iOS 18.7, from the home screen, Spotify playing):
+   - the app is "ambient" all the time: it mixes with the music and never stops it (a tap, opening the app, moving between screens).
+   - every sound is played with Web Audio (never an <audio> element: that one came late and stopped Spotify),
+     as "transient": the music goes down for a moment and comes back.
+   - your recording plays louder (gain + compressor), also "transient".
+   - the voice comes right after a short beep (a voice alone at the end of a rest was not heard).
+   - the microphone uses "play-and-record" only while it records, then back to "ambient".
+   - a tap only wakes the sound silently (no sound), so the first end of rest is heard without extra taps. */
+let recording=0,speaking=false;
 const AS=t=>{try{if(navigator.audioSession&&navigator.audioSession.type!==t)navigator.audioSession.type=t}catch(_){}};
-function duck(on){if(!recording)AS(on?'transient':'ambient')}
-function idle(){if(!recording)AS('auto')}
+let backT=0;
+function duck(on,ms){clearTimeout(backT);if(recording)return;if(on){AS('transient');backT=setTimeout(()=>{if(!recording&&!speaking)AS('ambient')},ms||2500)}else AS('ambient')}
+function idle(){if(!recording&&!speaking)AS('ambient')}
 idle();
 if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&!navigator.mediaDevices.__fp){
   const gum=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
   navigator.mediaDevices.getUserMedia=async function(c){
     const audio=!!(c&&c.audio);if(!audio)return gum(c);
-    AS('auto');
+    clearTimeout(backT);AS('play-and-record');
     recording++;
     try{const st=await gum(c);st.getTracks().forEach(t=>{const o=t.stop.bind(t);t.stop=function(){o();recording=Math.max(0,recording-1);if(!recording)setTimeout(idle,300)}});return st}
     catch(e){recording=Math.max(0,recording-1);if(!recording)idle();
@@ -56,56 +59,32 @@ function playTones(kind,oc){
   return 0;
 }
 
-/* 2.22: one <audio> element for every end-of-rest sound (tones rendered to WAV, and your own recording).
-   iPhone lets a page start sound later only on an element that once played from a tap, and plays one element at a time,
-   so the same element is unlocked on every tap (with a silent clip, not muted) and used for everything.
-   After it starts we check that it really plays; if not, the web sound plays instead. */
-const IPAD=/iPad/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-function useEl(){return true}
-let sndEl=null,elReady=false;const wavs={};
-const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
-function el(){if(!sndEl){sndEl=new Audio();sndEl.preload='auto';try{sndEl.setAttribute('playsinline','')}catch(_){}}return sndEl}
+/* 2.26: a tap wakes the sound, silently (in the lab this never stopped the music) */
+function wakeSound(){if(recording)return;const c=ctx();try{if(c&&!c.__fpUnlock){c.__fpUnlock=1;const bf=c.createBuffer(1,1,22050),sr=c.createBufferSource();sr.buffer=bf;sr.connect(c.destination);sr.start(0)}}catch(_){}}
+document.addEventListener('touchend',wakeSound,{passive:true});document.addEventListener('click',wakeSound,true);
+document.addEventListener('visibilitychange',()=>{try{if(document.visibilityState==='visible'){idle();if(state.audioCtx&&state.audioCtx.state!=='running')state.audioCtx.resume().catch(()=>{})}}catch(_){}});
+/* never wait forever for the sound to wake (a resume without a tap can hang): at most 0.4 s, then play anyway */
+async function live(){const c=ctx();if(!c)return null;try{if(c.state!=='running')await Promise.race([c.resume(),new Promise(r=>setTimeout(r,400))])}catch(_){}return c}
+async function webTones(kind){const c=await live();if(!c)return 0;return playTones(kind,c)||0}
+window.fp2SoundInfo=()=>({ctx:state.audioCtx&&state.audioCtx.state,session:navigator.audioSession&&navigator.audioSession.type});
+function heVoices(){try{return speechSynthesis.getVoices().filter(v=>/^he|^iw/i.test(v.lang))}catch(_){return []}}
+function speak(text){try{if(!('speechSynthesis' in window))return false;const c=cfg(),u=new SpeechSynthesisUtterance(text);u.lang='he-IL';const vs=heVoices(),pick=vs.find(v=>v.name===c.voice)||vs[0];if(pick)u.voice=pick;
+  const st=STYLES.find(s=>s[0]===c.style)||STYLES[0];u.rate=st[2];u.pitch=st[3];u.volume=Math.max(0.1,Math.min(1,c.vol));
+  speaking=true;const done=()=>{speaking=false;duck(true,500)};u.onend=done;u.onerror=done;setTimeout(()=>{if(speaking)done()},9000);
+  speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(_){speaking=false;return false}}
+/* your own recording: kept as a clean WAV (cleanRec below), decoded once and played with Web Audio, louder */
+const mineBuf={src:'',buf:null};
+async function mineDecoded(c){const data=LS.get(RK());if(!data)return null;if(mineBuf.src===data&&mineBuf.buf)return mineBuf.buf;
+  const [h,b64]=data.split(',');const bin=atob(b64||''),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+  const buf=await new Promise((ok,no)=>{const r=c.decodeAudioData(u8.buffer,ok,no);if(r&&r.then)r.then(ok,no)});mineBuf.src=data;mineBuf.buf=buf;return buf}
+async function playMine(){const c=await live();if(!c)return 0;let buf=null;try{buf=await mineDecoded(c)}catch(_){}
+  if(!buf)return playTones('beeps',c);
+  const s=c.createBufferSource(),g=c.createGain(),comp=c.createDynamicsCompressor();comp.threshold.value=-24;comp.knee.value=12;comp.ratio.value=6;comp.attack.value=0.003;comp.release.value=0.15;
+  g.gain.value=2.2*Math.max(0.2,Math.min(1,cfg().vol));s.buffer=buf;s.connect(g);g.connect(comp);comp.connect(c.destination);s.start();return buf.duration}
+/* a buffer → a WAV link (used to keep a cleaned recording) */
 function wavOf(buf){const d=buf.getChannelData(0),n=d.length,b=new ArrayBuffer(44+n*2),v=new DataView(b),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
   w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,buf.sampleRate,true);v.setUint32(28,buf.sampleRate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
   for(let i=0;i<n;i++){const x=Math.max(-1,Math.min(1,d[i]));v.setInt16(44+i*2,x<0?x*0x8000:x*0x7FFF,true)}return URL.createObjectURL(new Blob([b],{type:'audio/wav'}))}
-async function wavFor(kind){const key=kind+'|'+cfg().vol;if(wavs[key])return wavs[key];const OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!OAC)return null;
-  const sr=44100,oc=new OAC(1,Math.round(sr*2.2),sr);playTones(kind,oc);const buf=await new Promise((ok,no)=>{const r=oc.startRendering();if(r&&r.then)r.then(ok,no);else oc.oncomplete=e=>ok(e.renderedBuffer)});return (wavs[key]=wavOf(buf))}
-let busyUntil=0;
-/* 2.23: only during a workout (or a running timer). Outside a workout a tap never plays anything, so it never touches your music. */
-const inWorkout=()=>{try{return !!((document.getElementById('workouts')||{}).classList&&document.getElementById('workouts').classList.contains('active'))||!!(state.restEnd&&state.restEnd>Date.now())||!!document.getElementById('fpCarFloat')||!!document.querySelector('#fpTSheet .fpT-timer,#fpTSheet .fpTm')||!!document.getElementById('fpRestSet')&&document.getElementById('fpRestSet').open}catch(_){return false}};
-function unlockEl(){
-  if(!inWorkout())return;
-  /* 2.25: the sound and the microphone stay exactly as in 2.23.1 ("auto"). Only the silent unlock plays as "transient" for a moment,
-     like the end-of-rest sound: Spotify dips for a split second and goes on, instead of stopping when the app opens on the workout screen. */
-  const due=Date.now()-(unlockEl.__t||0)>300000;
-  if(!recording&&due){AS('transient');setTimeout(()=>{if(!recording)idle()},1500)}
-  /* not on every tap: once, and again only after 5 minutes (each time as "transient") */
-  if(due)try{const a=el();if(Date.now()>busyUntil&&(a.paused||a.ended)){a.muted=false;a.src=SILENT;const p=a.play();unlockEl.__t=Date.now();if(p&&p.then)p.then(()=>{elReady=true}).catch(()=>{unlockEl.__t=0});else elReady=true}}catch(_){}
-  try{const c=ctx();if(c&&!c.__fpUnlock){c.__fpUnlock=1;const b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0)}}catch(_){}
-  const k=cfg().kind;if(k!=='voice'&&k!=='mine'&&k!=='none')wavFor(k).catch(()=>{})}
-document.addEventListener('touchend',unlockEl,{passive:true});document.addEventListener('click',unlockEl,true);document.addEventListener('keydown',unlockEl,true);
-document.addEventListener('visibilitychange',()=>{try{if(document.visibilityState==='visible'&&state.audioCtx&&state.audioCtx.state!=='running')state.audioCtx.resume()}catch(_){}});
-/* play a source on the element; if it did not really start within a moment, run the fallback */
-function playSrc(src,len,fallback){const a=el();let fell=false;const fb=()=>{if(fell)return;fell=true;busyUntil=0;try{fallback&&fallback()}catch(_){}};
-  try{busyUntil=Date.now()+Math.max(1500,(len||2)*1000+800);a.muted=false;a.volume=1;a.src=src;try{a.currentTime=0}catch(_){}const p=a.play();if(p&&p.catch)p.catch(fb);
-    setTimeout(()=>{if(!fell&&(a.paused&&!a.ended||a.currentTime===0&&!a.ended))fb()},900)}catch(_){fb()}}
-function webTones(kind){try{const c=ctx();if(!c)return;const go=()=>playTones(kind,c);if(c.state==='running')go();else if(c.resume)c.resume().then(go).catch(()=>{})}catch(_){}}
-function playEl(kind){const len={beeps:1.1,whistle:.9,bell:1.5,chime:1.7,marimba:.9,softbell:1.9}[kind]||1;
-  wavFor(kind).then(u=>{if(!u)return webTones(kind);playSrc(u,len,()=>webTones(kind))}).catch(()=>webTones(kind));return len}
-window.fp2SoundInfo=()=>({ipad:IPAD,ctx:state.audioCtx&&state.audioCtx.state,el:elReady});
-function heVoices(){try{return speechSynthesis.getVoices().filter(v=>/^he|^iw/i.test(v.lang))}catch(_){return []}}
-function speak(text,quiet){try{if(!('speechSynthesis' in window))return false;const c=cfg(),u=new SpeechSynthesisUtterance(text);u.lang='he-IL';const vs=heVoices(),pick=vs.find(v=>v.name===c.voice)||vs[0];if(pick)u.voice=pick;
-  const st=STYLES.find(s=>s[0]===c.style)||STYLES[0];u.rate=st[2];u.pitch=st[3];u.volume=quiet?0:Math.max(0.1,Math.min(1,c.vol));speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(_){return false}}
-/* your own recording. 2.23: it is kept as a clean WAV (trimmed silence, even loudness), which every iPhone plays,
-   and played from a blob link on the same element as the other sounds. */
-let mineUrl='',mineSrc='';
-function mineBlob(d){const data=d||LS.get(RK());if(!data)return '';if(mineSrc===data&&mineUrl)return mineUrl;
-  try{const [h,b64]=data.split(','),type=(h.match(/data:([^;]+)/)||[])[1]||'audio/wav',bin=atob(b64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
-    if(mineUrl)URL.revokeObjectURL(mineUrl);mineUrl=URL.createObjectURL(new Blob([u8],{type}));mineSrc=data;return mineUrl}catch(_){return data}}
-function playMine(){const data=LS.get(RK());if(!data)return playEl('beeps');playSrc(mineBlob(data),4,()=>playMineWA(data))}
-async function playMineWA(d){const data=d||LS.get(RK());if(!data)return webTones('beeps');const c=ctx();if(!c)return;
-  try{if(c.state!=='running'&&c.resume)await c.resume()}catch(_){}
-  try{const b=await fetch(mineBlob(data)||data).then(r=>r.arrayBuffer());const buf=await new Promise((ok,no)=>c.decodeAudioData(b,ok,no));const s=c.createBufferSource(),g=c.createGain();g.gain.value=Math.max(0.1,Math.min(1,cfg().vol))*1.6;s.buffer=buf;s.connect(g);g.connect(out(c));s.start()}catch(e){webTones('beeps')}}
 /* clean a recording: decode → mono → cut the silence at the start and the end → low cut (rumble) → even loudness → 22 kHz WAV */
 async function cleanRec(arrayBuffer){const AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!AC||!OAC)throw new Error('no audio');
   const dc=state.audioCtx||new AC();const src=await new Promise((ok,no)=>{const r=dc.decodeAudioData(arrayBuffer.slice(0),ok,no);if(r&&r.then)r.then(ok,no)});
@@ -123,30 +102,38 @@ async function cleanRec(arrayBuffer){const AC=window.AudioContext||window.webkit
   const url=wavOf(r),blob=await fetch(url).then(x=>x.blob());URL.revokeObjectURL(url);
   return {data:await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(blob)}),sec:r.duration}}
 /* an older recording (mp4/webm) is cleaned once, in the background */
-setTimeout(async()=>{try{const data=LS.get('fp2.restRec');if(!data||/^data:audio\/(wav|x-wav)/.test(data))return;const ab=await fetch(data).then(r=>r.arrayBuffer());const c=await cleanRec(ab);LS.set('fp2.restRec',c.data);mineUrl='';mineSrc=''}catch(_){}},4000);
-function restSound(kindOverride){
+setTimeout(async()=>{try{const data=LS.get('fp2.restRec');if(!data||/^data:audio\/(wav|x-wav)/.test(data))return;const ab=await fetch(data).then(r=>r.arrayBuffer());const c=await cleanRec(ab);LS.set('fp2.restRec',c.data);mineBuf.buf=null}catch(_){}},4000);
+async function restSound(kindOverride){
   const c=cfg(),kind=kindOverride||c.kind;if(kind==='none')return;
-  duck(true);setTimeout(()=>{if(($('workouts')||{}).classList&&$('workouts').classList.contains('active'))duck(false);else idle()},kind==='mine'?6000:3500);
   const phrase=c.phrase==='custom'&&String(c.custom||'').trim()?String(c.custom).trim():(PHRASES[c.phrase]||PHRASES[0]);
-  if(kind==='voice'){if(!speak(phrase))playEl('beeps');return}
-  if(kind==='beepvoice'){const len=playEl('beeps');setTimeout(()=>{if(!speak(phrase))playEl('beeps')},len*1000);return}
-  if(kind==='mine'){playMine();return}
-  /* the web sound when it runs (it mixes best with music); otherwise the element */
-  const ac=state.audioCtx;if(ac&&ac.state==='running'&&!IPAD)playTones(kind,ac);else playEl(kind);
+  duck(true,6000);
+  let len=0;
+  if(kind==='voice'){/* a short beep, then the voice (in the lab the voice alone was not heard) */
+    const cc=await live();if(cc){const d=out(cc),t=cc.currentTime+0.02,v=Math.max(0.1,Math.min(1,c.vol))*0.7;tone(cc,d,t,880,0.16,'sine',v);tone(cc,d,t+0.18,1320,0.18,'sine',v)}
+    setTimeout(()=>{if(!speak(phrase))webTones('beeps')},450);return}
+  if(kind==='mine')len=await playMine();else len=await webTones(kind);
+  duck(true,Math.round((len||1.5)*1000)+700);
 }
-window.fpRestSound=(t)=>{if(typeof t!=='string')return restSound();const o=TY;TY=t;try{restSound()}finally{TY=o}};
+window.fpRestSound=(t)=>{if(typeof t!=='string')return restSound();const o=TY;TY=t;try{return restSound()}finally{TY=o}};
 window.fpRestSoundFor=t=>window.fpRestSound(t||'s');
 /* the end of rest calls beep(): play the chosen sound instead */
 if(typeof beep==='function'){beep=function(){window.fpRestSound('s')}}
-/* iPhone allows sound and speech later only if they were started once from a tap: do it silently when the rest starts */
-let primed=false;
-if(typeof startRestTimer==='function'){const o=startRestTimer;startRestTimer=function(){duck(false);const r=o.apply(this,arguments);try{ctx();const k=cfg().kind;if(!primed&&(k==='voice'||k==='beepvoice')){primed=true;speak(' ',true)}}catch(_){}wake(true);return r}}
+/* "שמור סט": the rest starts — wake the sound now (silently), keep the screen on */
+if(typeof startRestTimer==='function'){const o=startRestTimer;startRestTimer=function(){idle();const r=o.apply(this,arguments);try{wakeSound()}catch(_){}awake();return r}}
 
-/* ---------- keep the screen on during a workout ---------- */
-let lock=null,wantLock=false;
-async function wake(on){wantLock=!!on;try{if(on&&!lock&&navigator.wakeLock){lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>{lock=null})}else if(!on&&lock){await lock.release();lock=null}}catch(_){lock=null}}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantLock)wake(true)});
-if(typeof showView==='function'){const o=showView;showView=function(id){const r=o.apply(this,arguments);try{wake(id==='workouts');if(id!=='workouts'&&!state.restEnd)idle()}catch(_){}return r}}
+/* ---------- keep the screen on during an active workout (rest, run, cardio) ----------
+   2.26: a web app is put to sleep when the screen locks, and then no sound comes out (checked in the lab).
+   So while a workout is active the screen stays on by itself; after it, the phone behaves as usual. */
+let lock=null;
+function activeNow(){try{if(state.restEnd&&state.restEnd>Date.now())return true;
+  if(document.querySelector('#fpSR,#fpRunScr,#fpRunFloat,#fpCarFloat,#fpSRFloat,#fpTSheet .fpT-timer,#fpTSheet .fpTm'))return true;
+  if(window.fpT&&fpT.gpsOn&&fpT.gpsOn())return true;
+  const w=document.getElementById('workouts');return !!(w&&w.classList.contains('active')&&state.data&&state.sessionId)}catch(_){return false}}
+async function wake(on){try{if(on&&!lock&&navigator.wakeLock&&document.visibilityState==='visible'){lock=await navigator.wakeLock.request('screen');lock.addEventListener('release',()=>{lock=null})}else if(!on&&lock){const l=lock;lock=null;await l.release()}}catch(_){lock=null}}
+function awake(){wake(activeNow())}
+setInterval(awake,3000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')awake()});
+if(typeof showView==='function'){const o=showView;showView=function(id){const r=o.apply(this,arguments);try{awake()}catch(_){}return r}}
 
 /* ---------- new record: confetti ---------- */
 function confetti(text){
@@ -195,11 +182,11 @@ document.head.insertAdjacentHTML('beforeend',`<style id="fp223snd">
 function recLive(){const e=Math.min(REC_MAX,(Date.now()-recT0)/1000),t=$('fpRecLiveT'),f=$('fpRecLiveF'),l=$('fpRecLiveL');if(t)t.textContent='0:0'+Math.floor(e);if(f)f.style.width=(e/REC_MAX*100)+'%';if(l)l.textContent='נשארו '+Math.max(0,Math.ceil(REC_MAX-e))+' שנ׳'}
 const TYN={s:'צליל סוף מנוחה',r:'צליל בריצה',c:'צליל באירובי'},TYW={s:'',r:'נשמע בסוף כל חלק, בשינוי קצב ובסיבוב.',c:'נשמע במעבר בין שלבים.'};
 /* the copy inside Settings → אימונים → כוח / ריצה / אירובי: while it is open, every button works on that type */
-window.fpRestOpen=t=>{TY=t||'s';const o=$('fpRestSet');if(o&&TY!=='s'){o.innerHTML='<summary>צליל סוף מנוחה</summary>'}renderSet()};
-setInterval(()=>{if(TY!=='s'&&!$('fpRestSet_'+TY)){TY='s';try{renderSet()}catch(_){}}},700);
+window.fpRestOpen=t=>{TY=t||'s';renderSet()};
+setInterval(()=>{if(TY!=='s'&&!$('fpRestSet_'+TY))TY='s'},700);
 function renderSet(){
-  const sec=$('settings');if(!sec||!state.data)return;const copy=$('fpRestSet_'+TY);let box=copy||(TY==='s'?$('fpRestSet'):null);if(!box&&TY!=='s')return;
-  if(!box){box=document.createElement('details');box.className='settings-section fpRS';box.id='fpRestSet';const a=$('fpWeekSet')||$('calendarSettings')||$('notificationSettings');if(a)a.insertAdjacentElement('afterend',box);else{const h=sec.querySelector('h2');if(!h)return;h.insertAdjacentElement('afterend',box)}}
+  /* 2.26: only inside Settings → אימונים → כוח / ריצה / אירובי (the separate section outside is gone) */
+  if(!state.data)return;const box=$('fpRestSet_'+TY);if(!box)return;
   const open=box.open,c=cfg(),vs=heVoices(),hasRec=!!LS.get(RK()),tones=SOUNDS.filter(s=>WAVE[s[0]]);
   let h=`<summary>${TYN[TY]}</summary><div class="settings-body">${TYW[TY]?`<p class="muted" style="margin:0 0 6px;font-size:12.5px">${TYW[TY]}</p>`:''}
     <div class="lbl">צלילים · לחיצה משמיעה ובוחרת</div>
@@ -217,12 +204,12 @@ function renderSet(){
     <label class="btn light full" style="margin-top:8px;display:block;text-align:center">או לבחור קובץ קול<input type="file" accept="audio/*" style="display:none" onchange="fpRestFile(this.files&&this.files[0])"></label></div>`;
   h+=`<div class="lbl">עוצמה</div><input type="range" id="fpRestVol" min="0.2" max="1" step="0.1" value="${c.vol}" oninput="fpRestSet('vol',Number(this.value),true)" onchange="fpRestTest()" style="width:100%" aria-label="עוצמה">
     <button type="button" class="quiet${c.kind==='none'?' on':''}" onclick="fpRestPick('none')">${svgI('none')}שקט, בלי צליל</button>
-    <p class="muted" style="font-size:12.5px;margin:12px 0 0">במסך האימון המסך נשאר דלוק, כדי שהשעון ימשיך והצליל יישמע. מוזיקה ברקע ממשיכה: היא נחלשת לרגע בזמן הצליל וחוזרת.</p></div>`;
+    <p class="muted" style="font-size:12.5px;margin:12px 0 0">בזמן מנוחה, ריצה ואירובי המסך נשאר דלוק לבד, כי כשהמסך נעול הצליל לא נשמע. מוזיקה ברקע ממשיכה: היא יורדת לרגע בזמן הצליל וחוזרת.</p></div>`;
   box.innerHTML=h;box.open=open;if(rec)recLive();
 }
 window.fpRestSet=(k,v,quiet)=>{const c=cfg();c[k]=v;setCfg(c);if(!quiet)renderSet()};
-window.fpRestPick=k=>{const c=cfg();c.kind=k;setCfg(c);renderSet();if(k!=='none'&&!(k==='mine'&&!LS.get(RK()))){ctx();restSound()}};
-window.fpRestTest=()=>{ctx();restSound()};
+window.fpRestPick=k=>{const c=cfg();c.kind=k;setCfg(c);renderSet();if(k!=='none'&&!(k==='mine'&&!LS.get(RK())))restSound()};
+window.fpRestTest=()=>{restSound()};
 /* 2.17: every step says what failed, and a recorder is made with the first format that works */
 window.fpMakeRecorder=function(st,extra){const tries=[];['audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm','audio/ogg'].forEach(t=>{try{if(window.MediaRecorder&&(!MediaRecorder.isTypeSupported||MediaRecorder.isTypeSupported(t)))tries.push(Object.assign({mimeType:t},extra||{}))}catch(_){}});tries.push(extra||undefined);tries.push(undefined);
   let last=null;for(const o of tries){try{return new MediaRecorder(st,o)}catch(e){last=e}}throw Object.assign(new Error('ההקלטה לא נתמכת בטלפון הזה ('+((last&&last.name)||'')+')'),{fpMsg:'ההקלטה לא נתמכת בטלפון הזה. אפשר לבחור קובץ קול במקום.'})};
@@ -231,11 +218,11 @@ window.fpRecBar={t:0,start(total){this.stop();const t0=Date.now(),mm=x=>Math.flo
   document.body.insertAdjacentHTML('beforeend',`<div id="fpRecBar" role="status" style="position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:2147482000;background:#171C22;border:1px solid #E5484D;border-radius:14px;padding:10px 12px;direction:rtl;color:#F2F5F7;font:600 14px/1.3 -apple-system,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.45)"><div style="display:flex;justify-content:space-between;gap:8px"><span>מקליט… <span id="fpRecBarL"></span></span><span id="fpRecBarT" dir="ltr">0:00 / ${mm(total)}</span></div><div style="height:8px;background:#2C3640;border-radius:6px;overflow:hidden;margin-top:7px"><i id="fpRecBarF" style="display:block;height:100%;width:0;background:#E5484D;transition:width .2s linear"></i></div></div>`);
   this.t=setInterval(()=>{const e=(Date.now()-t0)/1000,f=$('fpRecBarF'),tx=$('fpRecBarT'),l=$('fpRecBarL');if(!f){clearInterval(this.t);return}f.style.width=Math.min(100,e/total*100)+'%';if(tx)tx.textContent=mm(Math.min(e,total))+' / '+mm(total);if(l)l.textContent='נשארו '+Math.max(0,Math.ceil(total-e))+' שנ׳'},200)},
  stop(){clearInterval(this.t);const b=$('fpRecBar');if(b)b.remove()}};
-async function keepRec(blob,from){const key=RK();try{const c=await cleanRec(await blob.arrayBuffer());LS.set(key,c.data);mineUrl='';mineSrc='';toast(from==='file'?'הקול נשמר':'ההקלטה נשמרה ('+(Math.round(c.sec*10)/10)+' שנ׳)')}
+async function keepRec(blob,from){const key=RK();try{const c=await cleanRec(await blob.arrayBuffer());LS.set(key,c.data);mineBuf.buf=null;toast(from==='file'?'הקול נשמר':'ההקלטה נשמרה ('+(Math.round(c.sec*10)/10)+' שנ׳)')}
   catch(e){if(e&&e.fpMsg){toast(e.fpMsg,true);return}
     /* could not clean it: keep it as it is, if it is small enough */
     if(blob.size>600000){toast(from==='file'?'הקובץ גדול מדי. קובץ של כמה שניות':'ההקלטה ארוכה מדי',true);return}
-    const d=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(blob)});LS.set(key,d);mineUrl='';mineSrc='';toast('נשמר')}
+    const d=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(blob)});LS.set(key,d);mineBuf.buf=null;toast('נשמר')}
   renderSet()}
 window.fpRestRec=async()=>{
   if(rec){try{rec.stop()}catch(_){}return}
@@ -255,6 +242,6 @@ window.fpRestRec=async()=>{
 };
 window.fpRestFile=function(f){if(!f)return;if(f.size>3000000)return toast('הקובץ גדול מדי. קובץ של כמה שניות',true);keepRec(f,'file')};
 
-try{speechSynthesis.onvoiceschanged=()=>{if($('fpRestSet'))renderSet()}}catch(_){}
+try{speechSynthesis.onvoiceschanged=()=>{if($('fpRestSet_'+TY))renderSet()}}catch(_){}
 if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{renderSet()}catch(e){console.error(e)}return r}}
 })();

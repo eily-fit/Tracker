@@ -36,7 +36,7 @@ const TASKS=[
    {kind:'b',view:'workouts',t:()=>q('#saveWorkoutBtn'),title:'שומרים',text:'לחץ שמור. התרגיל נכנס ליומן האימונים.',tap:true,done:()=>nHist()>B.h},
    {kind:'end',view:'workouts',t:()=>q('#lastPerformance'),title:'✓ נשמר',text:'בפעם הבאה בתרגיל הזה תראה מה עשית עכשיו, כולל תת־סטים.'}]},
  {id:'sound',ic:'',title:'לבחור צליל סוף מנוחה',sub:'צפצוף, קול, משפט שלך או הקלטה',steps:()=>[
-   {kind:'s',view:'settings',before:()=>{const d=q('#fpRestSet');if(d){d.open=true}},t:()=>q('#fpRestSet'),title:'צליל סוף מנוחה',text:'בחר צליל ולחץ ▶ לשמוע. ״משפט שלי״: הטלפון יקריא מה שתכתוב.',tap:true},
+   {kind:'s',view:'settings',before:()=>{try{if(!q('#fpRestSet_s'))fp222.page('s')}catch(_){}setTimeout(()=>{const d=q('#fpRestSet_s');if(d)d.open=true},300)},t:()=>q('#fpRestSet_s'),title:'צליל סוף מנוחה',text:'בחר צליל ולחץ ▶ לשמוע. ״משפט שלי״: הטלפון יקריא מה שתכתוב.',tap:true},
    {kind:'end',view:'settings',t:null,title:'✓ מוכן',text:'בסוף כל מנוחה תשמע את מה שבחרת.'}]},
  {id:'goal',ic:'',title:'להחליט איך היעד זז',sub:'לפי אתמול, וכמה לחסוך לאירוע',steps:()=>[
    {kind:'s',view:'settings',before:()=>{const d=q('#fpGoalSet');if(d)d.open=true},t:()=>q('#fpGoalSet'),title:'היעד מתאזן לבד',text:'אכלת פחות אתמול? היום מקבל את ההפרש. עברת? היום יורד. כתוב כמה מומלץ ולמה. אפשר גם לכבות.',tap:true},

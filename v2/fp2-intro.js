@@ -36,7 +36,7 @@ const STEPS=[
   {kind:'b',view:'process',t:()=>q('#fpWeekCard')||q('#photoCard'),title:'ההתקדמות שלך',text:'כל שבוע במקום אחד: תמונות, משקל והיקף טבור, עם השוואה.'},
   {kind:'b',view:'settings',before:()=>{try{const d=q('#fpGoalSet');if(d)d.open=false}catch(_){}},t:()=>q('#fpGoalSet'),title:'ההגדרות: היעד',text:'״היעד והאירועים״: כמה היעד זז לפי אתמול (או לכבות), וכמה לחסוך לפני אירוע.'},
   {kind:'b',view:'settings',t:()=>q('#fpWeekSet'),title:'יום, חגים ושבת',text:'מתי היום שלך מתחיל (אם אתה אוכל אחרי חצות), אילו חגים, ושבת.'},
-  {kind:'b',view:'settings',t:()=>q('#fpRestSet'),title:'צליל סוף מנוחה',text:'צפצוף, קול, משפט שלך או הקלטה. ועוצמה.'},
+  {kind:'b',view:'settings',t:()=>q('#fpFolderTrain'),title:'צלילים',text:'בתוך ״אימונים״ ← כוח / ריצה / אירובי: איזה צליל יישמע, קול, משפט שלך או הקלטה. ועוצמה.'},
   {kind:'b',view:'settings',t:()=>q('#notificationSettings'),title:'התראות',text:'תזכורת לאירועי השבוע, גם כשהאפליקציה סגורה.'},
   {kind:'end',view:'today',t:null,title:'זהו, אתה מוכן',text:'יאללה, תרשום את הארוחה הראשונה.'}
 ];
