@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="מעבדת צלילים">
+<title>מעבדת צלילים</title>
+<style>
+/* FitPro sound lab: a separate page, not part of the app. Each card is one way to play a sound; the user marks what works on his iPhone with Spotify on. */
+:root{--bg:#0B0F13;--card:#171C22;--card2:#1F262E;--line:#2C3640;--ink:#F2F5F7;--mu:#A3ADB8;--faint:#6B7682;--brand:#D7F36B;--good:#6EE787;--bad:#FF8A80;--f:-apple-system,"Rubik","Heebo",system-ui,sans-serif;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);margin:0}
+.wrap{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 60px)}
+h1{font-size:22px;margin:0 0 6px;font-weight:800}
+.sub{color:var(--mu);font-size:14px;line-height:1.55;margin:0 0 12px}
+.info{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:13px;color:var(--mu);line-height:1.6;margin:0 0 14px}
+.info b{color:var(--ink)}
+h2{font-size:16px;margin:24px 0 10px;color:var(--brand)}
+.t{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:0 0 12px}
+.t h3{margin:0 0 4px;font-size:15.5px;display:flex;gap:8px;align-items:baseline}
+.t h3 small{color:var(--faint);font-weight:500;font-size:12px}
+.t p{margin:0 0 8px;font-size:13.5px;line-height:1.55;color:#D5DBE1}
+.go{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.go button{flex:1 1 140px;font:inherit;font-weight:700;font-size:15px;border:0;border-radius:12px;padding:12px;background:var(--brand);color:#14190a;cursor:pointer}
+.go button.sec{background:var(--card2);color:var(--ink);border:1px solid var(--line)}
+.go button:disabled{opacity:.45}
+.st{font-size:13px;color:var(--mu);min-height:18px;margin:0 0 8px;font-variant-numeric:tabular-nums}
+.q{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;font-size:14px}
+.yn{display:flex;gap:6px}
+.yn button{font:inherit;font-size:13.5px;font-weight:700;border-radius:10px;padding:7px 14px;border:1px solid var(--line);background:var(--card2);color:var(--mu);cursor:pointer}
+.yn button.on.y{background:rgba(110,231,135,.16);border-color:var(--good);color:var(--good)}
+.yn button.on.n{background:rgba(255,138,128,.15);border-color:var(--bad);color:var(--bad)}
+textarea{width:100%;margin-top:6px;min-height:40px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font:inherit;font-size:14px;resize:vertical}
+.end{background:var(--card);border:1px solid var(--brand);border-radius:16px;padding:14px;margin-top:22px}
+.end button{width:100%;font:inherit;font-weight:800;font-size:16px;border:0;border-radius:12px;padding:14px;background:var(--brand);color:#14190a;margin-top:8px}
+.end .sec{background:var(--card2);color:var(--mu);border:1px solid var(--line);font-size:14px;padding:10px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:#2B3540;color:var(--ink);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.rec{display:inline-block;width:10px;height:10px;border-radius:50%;background:#E5484D;margin-inline-end:6px;animation:p 1s infinite}
+@keyframes p{50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>מעבדת צלילים</h1>
+<p class="sub">דף ניסוי נפרד, לא חלק מהאפליקציה. סיבוב 3: הקלטה וכפתורי צליל, בדיוק כמו בתוך האפליקציה. מסמנים מה קרה, ובסוף ״העתק תוצאות״ ושולחים לי.</p>
+<div class="info"><b>לפני שמתחילים:</b> מדליקים שיר ב-Spotify, חוזרים לכאן, ועוברים על הכרטיסים לפי הסדר. אחרי כל כרטיס בודקים אם השיר עדיין מתנגן. אם השיר נעצר, מדליקים אותו שוב לפני הכרטיס הבא.<br><span id="env"></span></div>
+
+<div id="list"></div>
+
+<div class="end">
+<b>סיימת?</b> לוחצים ושולחים לי בצ׳אט את מה שהועתק.
+<button type="button" onclick="copyAll()">העתק תוצאות</button>
+<button type="button" class="sec" onclick="if(confirm('למחוק את כל הסימונים?')){S={};save();render()}">להתחיל מחדש</button>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ---------- the tests ---------- */
+const T=[
+ ['כפתורי צליל (כמו בהגדרות)',[
+  {id:'t1',t:'כמו באפליקציה עכשיו',d:'הלחיצה ״מעירה״ את הצליל, ומיד מנמיכה את השיר ומשמיעה. לפני הכרטיס: יוצאים ל-Spotify וחוזרים.',b:[['השמע',()=>snd('t1','now'),1]],q:['first','music']},
+  {id:'t2',t:'בלי ״להעיר״ בלחיצה',d:'כמו במעבדה 1 שעבדה: בלי שום דבר מיוחד בלחיצה. לפני הכרטיס: יוצאים ל-Spotify וחוזרים.',b:[['השמע',()=>snd('t2','now'),0]],q:['first','music']},
+  {id:'t3',t:'להעיר, לחכות רגע, להשמיע',d:'הלחיצה מעירה, מחכה שנייה קטנה, ואז מנמיכה ומשמיעה. לפני הכרטיס: יוצאים ל-Spotify וחוזרים.',b:[['השמע',()=>snd('t3','wait'),1]],q:['first','music']},
+  {id:'t4',t:'בלי להנמיך את השיר',d:'מעירה ומשמיעה מעל השיר, בלי הנמכה. לפני הכרטיס: יוצאים ל-Spotify וחוזרים.',b:[['השמע',()=>snd('t4','mix'),1]],q:['first','music']}
+ ]],
+ ['הקלטה (כמו בהגדרות של האפליקציה)',[
+  {id:'r1',t:'הקלטה כמו בגרסה 2.26',d:'כמו עכשיו באפליקציה. מקליטים 4 שניות, ואז ״השמע״.',b:[['הקלט',()=>rec('r1','play-and-record',1,0),1],['השמע',()=>playLast('r1'),1]],q:['rec','good']},
+  {id:'r2',t:'הקלטה כמו בגרסה 2.25',d:'כמו בגרסה הקודמת, שהקליטה (גרוע, אבל הקליטה).',b:[['הקלט',()=>rec('r2','auto',1,0),1],['השמע',()=>playLast('r2'),1]],q:['rec','good']},
+  {id:'r3',t:'הקלטה כמו במעבדה 1',d:'בלי ״להעיר״ בלחיצה, כמו במעבדה שעבדה לך.',b:[['הקלט',()=>rec('r3','play-and-record',0,0),0],['השמע',()=>playLast('r3'),0]],q:['rec','good']},
+  {id:'r4',t:'הקלטה עם ״השתקת צליל״ לפני',d:'לפני ההקלטה הצליל של האפליקציה נכבה לגמרי, ואחריה חוזר.',b:[['הקלט',()=>rec('r4','auto',1,1),1],['השמע',()=>playLast('r4'),1]],q:['rec','good']},
+  {id:'r5',t:'כמו 2.26, עם ״השתקת צליל״ לפני',d:'שילוב: מצב ההקלטה של עכשיו, והצליל של האפליקציה נכבה לפני.',b:[['הקלט',()=>rec('r5','play-and-record',1,1),1],['השמע',()=>playLast('r5'),1]],q:['rec','good']}
+ ]]
+];
+const QL={first:'נשמע כבר בלחיצה הראשונה?',rec:'הקליט?',heard:'שמעת את הצליל?',music:'השיר המשיך להתנגן?',back:'השיר חזר אחרי הצליל?',good:'האיכות טובה?'};
+
+/* ---------- state (kept on this phone) ---------- */
+let S={};try{S=JSON.parse(localStorage.getItem('fpLab3')||'{}')||{}}catch(_){S={}}
+function save(){try{localStorage.setItem('fpLab3',JSON.stringify(S))}catch(_){}}
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function render(){
+  document.getElementById('list').innerHTML=T.map(([h,its])=>`<h2>${esc(h)}</h2>`+its.map(x=>{const v=S[x.id]||{};
+    return `<div class="t" id="c_${x.id}"><h3><small>${x.id}</small>${esc(x.t)}</h3><p>${esc(x.d)}</p>
+      <div class="go">${x.b.map((b,i)=>`<button type="button" class="${i?'sec':''}" data-t="${x.id}" data-b="${i}"${b[2]?' data-wake="1"':''}>${esc(b[0])}</button>`).join('')}</div>
+      <div class="st" id="st_${x.id}"></div>
+      ${x.q.map(k=>`<div class="q"><span>${QL[k]}</span><span class="yn"><button type="button" class="y${v[k]==='y'?' on':''}" data-t="${x.id}" data-k="${k}" data-v="y">כן</button><button type="button" class="n${v[k]==='n'?' on':''}" data-t="${x.id}" data-k="${k}" data-v="n">לא</button></span></div>`).join('')}
+      <textarea data-t="${x.id}" placeholder="משהו לא רגיל? (אפשר להכתיב)">${esc(v.note||'')}</textarea></div>`}).join('')).join('')}
+document.addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(!b)return;const id=b.dataset.t;
+  if(b.dataset.k){S[id]=S[id]||{};S[id][b.dataset.k]=S[id][b.dataset.k]===b.dataset.v?'':b.dataset.v;save();
+    b.parentElement.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===S[id][b.dataset.k]));return}
+  const x=T.flatMap(g=>g[1]).find(t=>t.id===id);if(x)x.b[Number(b.dataset.b)][1]()});
+document.addEventListener('input',e=>{const t=e.target;if(t.tagName!=='TEXTAREA')return;S[t.dataset.t]=S[t.dataset.t]||{};S[t.dataset.t].note=t.value;save()});
+function note(id,txt){const el=document.getElementById('st_'+id);if(el)el.innerHTML=txt}
+function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),2200)}
+
+/* ---------- audio ---------- */
+const AS=navigator.audioSession||null;
+function session(type){try{if(AS&&type)AS.type=type}catch(_){}}
+let ctx=null;
+function getCtx(){if(!ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;ctx=new AC()}return ctx}
+async function ready(type){session(type);const c=getCtx();if(!c)return null;try{if(c.state!=='running')await c.resume()}catch(_){}return c}
+function tone(c){const t0=c.currentTime+0.02,g=c.createGain();g.connect(c.destination);g.gain.setValueAtTime(0.0001,t0);
+  [[880,0],[1320,0.18]].forEach(([f,o])=>{const os=c.createOscillator();os.type='sine';os.frequency.value=f;os.connect(g);os.start(t0+o);os.stop(t0+o+0.16)});
+  g.gain.exponentialRampToValueAtTime(0.7,t0+0.02);g.gain.setValueAtTime(0.7,t0+0.32);g.gain.exponentialRampToValueAtTime(0.0001,t0+0.4)}
+async function prep(type,id){const c=await ready(type);note(id,c?`מוכן (${c.state}). לא הושמע כלום.`:'אין תמיכה בצליל בדפדפן הזה')}
+async function beepNow(type,id){const c=await ready(type);if(!c)return note(id,'אין תמיכה');tone(c);note(id,'הושמע ('+(AS?AS.type:'ללא סוג')+')');
+  if(type!=='ambient')setTimeout(()=>session('ambient'),900)}
+function wavURL(){const sr=22050,n=Math.floor(sr*0.4),b=new ArrayBuffer(44+n*2),v=new DataView(b);const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){const t=i/sr,f=t<0.18?880:1320,env=Math.min(1,t*50,(0.4-t)*25);v.setInt16(44+i*2,Math.max(-1,Math.min(1,Math.sin(2*Math.PI*f*t)*0.7*Math.max(0,env)))*32767,true)}
+  let s='';const u=new Uint8Array(b);for(let i=0;i<u.length;i++)s+=String.fromCharCode(u[i]);return 'data:audio/wav;base64,'+btoa(s)}
+let WAV=null;
+function beepEl(type,id){session(type);WAV=WAV||wavURL();const a=new Audio(WAV);a.play().then(()=>note(id,'הושמע')).catch(e=>note(id,'לא הושמע: '+esc(e.message)))}
+function say(id){session('transient');try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance('סט הבא');u.lang='he-IL';u.rate=1;u.onend=()=>session('ambient');speechSynthesis.speak(u);note(id,'נשלח לקול')}catch(e){note(id,'אין קול: '+esc(e.message))}}
+
+function say0(id){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance('סט הבא');u.lang='he-IL';speechSynthesis.speak(u);note(id,'נשלח לקול')}catch(e){note(id,'אין קול: '+esc(e.message))}}
+/* rest: everything is prepared in the tap; the sound itself comes later from a timer */
+async function rest(id,type,what,lock,boost){const sec=lock?15:10;
+  if(what==='rec'&&!REC.buf)return note(id,'קודם מקליטים בכרטיס r0');
+  if(what==='voice'){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(_){}}
+  const c=await ready('ambient');if(!c)return note(id,'אין תמיכה');
+  const end=Date.now()+sec*1000;const tick=()=>{const l=Math.max(0,Math.ceil((end-Date.now())/1000));note(id,l?`עוד ${l} שנ׳${lock?' · לנעול עכשיו':''}`:'עכשיו!');return l};tick();
+  const iv=setInterval(()=>{if(!tick()){clearInterval(iv)}},250);
+  setTimeout(async()=>{clearInterval(iv);note(id,'עכשיו!');
+    if(what==='voice')return say(id);
+    if(what==='voice0')return say0(id);
+    const c2=await ready(type);if(!c2)return;
+    if(what==='rec')playBuf(c2,boost);else tone(c2);
+    if(what==='beepvoice')setTimeout(()=>say0(id),450);
+    if(type!=='ambient')setTimeout(()=>session('ambient'),(what==='rec'&&REC.buf?REC.buf.duration*1000:400)+600)},sec*1000)}
+
+/* ---------- locked screen: keep the page awake during the rest ---------- */
+function silentWav(sec,beepAt){const sr=22050,n=Math.floor(sr*sec),b=new ArrayBuffer(44+n*2),v=new DataView(b);const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){const t=i/sr;let x=0;if(beepAt!=null&&t>=beepAt&&t<beepAt+0.4){const tt=t-beepAt,f=tt<0.18?880:1320,env=Math.min(1,tt*50,(0.4-tt)*25);x=Math.sin(2*Math.PI*f*tt)*0.8*Math.max(0,env)}v.setInt16(44+i*2,x*32767,true)}
+  return URL.createObjectURL(new Blob([b],{type:'audio/wav'}))}
+let KA=null;
+async function restK(id,mode){const sec=15;if(KA){try{KA.stop&&KA.stop()}catch(_){}try{KA.pause&&KA.pause()}catch(_){}KA=null}
+  const end=Date.now()+sec*1000;const tick=()=>{const l=Math.max(0,Math.ceil((end-Date.now())/1000));note(id,l?`עוד ${l} שנ׳ · לנעול עכשיו`:'עכשיו!');return l};tick();const iv=setInterval(()=>{if(!tick())clearInterval(iv)},250);
+  if(mode==='wa'){const c=await ready('ambient');if(!c)return;const o=c.createOscillator(),g=c.createGain();g.gain.value=0.00001;o.connect(g);g.connect(c.destination);o.start();KA=o;
+    setTimeout(async()=>{const c2=await ready('transient');tone(c2);setTimeout(()=>{try{o.stop()}catch(_){}session('ambient')},900)},sec*1000)}
+  else if(mode==='el'){session('ambient');const a=new Audio(silentWav(2));a.loop=true;a.play().catch(e=>note(id,'לא הופעל: '+esc(e.message)));KA=a;const c=await ready('ambient');
+    setTimeout(async()=>{const c2=await ready('transient');tone(c2);setTimeout(()=>{a.pause();session('ambient')},900)},sec*1000)}
+  else{session('ambient');const a=new Audio(silentWav(sec+1,sec));a.play().catch(e=>note(id,'לא הופעל: '+esc(e.message)));KA=a}}
+
+/* ---------- recording ---------- */
+const REC={buf:null,blob:null,url:null};
+function pickMime(){const c=['audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm'];for(const m of c){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(m))return m}catch(_){}}return ''}
+async function record(id,raw){
+  if(!navigator.mediaDevices||!window.MediaRecorder)return note(id,'אין הקלטה בדפדפן הזה');
+  session('play-and-record');let st;
+  try{st=await navigator.mediaDevices.getUserMedia({audio:raw?{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}:true})}
+  catch(e){session('ambient');return note(id,'אין גישה למיקרופון: '+esc(e.message))}
+  const mime=pickMime(),mr=new MediaRecorder(st,mime?{mimeType:mime,audioBitsPerSecond:128000}:undefined),parts=[];
+  mr.ondataavailable=e=>{if(e.data&&e.data.size)parts.push(e.data)};
+  mr.onstop=async()=>{st.getTracks().forEach(t=>t.stop());session('ambient');
+    REC.blob=new Blob(parts,{type:mr.mimeType||mime||'audio/mp4'});if(REC.url)URL.revokeObjectURL(REC.url);REC.url=URL.createObjectURL(REC.blob);
+    try{const c=getCtx();const ab=await REC.blob.arrayBuffer();REC.buf=clean(c,await decode(c,ab));note(id,`הוקלט (${(REC.blob.size/1024).toFixed(0)}KB, ${esc(REC.blob.type)}). לוחצים ״השמע״.`)}
+    catch(e){REC.buf=null;note(id,'הוקלט, אבל לא הצלחתי לפענח: '+esc(e.message))}};
+  mr.start();let l=3;note(id,`<span class="rec"></span>מקליט… ${l}`);const iv=setInterval(()=>{l--;if(l>0)note(id,`<span class="rec"></span>מקליט… ${l}`)},1000);
+  setTimeout(()=>{clearInterval(iv);try{mr.stop()}catch(_){}},3000)}
+function decode(c,ab){return new Promise((res,rej)=>{const p=c.decodeAudioData(ab,res,rej);if(p&&p.then)p.then(res,rej)})}
+/* trim the silence at both ends and bring the loudest point to 90% */
+function clean(c,b){const d=b.getChannelData(0);let peak=0;for(let i=0;i<d.length;i++){const a=Math.abs(d[i]);if(a>peak)peak=a}
+  if(!peak)return b;const th=peak*0.06;let s=0,e=d.length-1;while(s<e&&Math.abs(d[s])<th)s++;while(e>s&&Math.abs(d[e])<th)e--;
+  const pad=Math.floor(b.sampleRate*0.06);s=Math.max(0,s-pad);e=Math.min(d.length-1,e+pad);const len=Math.max(1,e-s+1),out=c.createBuffer(1,len,b.sampleRate),o=out.getChannelData(0),g=Math.min(8,0.9/peak);
+  for(let i=0;i<len;i++){let v=0;for(let ch=0;ch<b.numberOfChannels;ch++)v+=b.getChannelData(ch)[s+i];o[i]=Math.max(-1,Math.min(1,v/b.numberOfChannels*g))}
+  const f=Math.min(len,Math.floor(b.sampleRate*0.01));for(let i=0;i<f;i++){o[i]*=i/f;o[len-1-i]*=i/f}return out}
+function playBuf(c,boost){if(!REC.buf)return false;const s=c.createBufferSource();s.buffer=REC.buf;let out=c.destination;
+  if(boost&&boost>1){const comp=c.createDynamicsCompressor();comp.threshold.value=-24;comp.knee.value=12;comp.ratio.value=6;comp.attack.value=0.003;comp.release.value=0.15;const g=c.createGain();g.gain.value=boost;s.connect(g);g.connect(comp);comp.connect(c.destination);s.start();return true}
+  s.connect(out);s.start();return true}
+async function playRec(id,type,boost){if(!REC.buf)return note(id,REC.blob?'ההקלטה לא פוענחה':'קודם מקליטים ב-r0');const c=await ready(type);if(!c)return;playBuf(c,boost);note(id,'מושמע');
+  if(type!=='ambient')setTimeout(()=>session('ambient'),REC.buf.duration*1000+600)}
+function playRecEl(id){if(!REC.url)return note(id,'קודם מקליטים ב-r1 או r2');session('auto');const a=new Audio(REC.url);a.play().then(()=>note(id,'מושמע')).catch(e=>note(id,'לא הושמע: '+esc(e.message)))}
+
+
+/* ---------- round 3: the app's own way ---------- */
+/* like the app: every tap on a [data-wake] button wakes the sound first (resume, ambient) */
+function appWake(e){const b=e.target.closest&&e.target.closest('[data-wake]');if(!b)return;const c=getCtx();try{if(c&&c.state!=='running')c.resume().catch(()=>{})}catch(_){}}
+document.addEventListener('touchend',appWake,{passive:true,capture:true});document.addEventListener('click',appWake,true);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function snd(id,mode){const t0=performance.now();const c=getCtx();if(!c)return note(id,'אין תמיכה');
+  if(mode!=='mix')session('transient');if(mode==='wait')await sleep(150);
+  try{if(c.state!=='running')await Promise.race([c.resume(),sleep(400)])}catch(_){}
+  const st=c.state;tone(c);note(id,`הושמע · מצב ${st} · ${Math.round(performance.now()-t0)} מ״ש`);setTimeout(()=>session('ambient'),900)}
+const REC3={on:false,last:{}};
+async function rec(id,sess,wake,mute){
+  if(!navigator.mediaDevices||!window.MediaRecorder)return note(id,'אין הקלטה כאן');
+  const log=[];const L=t=>{log.push(t);note(id,log.join(' · '))};
+  REC3.on=true;const c=getCtx();
+  if(mute&&c){try{await c.suspend();L('צליל כבוי')}catch(e){L('כיבוי נכשל')}}
+  if(sess)session(sess);L('מצב '+(AS?AS.type:'—'));
+  let st;try{st=await navigator.mediaDevices.getUserMedia({audio:true});L('מיקרופון פתוח')}
+  catch(e){REC3.on=false;session('ambient');if(mute&&c)c.resume().catch(()=>{});return L('<b>שגיאה: '+esc(e.name||'')+' '+esc(e.message||'')+'</b>')}
+  let mr;const tries=['audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm'].filter(m=>{try{return MediaRecorder.isTypeSupported(m)}catch(_){return false}});
+  for(const m of [...tries,'']){try{mr=m?new MediaRecorder(st,{mimeType:m}):new MediaRecorder(st);break}catch(_){}}
+  if(!mr){st.getTracks().forEach(t=>t.stop());REC3.on=false;session('ambient');return L('<b>אין מקליט</b>')}
+  const parts=[];mr.ondataavailable=e=>{if(e.data&&e.data.size)parts.push(e.data)};
+  mr.onerror=e=>L('<b>שגיאת מקליט: '+esc((e.error&&e.error.name)||'')+'</b>');
+  mr.onstop=async()=>{st.getTracks().forEach(t=>t.stop());REC3.on=false;session('ambient');if(mute&&c){try{await c.resume()}catch(_){}}
+    const blob=new Blob(parts,{type:mr.mimeType||'audio/mp4'});L(`נשמר ${(blob.size/1024).toFixed(0)}KB`);
+    if(!blob.size)return L('<b>ריק</b>');
+    try{const cc=getCtx();const buf=clean(cc,await decode(cc,await blob.arrayBuffer()));REC3.last[id]=buf;L(`${buf.duration.toFixed(1)} שנ׳ · לוחצים ״השמע״`)}catch(e){L('<b>לא פוענח: '+esc(e.message||'')+'</b>')}};
+  try{mr.start();L('<span class="rec"></span>מקליט 4 שנ׳…')}catch(e){st.getTracks().forEach(t=>t.stop());REC3.on=false;session('ambient');return L('<b>לא התחיל: '+esc(e.name||'')+'</b>')}
+  setTimeout(()=>{try{mr.stop()}catch(_){}},4000)}
+async function playLast(id){const buf=REC3.last[id];if(!buf)return note(id,'קודם מקליטים בכרטיס הזה');const c=getCtx();session('transient');try{if(c.state!=='running')await Promise.race([c.resume(),sleep(400)])}catch(_){}
+  const s=c.createBufferSource(),g=c.createGain(),comp=c.createDynamicsCompressor();comp.threshold.value=-24;comp.knee.value=12;comp.ratio.value=6;comp.attack.value=0.003;comp.release.value=0.15;g.gain.value=2.2;s.buffer=buf;s.connect(g);g.connect(comp);comp.connect(c.destination);s.start();
+  setTimeout(()=>session('ambient'),buf.duration*1000+600)}
+/* ---------- results ---------- */
+function copyAll(){const lines=['מעבדת צלילים 3 · '+envTxt()];
+  T.forEach(([h,its])=>{lines.push('','# '+h);its.forEach(x=>{const v=S[x.id]||{};const a=x.q.map(k=>QL[k].replace('?','')+': '+(v[k]==='y'?'כן':v[k]==='n'?'לא':'—')).join(' · ');const stx=(document.getElementById('st_'+x.id)||{}).textContent||'';lines.push(`${x.id} ${x.t} — ${a}${v.note?' · הערה: '+v.note:''}${stx?' · מצב: '+stx:''}`)})});
+  const txt=lines.join('\n');
+  const done=()=>toast('הועתק. עכשיו מדביקים בצ׳אט');
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,()=>fallback(txt,done));else fallback(txt,done)}
+function fallback(txt,done){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand('copy');done()}catch(_){alert(txt)}t.remove()}
+function envTxt(){const ios=(navigator.userAgent.match(/OS (\d+)_(\d+)/)||[]).slice(1).join('.');const pwa=navigator.standalone||matchMedia('(display-mode: standalone)').matches;
+  return `iOS ${ios||'?'} · ${pwa?'ממסך הבית':'מהדפדפן'} · audioSession ${AS?'יש':'אין'}`}
+document.getElementById('env').textContent='המכשיר: '+envTxt();
+render();
+</script>
+</body>
+</html>
