@@ -50,6 +50,7 @@ const P={
   gym:'<path d="M3 21V9l9-5 9 5v12"/><path d="M8 14h8M9 12v4M15 12v4"/>',house:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
   free:'<path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/>',mach:'<rect x="4" y="3" width="6" height="18" rx="1.5"/><path d="M10 7h8M10 12h6M18 5v4"/><path d="M14 17h6"/>',
   bw:'<circle cx="12" cy="4.5" r="2"/><path d="M12 7v6M7 10l5-2 5 2M9 21l3-8 3 8"/>',
+  lock:'<rect x="5.5" y="10.5" width="13" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5"/>',
   r_track:'<rect x="2.5" y="6" width="19" height="12" rx="6"/><rect x="6.5" y="9.5" width="11" height="5" rx="2.5"/>',
   r_easy:'<path d="M4 15.5c0-2 1.5-3 3.5-3H10l2-4.5 3 1 .5 3 3.5 1c1 .3 1.5 1 1.5 2v1.5H4z"/><path d="M4 17.5h16"/>',
   r_long:'<path d="M9 21l2-18M15 21l-2-18"/><path d="M12 7v1.5M12 12v1.5M12 17v1.5"/>',
@@ -340,8 +341,12 @@ function strData(){const B=liftBests();
 let LF='';
 function liftsSheet(f){if(f!==undefined)LF=f||'';const all=liftBests(),B=LF?all.filter(b=>PPLG(b.g)===LF):all;const has=k=>all.some(b=>PPLG(b.g)===k);
   const chip=(k,t)=>`<button type="button" class="${LF===k?'on':''}" onclick="fp222.lifts('${k}')">${t}</button>`;
-  fpT._.sheet('השיאים שלי בכוח',`<div class="fpRecF">${chip('','הכל')}${['ps','pl','l'].map(k=>chip(k,PPLN[k])).join('')}${has('o')?chip('o','אחר'):''}</div><div class="fpCard">${B.length?B.map(b=>`<div class="fpRow"><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PPLC[PPLG(b.g)]};margin-inline-end:7px"></i>${esc(b.n)}<br><small class="mu">${dd(b.d)}</small></span><b style="color:var(--brand,#D7F36B)">${liftTxt(b)}</b></div>`).join(''):'<p class="mu" style="margin:0">אין עדיין שיאים כאן.</p>'}</div><p class="mu">הסט הכי כבד בכל תרגיל. אותו משקל עם יותר חזרות נחשב שיא.</p>`)}
-document.head.insertAdjacentHTML('beforeend',`<style id="fp224rec">.fpRec4{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fpRec4 button{font:inherit;color:inherit;text-align:right;background:#1F262E;border:1px solid var(--line,#2C3640);border-radius:14px;padding:10px;cursor:pointer}.fpRec4 small{display:block;color:var(--muted,#A3ADB8);font-size:11.5px;line-height:1.3}.fpRec4 b{display:block;font-size:19px;margin:3px 0;text-align:right}
+  /* 2.25: inside too, square cards like on the page, and a search for each filter */
+  fpT._.sheet('השיאים שלי בכוח',`<div class="fpRecF">${chip('','הכל')}${['ps','pl','l'].map(k=>chip(k,PPLN[k])).join('')}${has('o')?chip('o','אחר'):''}</div>
+    <div class="fpRecS"><input type="search" placeholder="חיפוש תרגיל${LF?' ב'+PPLN[LF]:''}…" oninput="fp222.liftQ(this.value)" aria-label="חיפוש תרגיל"></div>
+    ${B.length?`<div class="fpRec4" id="fpRecAll">${B.map(b=>{const c=PPLG(b.g);return `<div class="rc" data-n="${esc(b.n)}" style="border-top:3px solid ${PPLC[c]}"><small>${esc(b.n)}</small><b>${liftTxt(b)}</b><small>${PPLN[c]} · ${dd(b.d)}</small></div>`}).join('')}</div><p class="mu" id="fpRecNone" style="display:none">לא נמצא תרגיל כזה.</p>`:'<p class="mu" style="margin:0">אין עדיין שיאים כאן.</p>'}<p class="mu">הסט הכי כבד בכל תרגיל. אותו משקל עם יותר חזרות נחשב שיא.</p>`)}
+function liftQ(v){const q=String(v||'').trim();let n=0;document.querySelectorAll('#fpRecAll .rc').forEach(e=>{const ok=!q||e.dataset.n.includes(q);e.style.display=ok?'':'none';if(ok)n++});const x=$('fpRecNone');if(x)x.style.display=n?'none':''}
+document.head.insertAdjacentHTML('beforeend',`<style id="fp224rec">.fpRec4{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fpRec4 button{font:inherit;color:inherit;text-align:right;background:#1F262E;border:1px solid var(--line,#2C3640);border-radius:14px;padding:10px;cursor:pointer}.fpRec4 small{display:block;color:var(--muted,#A3ADB8);font-size:11.5px;line-height:1.3}.fpRec4 b{display:block;font-size:19px;margin:3px 0;text-align:right}.fpRec4 .rc{background:#1F262E;border:1px solid var(--line,#2C3640);border-radius:14px;padding:10px}.fpRecS input{width:100%;margin:0 0 10px;background:#1F262E;border:1px solid #3A4652;border-radius:12px;padding:10px 12px;color:var(--ink,#F2F5F7);font:inherit}
 .fpRecF{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:7px;margin:0 0 10px}.fpRecF button{font:inherit;font-size:13.5px;border-radius:12px;min-height:44px;background:#1F262E;border:1px solid var(--line,#2C3640);color:var(--muted,#A3ADB8);cursor:pointer}.fpRecF button.on{background:#222D17;border-color:var(--brand,#D7F36B);color:var(--ink,#F2F5F7);font-weight:700}</style>`);
 function planRow(){if(wpGet().plan==='none')return '';const S=setSummary();return `<div class="fpCard" style="padding:4px 14px"><button type="button" class="fpRowBtn" onclick="fp222.ed.open(1)"><span><b>${ic('cal')} התוכנית השבועית</b><small>${S.plan}</small></span>${ic('chev')}</button></div>`}
 function refreshAll(){try{mount()}catch(e){console.error(e)}try{if(window.fpW&&fpW.tab)fpW.tab(fpW.cur)}catch(_){}try{refreshPage()}catch(_){}try{if($('workoutDiary')&&$('workoutDiary').classList.contains('active'))jRender()}catch(_){}}
@@ -477,7 +482,9 @@ function resetGo(t){const d=today(),now=new Date(),o=J('RESET_AT',{})||{};o[t]=d
   if(t==='r'){const p=J('RUN_PLAN',null);if(p){p.resetAt=d;p.since=d;setProp('RUN_PLAN',JSON.stringify(p))}}
   if(t==='c'){const c=J('CARDIO_LVL',null)||{};c.since=weekStart(d);c.rep=0;if(!c.lvl)c.lvl='beg';setProp('CARDIO_LVL',JSON.stringify(c))}
   fpT.close();try{toast(TN[t]+': מתחילים נקי. היומן נשאר')}catch(_){}refreshAll()}
-function pageHtml(t){return showRow(t)+pageBody(t)+resetRow(t)}
+/* 2.25: the sound settings, one copy in each type's page (כוח / ריצה / אירובי) */
+function pageHtml(t){return showRow(t)+pageBody(t)+`<details class="settings-section fpRS" id="fpRestSet_${t}" style="margin:0 0 10px"></details>`+resetRow(t)}
+const rsOpen=t=>{try{window.fpRestOpen&&fpRestOpen(t)}catch(_){}};
 function pageBody(t){
   if(t==='s'){const w=wpGet(),T=TP();return recoRow('s')+`<div class="fpCard"><div class="fpRow" style="padding-top:0"><span>אימוני כוח בשבוע</span>${w.plan==='none'?`<span class="fpStp"><button type="button" aria-label="פחות" onclick="fp222.str(-1)">−</button><b>${Number(T.str)||0}</b><button type="button" aria-label="יותר" onclick="fp222.str(1)">+</button></span>`:`<b>${w.days.filter(d=>d.includes('s')).length}</b>`}</div>
       ${w.plan!=='none'?'<p class="mu" style="margin:0">הימים נקבעים בתוכנית השבועית.</p>':''}
@@ -486,8 +493,8 @@ function pageBody(t){
   if(t==='r')return recoRow('r')+fpW.runSetHtml();
   if(t==='c')return recoRow('c')+fpW.carSetHtml();
   return ''}
-function openPage(t){PAGE=t;fpT._.sheet(TN[t],pageHtml(t))}
-function refreshPage(){if(!PAGE)return;const s=$('fpTSheet');if(!s){PAGE='';return}fpT._.sheet(TN[PAGE],pageHtml(PAGE))}
+function openPage(t){PAGE=t;fpT._.sheet(TN[t],pageHtml(t));rsOpen(t)}
+function refreshPage(){if(!PAGE)return;const s=$('fpTSheet');if(!s){PAGE='';return}const op=($('fpRestSet_'+PAGE)||{}).open;fpT._.sheet(TN[PAGE],pageHtml(PAGE));rsOpen(PAGE);if(op&&$('fpRestSet_'+PAGE))$('fpRestSet_'+PAGE).open=true}
 function setSummary(){const w=wpGet(),n={s:0,r:0,c:0};w.days.forEach(d=>d.forEach(t=>n[t]++));const p=(()=>{try{return fpT.plan()}catch(_){return null}})(),c=(()=>{try{return fpW._.clv()}catch(_){return null}})(),T=TP();
   return {plan:w.plan==='none'?'כבויה':(w.plan==='fixed'?'קבועה':'משתנה כל שבוע')+' · '+[n.s?n.s+' כוח':'',n.r?n.r+' ריצה':'',n.c?n.c+' אירובי':''].filter(Boolean).join(', '),
     s:(Number(T.str)||n.s||0)+' בשבוע'+(RECO().s?'':' · בלי המלצה'),r:p?'יעד '+(p.goal===21.1?'חצי מרתון':p.goal+' ק״מ')+' · '+p.runs+' בשבוע':'אין תוכנית',c:c&&(Array.isArray(T.want)&&T.want.includes('car')||Number(T.car)>0)?({beg:'מתחיל',mid:'ממשיך',adv:'4×4'}[c.lvl])+' · '+(Number(T.car)||2)+' בשבוע':'לא פעיל'}}
@@ -511,7 +518,7 @@ if(typeof renderCheckin==='function'){const o=renderCheckin;renderCheckin=functi
 /* a run or cardio saved / a plan changed elsewhere → refresh */
 setInterval(()=>{try{if($('workoutHome')&&$('workoutHome').classList.contains('active')){const s=$('fpStrip');if(s){const on=stripOn();s.hidden=!on;const h=on?stripHtml():'';if(s.dataset.sig!==h){s.innerHTML=h;s.dataset.sig=h}}}}catch(_){}},4000);
 
-window.fp222={lifts:f=>liftsSheet(f===undefined?'':f),reset:t=>resetSheet(t),resetGo,
+window.fp222={lifts:f=>liftsSheet(f===undefined?'':f),liftQ,reset:t=>resetSheet(t),resetGo,
   ed,refreshPage,planChanged:refreshAll,planRow,
   hdr(){const h=$('fpHdr');if(h)h.innerHTML=hdrHtml();const r=$('fpReco');if(r)r.innerHTML=fpW.cur==='s'?strRecoHtml():''},
   tab(t){fpW.tab(t);mount()},

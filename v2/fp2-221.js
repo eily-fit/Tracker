@@ -136,6 +136,8 @@ function weekPlan(){let wp=J('WEEK_PLAN',null);
     wp={mode:'P',days:build(S,R,C,p&&p.m3&&R>=2?1:0,carHardMax()),auto:1}}
   return wp}
 function saveWeek(wp){delete wp.auto;setProp('WEEK_PLAN',JSON.stringify(wp))}
+/* 2.25: which days of the week are training days (for saving before an event: training days save half) */
+window.fpTrainDows=function(){try{const wp=weekPlan();return wp&&Array.isArray(wp.days)?wp.days.map(d=>Array.isArray(d)&&d.length>0):null}catch(_){return null}};
 
 /* =========================================================
    cardio plan: 3 levels, by week
@@ -455,7 +457,7 @@ function floatHtml(){const v=tmView();return `<button type="button" class="fl" o
 function showFloat(){let f=$('fpCarFloat');if(!f){document.body.insertAdjacentHTML('beforeend','<div id="fpCarFloat" role="status"></div>');f=$('fpCarFloat')}f.innerHTML=floatHtml()}
 function hideFloat(){const f=$('fpCarFloat');if(f)f.remove()}
 function tTick(){if(!TM||!TM.run||TM.pa)return;const s=tmState();
-  if(!TM.free&&s.i!==TM.i){TM.i=s.i;try{fpRestSound&&fpRestSound()}catch(_){}if(s.i>=TM.ph.length){clearInterval(tInt);return fpW.tstop(1,1)}if(TM.open&&$('fpTSheet'))timerSheet();}
+  if(!TM.free&&s.i!==TM.i){TM.i=s.i;try{fpRestSound&&fpRestSound('c')}catch(_){}if(s.i>=TM.ph.length){clearInterval(tInt);return fpW.tstop(1,1)}if(TM.open&&$('fpTSheet'))timerSheet();}
   if(TM.open&&$('fpWtBig')){const v=tmView();$('fpWtBig').textContent=v.big;const a=$('fpWtArc');if(a){const c=2*Math.PI*44;a.setAttribute('stroke-dashoffset',(c*(1-Math.min(1,Math.max(0,v.pct)))).toFixed(1))}
     const pr=$('fpWtProg');if(pr)pr.style.width=Math.min(100,v.el/tmTotal()*100)+'%';const tt=$('fpWtTot');if(tt)tt.textContent=mmss(v.el)+' מתוך '+mmss(tmTotal())}
   else if(!TM.open)showFloat()}

@@ -164,7 +164,7 @@ const exvSave=m=>setProp('EXV',JSON.stringify(m));
 const exKey=x=>x?x.id:'';
 const findEx=name=>{const n=low(name);return exList().find(x=>low(x.name)===n)||null};
 let SHARED=(()=>{try{return JSON.parse(LS.get('fp2.sharedEx')||'null')||{t:0,items:[]}}catch(_){return {t:0,items:[]}}})();
-async function loadShared(force){if(!force&&Date.now()-SHARED.t<6*36e5)return SHARED.items;try{const r=await push('listSharedExercises',{});SHARED={t:Date.now(),items:(r&&r.items)||[]};LS.set('fp2.sharedEx',JSON.stringify(SHARED))}catch(_){}return SHARED.items}
+async function loadShared(force){if(!force&&Date.now()-SHARED.t<6*36e5)return SHARED.items;try{const r=await push('listSharedExercises',{});SHARED={t:Date.now(),items:(r&&r.items)||[],removed:(r&&r.removed)||[]};LS.set('fp2.sharedEx',JSON.stringify(SHARED))}catch(_){}return SHARED.items}
 const sharedOf=name=>(SHARED.items||[]).find(x=>low(x.name)===low(name));
 /* video files on this phone (IndexedDB), so a video downloads once */
 const vdb=()=>new Promise((ok,no)=>{const r=indexedDB.open('fp2vids',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('v'))r.result.createObjectStore('v')};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
@@ -196,6 +196,10 @@ function xvSheet(){const x=XV;if(!x)return;let o=$('fpExV');if(!o){document.body
   const ex=x.ex,sh=sharedOf(x.name),mine=ex?EXV()[exKey(ex)]:null,adm=isAdmin(),canName=ex&&!sh&&!ex.sourceUrl;
   let h=`<div class="sheet-head"><h3 style="margin:0">${esc(x.name)}</h3><button type="button" class="trash" aria-label="סגור" onclick="fp223.xvClose()">✕</button></div>`;
   if(canName)h+=`<div class="nm"><div class="field"><label for="fpXvN">שם התרגיל</label><input id="fpXvN" value="${esc(x.name)}" maxlength="60"></div><button type="button" class="btn light" onclick="fp223.xvRename()">שמור שם</button></div>`;
+  /* 2.25: a chosen video waits here: "רק לי" or "לשתף עם כולם (המנהל מחליט)", then "שלח" or "מחק". Nothing goes out by itself. */
+  if(x.pend&&!x.busy){h+=`<video class="vid" src="${x.pend.url}" controls playsinline loop muted autoplay></video>
+      <div class="tiles" style="margin-top:10px"><button type="button" class="tile ${x.pend.to!=='all'?'on':''}" onclick="fp223.xvTo('me')">${ic('lock')}רק לי<small>רק אתה רואה</small></button><button type="button" class="tile ${x.pend.to==='all'?'on':''}" onclick="fp223.xvTo('all')">${ic('chat')}לשתף עם כולם<small>נשמר אצלך מיד. לכולם אחרי אישור מנהל</small></button></div>
+      <div class="row" style="margin-top:10px"><button type="button" class="btn light" style="color:#F09595" onclick="fp223.xvDrop()">מחק</button><button type="button" class="btn" onclick="fp223.xvSend()">שלח</button></div>`;o.querySelector('.sheet').innerHTML=h;o.classList.remove('hide');return}
   if(x.busy)h+=`<div class="ph"><div><b>${esc(x.busy)}</b><div class="prog" style="width:220px"><i id="fpXvP" style="width:${Math.round((x.p||0)*100)}%"></i></div><small class="mu">אפשר להשאיר את המסך פתוח עד שזה נגמר</small></div></div>`;
   else if(sh||mine)h+=x.url?`<video class="vid" src="${x.url}" controls playsinline loop muted autoplay></video>`:`<div class="ph">${x.err?esc(x.err):'טוען את הסרטון…'}</div>`;
   if(!x.busy&&sh){h+=`<div class="who"><span class="mu">מי רואה</span><span class="pill all">כולם</span></div>`;
@@ -210,8 +214,7 @@ function xvSheet(){const x=XV;if(!x)return;let o=$('fpExV');if(!o){document.body
       <button type="button" class="btn light full" style="margin-top:8px;color:#F09595" onclick="fp223.xvDel()">למחוק את הסרטון</button>`}
   else if(!x.busy){const asked=window.FP2Anim&&FP2Anim.asked&&FP2Anim.asked(x.name);
     h+=`<div class="ph"><div>${ic('film')}<br>לתרגיל הזה עוד אין הדגמה</div></div>
-      <div class="tiles"><label class="tile">${ic('cam')}להעלות סרטון שלי<small>מצלמים או בוחרים, עד 30 שנ׳. רק אתה רואה</small><input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0])"></label>
-      <label class="tile">${ic('chat')}להעלות ולשתף עם כולם<small>נשמר אצלך מיד. לכולם אחרי אישור מנהל</small><input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0],'share')"></label></div><div class="tiles">
+      <div class="tiles"><label class="tile">${ic('cam')}להעלות סרטון<small>מצלמים או בוחרים, עד 30 שנ׳. אחר כך בוחרים למי ושולחים</small><input type="file" accept="video/*" style="display:none" onchange="fp223.xvPick(this.files&&this.files[0])"></label>
       <button type="button" class="tile" ${asked?'disabled':''} onclick="fp223.xvAsk()">${ic('chat')}${asked?'הבקשה כבר נשלחה':'לבקש הדגמה מהמנהל'}<small>${asked?'המנהל יראה אותה ברשימה':'פעם אחת, הבקשה נשמרת'}</small></button></div>
       ${!ex?'<p class="fpHint" style="margin:0">כדי להעלות סרטון, התרגיל צריך להיות ברשימת התרגילים שלך.</p>':''}`}
   o.querySelector('.sheet').innerHTML=h;o.classList.remove('hide')}
@@ -222,7 +225,11 @@ async function xvSyncStatus(){const x=XV;if(!x||!x.ex)return;const m=EXV(),k=exK
 window.fp223 && (window.fp223._sync=async()=>{await loadShared(true);return syncShared()});
 window.fpExV={open(name){const n=norm(name);if(!n)return;XV={name:n,ex:findEx(n),url:'',busy:'',p:0};xvSheet();loadShared(false).then(()=>{if(XV&&XV.name===n){xvSheet();xvLoad();xvSyncStatus()}})}};
 Object.assign(window.fp223,{
-  xvClose(){const o=$('fpExV');if(o)o.remove();if(XV&&XV.url)URL.revokeObjectURL(XV.url);XV=null},
+  xvClose(){const o=$('fpExV');if(o)o.remove();if(XV&&XV.url)URL.revokeObjectURL(XV.url);if(XV&&XV.pend)URL.revokeObjectURL(XV.pend.url);XV=null},
+  xvPick(file){const x=XV;if(!x||!file)return;if(!x.ex){toast('קודם מוסיפים את התרגיל לרשימה',true);return}if(x.pend)URL.revokeObjectURL(x.pend.url);x.pend={file,url:URL.createObjectURL(file),to:'me'};xvSheet()},
+  xvTo(t){const x=XV;if(!x||!x.pend)return;x.pend.to=t;xvSheet()},
+  xvDrop(){const x=XV;if(!x||!x.pend)return;URL.revokeObjectURL(x.pend.url);x.pend=null;xvSheet()},
+  async xvSend(){const x=XV;if(!x||!x.pend)return;const p=x.pend;x.pend=null;URL.revokeObjectURL(p.url);await fp223.xvUp(p.file,p.to==='all'?'share':undefined)},
   async xvUp(file,mode){const x=XV;if(!x||!file)return;if(!x.ex&&mode!=='admin'){toast('קודם מוסיפים את התרגיל לרשימה',true);return}
     x.busy='מכין את הסרטון';x.p=0;xvSheet();
     try{const s=await shrink(file,p=>{x.p=p*0.8;const b=$('fpXvP');if(b)b.style.width=Math.round(x.p*100)+'%'});x.busy='מעלה';x.p=0.85;xvSheet();
@@ -249,6 +256,8 @@ Object.assign(window.fp223,{
 /* approved exercises from other people come into my list of exercises (once each) */
 async function syncShared(){if(!state.data||!state.data.workout)return;const items=await loadShared(false);const added=J('SHARED_ADDED',[]);let ch=false;
   for(const s of items){const n=low(s.name);if(added.includes(n))continue;if(!findEx(s.name)){try{state.data.workout=await call('saveExercise',{muscleGroup:s.group||'כללי',name:s.name,equipment:s.equipment||'משקולות חופשיות'});ch=true}catch(_){continue}}added.push(n)}
+  /* 2.25: the admin removed an approved exercise from everyone → it leaves my list too (only if it came from the shared list) */
+  for(const nm of (SHARED.removed||[])){const n=low(nm),i=added.indexOf(n);if(i<0)continue;const ex=findEx(nm);if(ex){try{state.data.workout=await call('deleteExercise',ex.id);ch=true}catch(_){continue}}added.splice(i,1)}
   setProp('SHARED_ADDED',JSON.stringify(added.slice(-300)));if(ch){try{if($('workoutLibrary')&&$('workoutLibrary').classList.contains('active'))renderWorkoutPlans()}catch(_){}}}
 /* the admin: suggestions to approve (Settings) */
 let SUG=null;
@@ -324,7 +333,7 @@ function badgeDraw(){const n=BADGE.sug+BADGE.req,b=document.querySelector('nav b
 document.head.insertAdjacentHTML('beforeend','<style>.fpBadge{position:absolute;top:-6px;right:-14px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#FF5A4F;color:#fff;font-size:11px;font-weight:800;display:inline-grid;place-items:center;line-height:1}.fpBadge.in{position:static;vertical-align:middle}</style>');
 setInterval(()=>{if(typeof state!=='undefined'&&state.data)badgeLoad()},10*60*1000);
 /* 2.24: the 224 module refreshes these right after a send / an approval, and when you open a screen */
-window.fp223.badgeLoad=()=>badgeLoad();window.fp223.reqInbox=()=>reqInbox();
+window.fp223.badgeLoad=()=>badgeLoad();window.fp223.loadShared=f=>loadShared(f);window.fp223.sharedNow=()=>SHARED.items||[];window.fp223.reqInbox=()=>reqInbox();
 
 /* ---------- hooks ---------- */
 if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{renderSugSet();badgeDraw()}catch(e){console.error(e)}try{renderChk()}catch(e){console.error(e)}return r}}

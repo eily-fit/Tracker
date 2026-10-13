@@ -529,7 +529,7 @@ function saveDishEntries(payload) {
 }
 
 function saveDishAsMeal_(name,ingredients,category){
-  const selected=['בוקר','צהריים','ערב'].includes(category)?category:'צהריים';
+  const selected=['בוקר','צהריים','שלישית','ערב'].includes(category)?category:'צהריים';
   const sh=sheet_(APP.sheets.meals),values=sh.getDataRange().getValues();
   const existing=values.findIndex((r,i)=>i>0&&r[12]!==false&&r[0]===selected&&String(r[10])===name&&r[13]);
   if(existing>=0)return; // Keep the saved recipe; edit it from the meals screen if needed.
@@ -538,7 +538,7 @@ function saveDishAsMeal_(name,ingredients,category){
 }
 
 function saveCustomMeal(payload) {
-  if (!payload || ['בוקר','צהריים','ערב'].indexOf(String(payload.category)) < 0) throw new Error('יש לבחור קטגוריית ארוחה');
+  if (!payload || ['בוקר','צהריים','שלישית','ערב'].indexOf(String(payload.category)) < 0) throw new Error('יש לבחור קטגוריית ארוחה');
   const name=String(payload.name||'').trim();
   if (!name) throw new Error('יש להזין שם לארוחה');
   const ingredients=(payload.ingredients||[]).filter(x=>String(x.name||'').trim() && Number(x.amount)>0);
@@ -572,7 +572,7 @@ function saveCustomMeal(payload) {
    optionally switch off old ones (remove: meal ids) and hide the built-in meals for a new account */
 function saveMenuMeals(payload){
   const list=(payload&&payload.meals)||[];const sh=sheet_(APP.sheets.meals);const rows=[];
-  list.forEach(m=>{const cat=String(m.category||'');if(['בוקר','צהריים','ערב'].indexOf(cat)<0)return;const name=String(m.name||'').trim();if(!name)return;
+  list.forEach(m=>{const cat=String(m.category||'');if(['בוקר','צהריים','שלישית','ערב'].indexOf(cat)<0)return;const name=String(m.name||'').trim();if(!name)return;
     const ing=(m.ingredients||[]).filter(x=>String(x.name||'').trim()&&Number(x.amount)>0);if(!ing.length)return;const mealId=Utilities.getUuid();
     ing.forEach((x,i)=>rows.push([cat,'אישי',i+1,String(x.name).trim(),Math.max(0,Number(x.amount)||0),String(x.unit||'גרם'),round1_(Number(x.calories)||0),round1_(Number(x.protein)||0),round1_(Number(x.carbs)||0),round1_(Number(x.fat)||0),name,'אישי',true,mealId]))});
   const remove=new Set(((payload&&payload.remove)||[]).map(String));
@@ -687,7 +687,7 @@ function groupEntries(payload){
 }
 // v0.33.4: the same food, in the same unit, twice in the same meal (or loose in the same section of the day) is combined into one line.
 function mergeDuplicateRows_(sh,values,date,onlyGroup){
-  const sec=c=>['בוקר','צהריים','ערב'].indexOf(String(c))>=0?String(c):'נוספים';
+  const sec=c=>['בוקר','צהריים','שלישית','ערב'].indexOf(String(c))>=0?String(c):'נוספים';
   const snap=r=>({id:String(r[0]),amount:r[7],calories:r[9],protein:r[10],carbs:r[11],fat:r[12],deleted:r[14]===true});
   const buckets={},prev=[],names=[];
   for(let i=1;i<values.length;i++){
@@ -715,7 +715,7 @@ function mergeDuplicateEntries(payload){
 function moveEntries(payload){
   const ids=new Set((payload&&payload.ids||[]).map(String)),cat=String(payload&&payload.category||'');
   if(!ids.size)throw new Error('לא נבחרו פריטים');
-  if(['בוקר','צהריים','ערב','נוסף'].indexOf(cat)<0)throw new Error('בחר בוקר, צהריים, ערב או נוספים');
+  if(['בוקר','צהריים','שלישית','ערב','נוסף'].indexOf(cat)<0)throw new Error('בחר בוקר, צהריים, ערב או נוספים');
   const sh=sheet_(APP.sheets.entries),values=sh.getDataRange().getValues();let date='';
   for(let i=1;i<values.length;i++){const r=values[i];if(!ids.has(String(r[0]))||r[14]===true)continue;sh.getRange(i+1,4).setValue(cat);date=formatDateValue_(r[1]);}
   if(!date)throw new Error('הפריטים לא נמצאו. רענן ונסה שוב');
@@ -743,10 +743,14 @@ function duplicateEntries(payload){
 // 2.11.0: the admin "time machine" is a clean test: everything added while it is on is removed when it is turned off,
 // and the settings go back to what they were.
 const DEBUG_SKIP=['debug_today','debug_since','debug_snapshot','debug_dates','has_usda_key','has_openai_key'];
+/* keys that never go back with the test: passwords, users, keys of services */
+const DEBUG_PROP_KEEP=/^(API_|USERS$|OPENAI|VAPID|FCM|PUSH)/;
 function debugStart(payload){
   const s=getSettings_(),since=Date.now(),snap={};
   Object.keys(s).forEach(k=>{if(DEBUG_SKIP.indexOf(k)<0)snap[k]=s[k]});
   setSetting_('debug_since',String(since));setSetting_('debug_snapshot',JSON.stringify(snap));setSetting_('debug_dates','[]');
+  /* 2.25: the app's own data (runs, cardio, marks, medals, plans…) is kept in properties: copy them too, so turning the test off brings them back */
+  try{const P=PropertiesService.getScriptProperties(),all=P.getProperties();delete all.__DEBUG_PROPS;Object.keys(all).forEach(k=>{if(DEBUG_PROP_KEEP.test(k))delete all[k]});P.setProperty('__DEBUG_PROPS',JSON.stringify(all))}catch(_){}
   return {since};
 }
 function debugEnd(){
@@ -768,6 +772,11 @@ function debugEnd(){
     Object.keys(s).forEach(k=>{if(DEBUG_SKIP.indexOf(k)>=0)return;const was=Object.prototype.hasOwnProperty.call(snap,k)?snap[k]:'';if(String(was)!==String(s[k]))setSetting_(k,was)});
     dates.forEach(d=>{try{touchDay_(d)}catch(_){}});
   }
+  /* 2.25: the properties go back to what they were before the test (keys added during the test are removed) */
+  try{const P=PropertiesService.getScriptProperties(),raw=P.getProperty('__DEBUG_PROPS');if(raw&&since){const snap=JSON.parse(raw)||{},now=P.getProperties();let n=0;
+      Object.keys(now).forEach(k=>{if(k==='__DEBUG_PROPS'||DEBUG_PROP_KEEP.test(k))return;if(!Object.prototype.hasOwnProperty.call(snap,k)){P.deleteProperty(k);n++}else if(String(snap[k])!==String(now[k])){P.setProperty(k,snap[k]);n++}});
+      Object.keys(snap).forEach(k=>{if(!Object.prototype.hasOwnProperty.call(now,k)){P.setProperty(k,snap[k]);n++}});out.props=n}
+    P.deleteProperty('__DEBUG_PROPS')}catch(_){}
   ['debug_today','debug_since','debug_snapshot','debug_dates'].forEach(k=>setSetting_(k,''));
   return out;
 }
@@ -2115,7 +2124,7 @@ function getDayData_(date) {
 
 function getMealOptions_(includeHidden) {
   const values = sheet_(APP.sheets.meals).getDataRange().getValues();
-  const out = {'בוקר':[], 'צהריים':[], 'ערב':[]};
+  const out = {'בוקר':[], 'צהריים':[], 'שלישית':[], 'ערב':[]}; /* 2.25: 'שלישית' = the 4th meal (on with the 4-meals switch) */
   const groups = {};
   const hidden=new Set(getHiddenMealKeys_());
   for (let i = 1; i < values.length; i++) {
@@ -2868,11 +2877,18 @@ function bankContext_(settings){
   // 2.8.0: the goal the app suggests is never below the minimum for the sex, the protein+fat minimum, or 25% under the daily burn
   const fatMin=Math.round(weight*0.6),minDay=Math.max(male?1500:1200,Math.round(protein*4+fatMin*9+320),tdee?Math.round(tdee*0.75/10)*10:0);
   const noDeficit=Number(profile.age)<18||profile.medical===true;
-  const rules=GOAL_RULES[profile.goal]||GOAL_RULES.recomp,range=rules.save;
+  const rules=GOAL_RULES[profile.goal]||GOAL_RULES.recomp;
+  /* 2.25: saving before an event follows the goal, in % of maintenance (the daily burn):
+     cut: up to 10% a day, the total deficit never over 25% · recomp / maintain: up to 10%, total deficit never over 10% ·
+     lean bulk: only the surplus, never under maintenance. The user can only choose less. */
+  const gt=profile.goal||'recomp',maint=tdee||(gt==='lose'?Math.round(goal/0.825):gt==='gain'?Math.round(goal/1.085):goal);
+  const room=Math.max(0,gt==='lose'?goal-0.75*maint:gt==='gain'?goal-maint:goal-0.90*maint),recPct=Math.max(0,Math.min(10,Math.floor(Math.min(0.10*maint,room)/maint*100+1e-9)));
+  const noRoom=recPct<1,range=(noRoom?[0,0]:[Math.max(1,Math.round(recPct/3)),recPct]).map(x=>x/100);
   /* 2.17: 0 = no saving before events */
-  const saveOff=String(s.event_cut_pct)==='0';let pct=Number(s.event_cut_pct)/100;if(saveOff)pct=0;else if(!(pct>=range[0]&&pct<=range[1]))pct=range[1];
-  const maxCut=noDeficit?0:Math.max(0,Math.min(Math.round(goal*pct/10)*10,goal-minDay));
-  return {goal,protein,fatMin,minDay,maxCut,noDeficit,saveOff,savePct:Math.round(pct*100),saveRange:[Math.round(range[0]*100),Math.round(range[1]*100)],eventPct:Math.round(rules.event*100),eventCap:Math.round(goal*rules.event/10)*10,goalType:profile.goal||'recomp',goalName:rules.name,shiftPct:Math.round(userShift_(s)*100),shiftMax:Math.round(rules.shift*100)};
+  const saveOff=String(s.event_cut_pct)==='0'||noRoom;let pct=Number(s.event_cut_pct)/100;if(saveOff)pct=0;else if(!(pct>0))pct=range[1];else pct=Math.min(pct,range[1]);
+  const cutOf=v=>noDeficit||noRoom?0:Math.max(0,Math.min(Math.floor(maint*v/10)*10,Math.floor(room/10)*10,goal-minDay));
+  const maxCut=cutOf(pct);
+  return {goal,protein,fatMin,minDay,maxCut,noDeficit,saveOff,noRoom,maint,room:Math.round(room),recPct,recCut:cutOf(recPct/100),savePct:Math.round(pct*100),saveRange:[Math.round(range[0]*100),Math.round(range[1]*100)],eventPct:Math.round(rules.event*100),eventCap:Math.round(goal*rules.event/10)*10,goalType:profile.goal||'recomp',goalName:rules.name,shiftPct:Math.round(userShift_(s)*100),shiftMax:Math.round(rules.shift*100)};
 }
 // v0.32: an event far ahead is saved without a plan ("pending"). Its reminder opens on the Sunday of its week,
 // or on the Thursday before when the event is on Sunday–Tuesday, and the plan is built then with the goal of that time.
@@ -2902,11 +2918,15 @@ function bankResponse_(viewDate){
   const date=/^\d{4}-\d{2}-\d{2}$/.test(String(viewDate||''))?String(viewDate):getWorkingDate_();
   return {bank:getBankState_(),day:getDayData_(date)};
 }
-function computeBankPlan_(ctx,today,date,extra,method,others){
+function computeBankPlan_(ctx,today,date,extra,method,others,opt){
   if(ctx.eventCap)extra=Math.min(extra,ctx.eventCap);
+  /* 2.25: this event's own choice (only less than the recommendation), the days before (1–3) and the training days (they save half) */
+  const o=opt||{};let maxCut=ctx.maxCut;if(Number(o.pct)>=0&&o.pct!==''&&o.pct!==null&&o.pct!==undefined)maxCut=Math.min(ctx.recCut!=null?ctx.recCut:ctx.maxCut,Math.floor((ctx.maint||ctx.goal)*Math.min(Number(o.pct),ctx.recPct!=null?ctx.recPct:10)/1000)*10,Math.floor((ctx.room!=null?ctx.room:1e9)/10)*10,ctx.goal-ctx.minDay);if(ctx.noDeficit||ctx.noRoom)maxCut=0;
+  const train=Array.isArray(o.train)?o.train.map(String):[],maxDays=Number(o.days)||3;
   if(method==='none')return {mode:date===today?'today':'future',method:'none',days:[],banked:0,onDay:0,overflow:0,adj:{},preBudget:ctx.goal,eventMeal:0,proteinBefore:Math.round(ctx.protein*0.7),dayGoal:ctx.goal,forced:''};
   const used={};others.forEach(e=>Object.keys((e.plan&&e.plan.adj)||{}).forEach(d=>{const v=Number(e.plan.adj[d])||0;if(v<0)used[d]=(used[d]||0)+v;}));
-  return bankPlan({goal:ctx.goal,protein:ctx.protein,maxCut:ctx.maxCut,noDeficit:ctx.noDeficit,today,date,extra,method,used,skip:others.map(e=>e.date)});
+  const r=bankPlan({goal:ctx.goal,protein:ctx.protein,maxCut,noDeficit:ctx.noDeficit,today,date,extra,method,used,skip:others.map(e=>e.date),train,maxDays});
+  if(o.pct!==undefined&&o.pct!==null&&o.pct!=='')r.pct=Number(o.pct);if(o.days)r.nd=maxDays;if(ctx.noRoom&&!r.forced&&method!=='day'&&method!=='none'&&r.mode==='future')r.forced='goal';return r;
 }
 function findBankEventRow_(id){
   const sh=sheet_('App_Events'),rows=sh.getDataRange().getValues(),i=rows.findIndex((r,j)=>j>0&&String(r[0])===String(id)&&String(r[7])==='active');
@@ -2923,7 +2943,7 @@ function saveBankEvent(payload){
   const method=['spread','day','half','none'].includes(p.method)?p.method:'half';
   const others=listBankEvents_(settings).filter(e=>e.id!==id);
   if(others.some(e=>e.date===date))throw new Error('כבר יש אירוע בתאריך הזה');
-  const plan=date>today&&bankRemindDate_(date)>today?{mode:'pending',method:'later',adj:{}}:computeBankPlan_(ctx0,today,date,extraVal,method,others);
+  const opt={pct:p.pct,days:p.days,train:p.train};const plan=date>today&&bankRemindDate_(date)>today?{mode:'pending',method:'later',adj:{},pref:p.pref||null}:computeBankPlan_(ctx0,today,date,extraVal,method,others,opt);
   const stored=plan.mode==='pending'?'later':plan.method,note=String(p.note||'').trim().slice(0,120);
   let savedId=id;
   if(id){const f=findBankEventRow_(id);f.sh.getRange(f.row,2,1,9).setValues([[date,type,size,extraVal,stored,JSON.stringify(plan),'active',new Date(),note]]);}
@@ -2938,7 +2958,7 @@ function chooseBankMethod(payload){
   const all=listBankEvents_(settings),e=all.find(x=>x.id===String(p.id||''));if(!e)throw new Error('האירוע לא נמצא');
   if(e.date<today)throw new Error('האירוע כבר עבר');
   const method=['spread','day','half','none'].includes(p.method)?p.method:'half';
-  const plan=computeBankPlan_(bankContext_(settings),today,e.date,e.extra,method,all.filter(x=>x.id!==e.id));
+  const plan=computeBankPlan_(bankContext_(settings),today,e.date,e.extra,method,all.filter(x=>x.id!==e.id),{pct:p.pct,days:p.days,train:p.train});
   const f=findBankEventRow_(e.id);f.sh.getRange(f.row,6,1,2).setValues([[plan.method,JSON.stringify(plan)]]);
   const out=bankResponse_(p.viewDate);out.plan=plan;return out;
 }
@@ -2971,9 +2991,9 @@ function bankPlan(p){
   else if(p.noDeficit&&out.method!=='day'){out.forced='safety';out.method='day';}
   var spreadPart=out.method==='spread'?extra:out.method==='half'?r10(extra/2):0;
   if(spreadPart>0){
-    var list=[];for(var d=addD(p.date,-4);d<p.date;d=addD(d,1)){if(d>=p.today&&skip.indexOf(d)<0)list.push({date:d,cap:Math.max(0,maxCut-Math.max(0,-(Number(used[d])||0))),cut:0});}
+    var list=[];var nd=Math.max(1,Math.min(3,Number(p.maxDays)||3)),train=p.train||[];for(var d=addD(p.date,-nd);d<p.date;d=addD(d,1)){if(d>=p.today&&skip.indexOf(d)<0){var tr=train.indexOf(d)>=0,cp=tr?Math.floor(maxCut/20)*10:maxCut;list.push({date:d,tr:tr,cap:Math.max(0,cp-Math.max(0,-(Number(used[d])||0))),cut:0});}}
     var left=spreadPart;
-    for(var k=0;k<8&&left>0;k++){var open=list.filter(function(x){return x.cap-x.cut>=10;});if(!open.length)break;var share=Math.max(10,r10(left/open.length));
+    for(var k=0;k<16&&left>0;k++){var open=list.filter(function(x){return x.cap-x.cut>=10&&!x.tr;});if(!open.length)open=list.filter(function(x){return x.cap-x.cut>=10;});if(!open.length)break;var share=Math.max(10,r10(left/open.length));
       open.forEach(function(x){if(left<=0)return;var g=Math.min(share,x.cap-x.cut,left);g=Math.floor(g/10)*10;x.cut+=g;left-=g;});}
     list.forEach(function(x){if(x.cut>0){out.days.push({date:x.date,cut:x.cut});out.adj[x.date]=-x.cut;out.banked+=x.cut;}});
   }

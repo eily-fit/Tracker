@@ -90,7 +90,7 @@ window.fpAddToMeal=function(gid){
   if(!items.length)return;
   if(items.some(x=>x.pending))return toast('רגע, עוד שומר את הארוחה…',true);
   state.fpAddToGroup={t:Date.now(),gid,name:items[0].mealOption||items[0].name||'ארוחה',category:items[0].category,date:state.date};
-  state.addCategory=['בוקר','צהריים','ערב'].includes(items[0].category)?items[0].category:state.addCategory;
+  state.addCategory=(window.fpCats?fpCats():['בוקר','צהריים','ערב']).includes(items[0].category)?items[0].category:state.addCategory;
   showView('add');
 };
 async function joinToMeal(before,target){
@@ -150,9 +150,9 @@ window.fpAddModeRefresh=addMode;
 if(typeof showView==='function'){const oShow=showView;showView=function(v){if(v==='today'){state.fpAddToGroup=null;state.fpReplace=null}const r=oShow.apply(this,arguments);try{addMode()}catch(_){}return r}}
 
 /* ---------- each part of the day: count meals as one item, total at the bottom ---------- */
-const SEC_NAME={'בוקר':'בוקר','צהריים':'צהריים','ערב':'ערב','נוספים':'ביניים ונוספים'};
+const SEC_NAME={'בוקר':'בוקר','צהריים':'צהריים','שלישית':'ארוחה שלישית','ערב':'ערב','נוספים':'ביניים ונוספים'};
 function enhanceSections(){
-  const entries=state.data.entries||[],secOf=x=>['בוקר','צהריים','ערב'].includes(x.category)?x.category:'נוספים';
+  const entries=state.data.entries||[],secOf=x=>(window.fpCats?fpCats():['בוקר','צהריים','ערב']).includes(x.category)?x.category:'נוספים';
   document.querySelectorAll('#entries details.meal-sec').forEach(d=>{
     const c=d.dataset.sec,list=entries.filter(x=>secOf(x)===c);
     const add=d.querySelector('.add-to-sec');if(add)add.style.display=list.length?'none':'';
@@ -219,7 +219,7 @@ window.fpOpenMove=function(){
   const sel=new Set(ids.map(String)),groups={};
   (state.data.entries||[]).forEach(x=>{if(x.groupId&&['meal','dish'].includes(x.sourceType)&&!x.pending)(groups[x.groupId]||(groups[x.groupId]=[])).push(x)});
   const meals=Object.entries(groups).filter(([g,xs])=>!xs.every(x=>sel.has(String(x.id)))).map(([g,xs])=>({gid:g,name:xs[0].mealOption||xs[0].name||'ארוחה',cat:xs[0].category,kcal:Math.round(xs.reduce((n,x)=>n+(Number(x.calories)||0),0))}));
-  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpMoveSheet" onclick="if(event.target===this)this.remove()"><div class="sheet"><h3 style="margin:0 0 10px">להעביר ל…</h3>${meals.length?`<div class="muted" style="margin-top:4px">לתוך ארוחה:</div>${meals.map(m=>`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpMoveIntoMeal('${esc(m.gid)}')">${esc(m.name)} <small class="muted">· ${esc(m.cat)} · ${fmt(m.kcal)} קל׳</small></button>`).join('')}<div class="muted" style="margin-top:12px">או לחלק אחר ביום:</div>`:''}${[['בוקר','בוקר'],['צהריים','צהריים'],['ערב','ערב'],['נוסף','ביניים ונוספים']].map(([v,l])=>`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpMoveTo('${v}')">${l}</button>`).join('')}<button type="button" class="btn secondary full" style="margin-top:12px" onclick="document.getElementById('fpMoveSheet').remove()">ביטול</button></div></div>`);
+  document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpMoveSheet" onclick="if(event.target===this)this.remove()"><div class="sheet"><h3 style="margin:0 0 10px">להעביר ל…</h3>${meals.length?`<div class="muted" style="margin-top:4px">לתוך ארוחה:</div>${meals.map(m=>`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpMoveIntoMeal('${esc(m.gid)}')">${esc(m.name)} <small class="muted">· ${esc(m.cat)} · ${fmt(m.kcal)} קל׳</small></button>`).join('')}<div class="muted" style="margin-top:12px">או לחלק אחר ביום:</div>`:''}${(window.fpCats?fpCats():['בוקר','צהריים','ערב']).map(c=>[c,c==='שלישית'?'ארוחה שלישית':c]).concat([['נוסף','ביניים ונוספים']]).map(([v,l])=>`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpMoveTo('${v}')">${l}</button>`).join('')}<button type="button" class="btn secondary full" style="margin-top:12px" onclick="document.getElementById('fpMoveSheet').remove()">ביטול</button></div></div>`);
 };
 window.fpMoveTo=async function(cat){
   const ids=selectedIds();const s=$('fpMoveSheet');if(s)s.remove();
@@ -246,7 +246,7 @@ window.fpReplaceItem=function(){
   const x=(state.data.entries||[]).find(e=>String(e.id)===String(ids[0]));if(!x||x.pending)return toast('רגע, עוד שומר…',true);
   state.fpReplace={t:Date.now(),date:state.date,old:x};
   exitSelectMode();
-  state.addCategory=['בוקר','צהריים','ערב'].includes(x.category)?x.category:state.addCategory;
+  state.addCategory=(window.fpCats?fpCats():['בוקר','צהריים','ערב']).includes(x.category)?x.category:state.addCategory;
   showView('add');
   toast('חפש ובחר במה להחליף את ״'+x.name+'״');
 };

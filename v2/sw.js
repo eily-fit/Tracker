@@ -1,4 +1,4 @@
-const CACHE='fitpro2-2.24.0';
+const CACHE='fitpro2-2.25.0';
 const ASSETS=['./','index.html','server.js','fp2-core.js','fp2.js','fp2-nutrition.js','fp2-improvements.js','fp2-foods.js','fp2-meals.js','fp2-days.js','fp2-goal.js','fp2-photos.js','fp2-requests.js','fp2-fixes.js','fp2-progress.js','fp2-tour.js','fp2-week.js','fp2-gym.js','fp2-recipe.js','fp2-train.js','fp2-intro.js','fp2-add.js','fp2-units.js','fp2-setup.js','fp2-more.js','fp2-216.js','fp2-tours.js','fp2-218.js','fp2-anim.js','fp2-exlib.js','fp2-219-menu.js','fp2-219-onb.js','fp2-219-train.js','fp2-219-week.js','fp2-219-food.js','fp2-219-tour.js','fp2-220.js','fp2-221.js','fp2-222.js','fp2-223.js','fp2-224.js','manifest.webmanifest','../icon-180.png','../icon-192.png','../icon-512.png'];
 const FB='https://www.gstatic.com/firebasejs/';
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>Promise.all(ASSETS.map(async u=>{try{const r=await fetch(new Request(u,{cache:'reload'}));if(r.ok)await c.put(u,r)}catch(_){}}))).then(()=>self.skipWaiting())));

@@ -210,7 +210,7 @@ function screen(id){
       ${S.includes('bread')?`<div class="fpq-sub"><b>איזה לחם?</b><div class="onb-options" style="margin-top:6px">${FPM.P[0].sub.map(([k,l])=>tg('bread',k,l,'chip')).join('')}</div></div>`:''}
       <p class="muted" style="margin:10px 0 0">${d.diet==='all'?'טופו לא מופיע, כי סימנת שאתה אוכל הכל.':d.diet==='veg'?'רק מוצרים צמחוניים.':'רק מוצרים טבעוניים.'}</p></div>`}
   if(id==='meals')return `<h2>כמה ארוחות ביום?</h2><p class="onb-intro">אפשר לשנות בהגדרות, או לכבות ולבנות הכל לבד.</p><div class="onb-panel">
-    <div class="fpq-grid">${chc('meals','3','3 ארוחות','בוקר, צהריים, ערב')}${chc('meals','3f','3 ארוחות + קלוריות חופשיות',d.free+' קלוריות למה שבא לך')}${chc('meals','4','4 ארוחות','בוקר, צהריים, ביניים, ערב')}</div>
+    <div class="fpq-grid">${chc('meals','3','3 ארוחות','בוקר, צהריים, ערב')}${chc('meals','3f','3 ארוחות + קלוריות חופשיות',d.free+' קלוריות למה שבא לך')}${chc('meals','4','4 ארוחות','בוקר, צהריים, ארוחה שלישית, ערב')}</div>
     <label style="margin-top:14px">איך אתה מבשל?</label><div class="fpq-grid">${COOK.map(([k,l,s])=>chc('cook',k,l,s)).join('')}</div><p class="muted" style="margin:8px 0 0">זו רק ברירת מחדל. אפשר לשנות בכל מנה ובהגדרות.</p></div>`;
   if(id==='load')return `<div class="fpq-load"><div class="fpq-spin" aria-hidden="true"></div><h2>בונה את התוכנית שלך</h2><div class="fpq-ll" id="fpqLL"><div>מחשב כמה אתה שורף במנוחה</div><div>מנתח את הפעילות שלך</div><div>${guided(d)?'בונה תוכנית ריצה':'מכייל חלבון, פחמימות ושומן'}</div><div>בונה תפריט</div></div></div>`;
   if(id==='menu')return `<h2>התפריט הראשוני שלך</h2><div class="fpq-good">זה לא תפריט קבוע. זה תפריט ראשוני שהאפליקציה נותנת לך, כדי שיהיה לך ממה להתחיל. לכל ארוחה יש 4 אפשרויות, וכולן נשמרות אצלך בארוחות הקבועות. אפשר להחליף ארוחות ואת כל התפריט כל יום, מתי שרוצים.</div>${mealsHtml(Q.sets)}`;
@@ -286,12 +286,12 @@ async function finish(){
     if(d.shab===false)extra.shabbat_json=JSON.stringify({asked:'onboarding-no'});
     if(d.shab===true)extra.shabbat_json=JSON.stringify({want:true,pick:d.shabPick.length?d.shabPick:['fri','satB']});
     try{state.data=await call('saveSettings',extra)}catch(e){console.warn(e)}
-    if(Q.menu&&Q.sets){const meals=[];Q.sets.forEach(m=>{const cat=m.name==='ביניים'?'צהריים':m.name;m.opts.forEach((o,i)=>meals.push({category:cat,name:(m.name==='ביניים'?'ביניים: ':'')+o.t,ingredients:FPM.ingredients(o),first:i===m.sel}))});
+    if(Q.menu&&Q.sets){const meals=[];Q.sets.forEach(m=>{const cat=m.name==='ביניים'?(d.meals==='4'?'שלישית':'צהריים'):m.name;m.opts.forEach((o,i)=>meals.push({category:cat,name:(m.name==='ביניים'&&d.meals!=='4'?'ביניים: ':'')+o.t,ingredients:FPM.ingredients(o),first:i===m.sel}))});
       meals.sort((a,b)=>(b.first?1:0)-(a.first?1:0));
       state.data=await call('saveMenuMeals',{meals,hideBuiltin:true,date:state.date})}
     try{if(window.fpSetOilProfile)fpSetOilProfile(d.cook);else await call('saveSettings',{oil_profile:d.cook})}catch(_){}
     LS.set('fp2.calKinds',JSON.stringify(d.cal));if(d.cal[0])LS.set('fp2.calKind',d.cal[0]);
-    setProp('MEAL_MODE',d.meals);
+    setProp('MEAL_MODE',d.meals);setProp('MEALS4',d.meals==='4'?'1':'');
     setProp('MENU_PREFS',JSON.stringify({prod:FPM.prodSet(),bread:d.bread,milk:d.milk}));
     /* 2.23: with a weekly plan, the days you set decide how many of each a week */
     if(d.wplan!=='none'&&d.want.length){const dz=planDays(d),n={s:0,r:0,c:0};dz.forEach(x=>x.forEach(t=>n[t]++));if(d.want.includes('str')&&n.s)d.strGoal=n.s;if(d.want.includes('car')&&n.c)d.carGoal=n.c;if(d.want.includes('run')&&n.r&&guided(d))d.runsGoal=n.r}

@@ -53,7 +53,7 @@ function setLefts(a){const s=JSON.stringify(a.slice(-12));LS.set(LK,s);try{if(wi
 const FRAC=f=>{const r=Math.round((1-f)*100)/100;return r===0.5?'חצי':r===0.25?'רבע':r===0.75?'שלושה רבעים':Math.abs(r-2/3)<0.02?'שני שליש':Math.abs(r-1/3)<0.02?'שליש':Math.round(r*100)+'%'};
 window.fpLeftAdd=function(name,f,rest,cat){if(!name||!rest||!(Number(rest.calories)>0))return;const a=lefts();a.push({id:'l'+Date.now().toString(36),name,f,rest,cat:cat||'',t:Date.now()});setLefts(a)};
 window.fpLeftEat=function(id){const a=lefts(),x=a.find(v=>v.id===id);if(!x)return;
-  const h=new Date().getHours(),cat=h<11?'בוקר':h<17?'צהריים':'ערב';
+  const h=new Date().getHours(),cat=typeof defaultMealSection==='function'?defaultMealSection():h<11?'בוקר':h<17?'צהריים':'ערב';
   const item={date:state.date,category:cat,source:'השאר',noCache:true,name:x.name+' (השאר)',amount:1,baseQty:1,unit:'מנה',calories:Math.round(x.rest.calories),protein:n1(x.rest.protein),carbs:n1(x.rest.carbs),fat:n1(x.rest.fat)};
   try{optimisticMutate('saveFood',item,'');toast(`נוסף: ${item.name} · ${kc(item.calories)} קל׳`)}catch(e){return toast(e.message,true)}
   setLefts(a.filter(v=>v.id!==id))};

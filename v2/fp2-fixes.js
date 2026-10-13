@@ -122,7 +122,7 @@ saveEntryEdit=async function(){
 };
 
 /* ---------- the day opens closed ---------- */
-function collapseAll(){state.openSecs={'בוקר':false,'צהריים':false,'ערב':false,'נוספים':false};try{fpMealsCollapseAll()}catch(_){}}
+function collapseAll(){state.openSecs={'בוקר':false,'צהריים':false,'שלישית':false,'ערב':false,'נוספים':false};try{fpMealsCollapseAll()}catch(_){}}
 collapseAll();
 let lastView='';
 const oShow=showView;

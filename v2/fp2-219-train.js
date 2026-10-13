@@ -338,7 +338,7 @@ window.fpT={
   /* 2.23.1: "התחל ריצה" on the run tab: the clock and the GPS start right away, no target. Or fill in a run done without the app. */
   quick(type){V={step:0,pick:'own',own:{type:type||'קלה',km:'',min:''},quick:1};gpsStart()},
   fill(type){V={step:2,pick:'own',own:{type:type||'קלה',km:'',min:''},quick:1};runSheet()},
-  runFixed(x){const last=J('RUN_LOG',[]).filter(r=>(r.fid?r.fid===x.id:r.name===x.name)&&Array.isArray(r.tg)&&Array.isArray(r.sp)&&r.sp.length).pop();
+  runFixed(x){const last=J('RUN_LOG',[]).filter(r=>(r.fid?r.fid===x.id:r.name===x.name)&&Array.isArray(r.tg)&&Array.isArray(r.sp)&&r.sp.length&&!(window.fp224&&fp224.markR&&fp224.markR('r',r)==='weak')).pop();
     V={step:0,pick:'own',own:{type:x.type||'קלה',km:x.km?String(x.km):'',min:x.min?String(x.min):''},fixed:x.name,fid:x.id,tg:Array.isArray(x.tg)&&x.tg.length?x.tg.slice():null,rec:recFor(last)};runSheet()},
   recApply(fid,tg){const a=J('RUN_MY',[]),x=a.find(r=>r.id===fid);if(!x||!Array.isArray(tg))return;x.tg=tg.map(Number);const tot=x.tg.slice(0,Math.ceil(Number(x.km)||x.tg.length)).reduce((s,v)=>s+v,0);x.tm=mmss(tot);x.tmode='total';x.per=new Set(x.tg).size>1;setProp('RUN_MY',JSON.stringify(a));try{toast('היעדים לפעם הבאה נשמרו')}catch(_){}
     document.querySelectorAll('#fpTSheet button').forEach(b=>{if(/שמור יעדים לפעם הבאה/.test(b.textContent)){b.disabled=true;b.textContent='✓ נשמר'}})},

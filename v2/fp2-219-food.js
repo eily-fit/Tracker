@@ -76,7 +76,7 @@ function draw(){const a=B.a;FPM.use(a);const vp=FPM.products(),S=FPM.prodSet();
       ${has?'<button type="button" class="btn light full" style="margin-top:8px" onclick="fpBuildPart()">רק חלק: להשאיר ארוחות שאני אוהב</button>':''}
       <button type="button" class="btn light full" style="margin-top:8px" onclick="fpBuildSelf()">אני בונה לבד, עם ״תגביל אותי״</button>`);return}
   if(B.step==='part'){const ms=customMeals();
-    sheet(`<p class="muted" style="margin:0 0 8px">סמן את הארוחות שאתה רוצה להשאיר. השאר יתחלפו בחדשות.</p>${['בוקר','צהריים','ערב'].map(c=>{const l=ms.filter(m=>m.category===c);return l.length?`<b style="display:block;margin-top:8px">${c}</b>${l.map(m=>`<button type="button" class="fpF-meal${B.keep[m.id]?' on':''}" onclick="fpBuildKeep('${m.id}')"><span>${esc(m.title||m.option)}</span><span>${B.keep[m.id]?'✓ להשאיר':'להחליף'}</span></button>`).join('')}`:''}).join('')}
+    sheet(`<p class="muted" style="margin:0 0 8px">סמן את הארוחות שאתה רוצה להשאיר. השאר יתחלפו בחדשות.</p>${(window.fpCats?fpCats():['בוקר','צהריים','ערב']).map(c=>{const l=ms.filter(m=>m.category===c);return l.length?`<b style="display:block;margin-top:8px">${c==='שלישית'?'ארוחה שלישית':c}</b>${l.map(m=>`<button type="button" class="fpF-meal${B.keep[m.id]?' on':''}" onclick="fpBuildKeep('${m.id}')"><span>${esc(m.title||m.option)}</span><span>${B.keep[m.id]?'✓ להשאיר':'להחליף'}</span></button>`).join('')}`:''}).join('')}
       <div class="row" style="margin-top:10px"><button type="button" class="btn light" onclick="fpBuildBack()">› חזרה</button><button type="button" class="btn" onclick="fpBuildRun(true)">בנה את השאר</button></div>`);return}
   if(B.step==='busy')sheet('<div style="text-align:center;padding:30px 0"><div class="fpq-spin" style="margin:0 auto 12px;width:44px;height:44px;border-radius:50%;border:4px solid #2C3640;border-top-color:#D7F36B;animation:fpqsp 1s linear infinite"></div>בונה…</div>');
 }
@@ -89,7 +89,7 @@ window.fpBuildSelf=()=>{fpBuildClose();try{showView('meals')}catch(_){}openCusto
 window.fpBuildRun=async function(part){
   const a=B.a;setProp('MENU_PREFS',JSON.stringify({prod:a.prod,bread:a.bread,milk:a.milk}));B.step='busy';draw();
   try{FPM.use(a);FPM.reseed();const sets=FPM.sets(null);const ms=customMeals();const keep=part?ms.filter(m=>B.keep[m.id]):[];const remove=ms.filter(m=>!keep.includes(m)).map(m=>m.id);
-    const meals=[];sets.forEach(m=>{const cat=m.name==='ביניים'?'צהריים':m.name;const kept=keep.filter(k=>k.category===cat).length;m.opts.slice(0,Math.max(0,4-kept)).forEach(o=>meals.push({category:cat,name:(m.name==='ביניים'?'ביניים: ':'')+o.t,ingredients:FPM.ingredients(o)}))});
+    const meals=[];sets.forEach(m=>{const cat=m.name==='ביניים'?(a.meals==='4'?'שלישית':'צהריים'):m.name;const kept=keep.filter(k=>k.category===cat).length;m.opts.slice(0,Math.max(0,4-kept)).forEach(o=>meals.push({category:cat,name:(m.name==='ביניים'&&a.meals!=='4'?'ביניים: ':'')+o.t,ingredients:FPM.ingredients(o)}))});
     state.data=await call('saveMenuMeals',{meals,remove,date:state.date});try{saveCachedState()}catch(_){}try{renderAll()}catch(_){renderMeals()}fpBuildClose();
     toast(part?`נשארו ${keep.length} ארוחות, נוספו ${meals.length} חדשות`:`נבנה תפריט חדש: ${meals.length} ארוחות`)}
   catch(e){toast(e.message,true);if(B){B.step='like';draw()}}};

@@ -9,8 +9,10 @@ const LS={get(k){try{return localStorage.getItem(k)}catch(_){return null}},set(k
 const SOUNDS=[['chime','פעמונים רכים'],['marimba','מרימבה'],['softbell','צלצול עדין'],['beeps','3 צפצופים חזקים'],['whistle','שריקה'],['bell','פעמון'],['voice','קול'],['mine','ההקלטה שלי'],['none','שקט']];
 const PHRASES=['סט חדש!','יאללה, סט הבא!','המנוחה נגמרה, לעבודה!','קדימה, עוד סט!'];
 const STYLES=[['normal','רגיל',1,1],['radio','רדיו',0.92,0.75],['fast','אנרגטי',1.2,1.15]];
-const cfg=()=>{let c={};try{c=JSON.parse(LS.get('fp2.restSound')||'{}')||{}}catch(_){}c=Object.assign({kind:'chime',phrase:0,style:'normal',voice:'',vol:1},c);if(c.kind==='beepvoice')c.kind='voice';if(c.kind==='horn')c.kind='chime';return c};
-const setCfg=c=>LS.set('fp2.restSound',JSON.stringify(c));
+/* 2.25: a sound for each type: כוח (end of rest), ריצה (a part ends, pace change, lap), אירובי (next phase). Same settings, one per type. */
+let TY='s';const SFX=()=>TY==='s'?'':'.'+TY,RK=()=>'fp2.restRec'+SFX();
+const cfg=()=>{let c={};try{c=JSON.parse(LS.get('fp2.restSound'+SFX())||LS.get('fp2.restSound')||'{}')||{}}catch(_){}c=Object.assign({kind:'chime',phrase:0,style:'normal',voice:'',vol:1},c);if(c.kind==='beepvoice')c.kind='voice';if(c.kind==='horn')c.kind='chime';return c};
+const setCfg=c=>LS.set('fp2.restSound'+SFX(),JSON.stringify(c));
 
 function ctx(){try{if(!state.audioCtx){const AC=window.AudioContext||window.webkitAudioContext;if(AC)state.audioCtx=new AC()}const c=state.audioCtx;if(c&&c.state==='suspended'&&c.resume)c.resume();return c}catch(_){return null}}
 /* 2.23: the audio session.
@@ -73,13 +75,16 @@ let busyUntil=0;
 const inWorkout=()=>{try{return !!((document.getElementById('workouts')||{}).classList&&document.getElementById('workouts').classList.contains('active'))||!!(state.restEnd&&state.restEnd>Date.now())||!!document.getElementById('fpCarFloat')||!!document.querySelector('#fpTSheet .fpT-timer,#fpTSheet .fpTm')||!!document.getElementById('fpRestSet')&&document.getElementById('fpRestSet').open}catch(_){return false}};
 function unlockEl(){
   if(!inWorkout())return;
-  /* 2.24: the silent unlock plays as "ambient" (mixes with Spotify). Under "auto" an <audio> element becomes "playback" and iPhone paused the music every time the app opened on the workout screen. */
-  if(!recording)AS('ambient');
-  try{const a=el();if(Date.now()>busyUntil&&(a.paused||a.ended)){a.muted=false;a.src=SILENT;const p=a.play();if(p&&p.then)p.then(()=>{elReady=true}).catch(()=>{});else elReady=true}}catch(_){}
+  /* 2.25: the sound and the microphone stay exactly as in 2.23.1 ("auto"). Only the silent unlock plays as "transient" for a moment,
+     like the end-of-rest sound: Spotify dips for a split second and goes on, instead of stopping when the app opens on the workout screen. */
+  const due=Date.now()-(unlockEl.__t||0)>300000;
+  if(!recording&&due){AS('transient');setTimeout(()=>{if(!recording)idle()},1500)}
+  /* not on every tap: once, and again only after 5 minutes (each time as "transient") */
+  if(due)try{const a=el();if(Date.now()>busyUntil&&(a.paused||a.ended)){a.muted=false;a.src=SILENT;const p=a.play();unlockEl.__t=Date.now();if(p&&p.then)p.then(()=>{elReady=true}).catch(()=>{unlockEl.__t=0});else elReady=true}}catch(_){}
   try{const c=ctx();if(c&&!c.__fpUnlock){c.__fpUnlock=1;const b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0)}}catch(_){}
   const k=cfg().kind;if(k!=='voice'&&k!=='mine'&&k!=='none')wavFor(k).catch(()=>{})}
 document.addEventListener('touchend',unlockEl,{passive:true});document.addEventListener('click',unlockEl,true);document.addEventListener('keydown',unlockEl,true);
-document.addEventListener('visibilitychange',()=>{try{if(document.visibilityState==='visible'&&state.audioCtx&&state.audioCtx.state!=='running'){if(!recording)AS('ambient');state.audioCtx.resume()}}catch(_){}});
+document.addEventListener('visibilitychange',()=>{try{if(document.visibilityState==='visible'&&state.audioCtx&&state.audioCtx.state!=='running')state.audioCtx.resume()}catch(_){}});
 /* play a source on the element; if it did not really start within a moment, run the fallback */
 function playSrc(src,len,fallback){const a=el();let fell=false;const fb=()=>{if(fell)return;fell=true;busyUntil=0;try{fallback&&fallback()}catch(_){}};
   try{busyUntil=Date.now()+Math.max(1500,(len||2)*1000+800);a.muted=false;a.volume=1;a.src=src;try{a.currentTime=0}catch(_){}const p=a.play();if(p&&p.catch)p.catch(fb);
@@ -94,13 +99,13 @@ function speak(text,quiet){try{if(!('speechSynthesis' in window))return false;co
 /* your own recording. 2.23: it is kept as a clean WAV (trimmed silence, even loudness), which every iPhone plays,
    and played from a blob link on the same element as the other sounds. */
 let mineUrl='',mineSrc='';
-function mineBlob(){const data=LS.get('fp2.restRec');if(!data)return '';if(mineSrc===data&&mineUrl)return mineUrl;
+function mineBlob(d){const data=d||LS.get(RK());if(!data)return '';if(mineSrc===data&&mineUrl)return mineUrl;
   try{const [h,b64]=data.split(','),type=(h.match(/data:([^;]+)/)||[])[1]||'audio/wav',bin=atob(b64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
     if(mineUrl)URL.revokeObjectURL(mineUrl);mineUrl=URL.createObjectURL(new Blob([u8],{type}));mineSrc=data;return mineUrl}catch(_){return data}}
-function playMine(){const data=LS.get('fp2.restRec');if(!data)return playEl('beeps');playSrc(mineBlob(),4,playMineWA)}
-async function playMineWA(){const data=LS.get('fp2.restRec');if(!data)return webTones('beeps');const c=ctx();if(!c)return;
+function playMine(){const data=LS.get(RK());if(!data)return playEl('beeps');playSrc(mineBlob(data),4,()=>playMineWA(data))}
+async function playMineWA(d){const data=d||LS.get(RK());if(!data)return webTones('beeps');const c=ctx();if(!c)return;
   try{if(c.state!=='running'&&c.resume)await c.resume()}catch(_){}
-  try{const b=await fetch(mineBlob()||data).then(r=>r.arrayBuffer());const buf=await new Promise((ok,no)=>c.decodeAudioData(b,ok,no));const s=c.createBufferSource(),g=c.createGain();g.gain.value=Math.max(0.1,Math.min(1,cfg().vol))*1.6;s.buffer=buf;s.connect(g);g.connect(out(c));s.start()}catch(e){webTones('beeps')}}
+  try{const b=await fetch(mineBlob(data)||data).then(r=>r.arrayBuffer());const buf=await new Promise((ok,no)=>c.decodeAudioData(b,ok,no));const s=c.createBufferSource(),g=c.createGain();g.gain.value=Math.max(0.1,Math.min(1,cfg().vol))*1.6;s.buffer=buf;s.connect(g);g.connect(out(c));s.start()}catch(e){webTones('beeps')}}
 /* clean a recording: decode → mono → cut the silence at the start and the end → low cut (rumble) → even loudness → 22 kHz WAV */
 async function cleanRec(arrayBuffer){const AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!AC||!OAC)throw new Error('no audio');
   const dc=state.audioCtx||new AC();const src=await new Promise((ok,no)=>{const r=dc.decodeAudioData(arrayBuffer.slice(0),ok,no);if(r&&r.then)r.then(ok,no)});
@@ -129,9 +134,10 @@ function restSound(kindOverride){
   /* the web sound when it runs (it mixes best with music); otherwise the element */
   const ac=state.audioCtx;if(ac&&ac.state==='running'&&!IPAD)playTones(kind,ac);else playEl(kind);
 }
-window.fpRestSound=restSound;
+window.fpRestSound=(t)=>{if(typeof t!=='string')return restSound();const o=TY;TY=t;try{restSound()}finally{TY=o}};
+window.fpRestSoundFor=t=>window.fpRestSound(t||'s');
 /* the end of rest calls beep(): play the chosen sound instead */
-if(typeof beep==='function'){beep=function(){restSound()}}
+if(typeof beep==='function'){beep=function(){window.fpRestSound('s')}}
 /* iPhone allows sound and speech later only if they were started once from a tap: do it silently when the rest starts */
 let primed=false;
 if(typeof startRestTimer==='function'){const o=startRestTimer;startRestTimer=function(){duck(false);const r=o.apply(this,arguments);try{ctx();const k=cfg().kind;if(!primed&&(k==='voice'||k==='beepvoice')){primed=true;speak(' ',true)}}catch(_){}wake(true);return r}}
@@ -169,29 +175,33 @@ const waveHtml=k=>`<span class="w" aria-hidden="true">${(WAVE[k]||[]).map(h=>`<i
 const IC={voice:'<path d="M4 5h16v11H9l-5 4z"/>',mine:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',none:'<path d="M5 9v6h4l5 4V5L9 9z"/><path d="M17 9l4 6M21 9l-4 6"/>'};
 const svgI=k=>`<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
 document.head.insertAdjacentHTML('beforeend',`<style id="fp223snd">
-#fpRestSet .lbl{font-size:11.5px;color:#6B7682;margin:12px 2px 6px;letter-spacing:.02em}
-#fpRestSet .snd{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-#fpRestSet .snd button{font:inherit;text-align:right;background:#1F262E;border:1px solid var(--line,#2C3640);border-radius:14px;padding:10px;color:var(--muted,#A3ADB8);cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:64px}
-#fpRestSet .snd button b{color:var(--ink,#F2F5F7);font-size:13.5px;font-weight:700}
-#fpRestSet .snd button.on{border-color:var(--brand,#D7F36B);background:#1C2414;color:var(--brand,#D7F36B)}
-#fpRestSet .snd button.on b{color:var(--brand,#D7F36B)}
-#fpRestSet .snd svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#fpRestSet .w{display:flex;gap:2px;align-items:center;height:22px}#fpRestSet .w i{display:block;width:3px;border-radius:2px;background:currentColor}
-#fpRestSet .panel{background:#171C22;border:1px solid var(--line,#2C3640);border-radius:14px;padding:10px 12px;margin-top:8px}
-#fpRestSet .quiet{font:inherit;font-size:13px;border:1px solid var(--line,#2C3640);background:#1F262E;color:var(--muted,#A3ADB8);border-radius:99px;padding:6px 12px;margin-top:10px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
-#fpRestSet .quiet.on{background:#26301A;color:var(--ink,#F2F5F7);border-color:#4B5A2A}#fpRestSet .quiet svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
-#fpRestSet .recb{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;margin:6px auto;border:3px solid #E5484D;background:none;cursor:pointer}
-#fpRestSet .recb i{display:block;width:26px;height:26px;border-radius:50%;background:#E5484D;transition:border-radius .2s}
-#fpRestSet .recb.on i{border-radius:6px}
-#fpRestSet .rlive{text-align:center;font-variant-numeric:tabular-nums}#fpRestSet .rlive b{font-size:22px}
-#fpRestSet .rbar{height:8px;background:#2C3640;border-radius:6px;overflow:hidden;margin:8px 0 4px}#fpRestSet .rbar i{display:block;height:100%;width:0;background:#E5484D;transition:width .2s linear}
+.fpRS .lbl{font-size:11.5px;color:#6B7682;margin:12px 2px 6px;letter-spacing:.02em}
+.fpRS .snd{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.fpRS .snd button{font:inherit;text-align:right;background:#1F262E;border:1px solid var(--line,#2C3640);border-radius:14px;padding:10px;color:var(--muted,#A3ADB8);cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:64px}
+.fpRS .snd button b{color:var(--ink,#F2F5F7);font-size:13.5px;font-weight:700}
+.fpRS .snd button.on{border-color:var(--brand,#D7F36B);background:#1C2414;color:var(--brand,#D7F36B)}
+.fpRS .snd button.on b{color:var(--brand,#D7F36B)}
+.fpRS .snd svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fpRS .w{display:flex;gap:2px;align-items:center;height:22px}.fpRS .w i{display:block;width:3px;border-radius:2px;background:currentColor}
+.fpRS .panel{background:#171C22;border:1px solid var(--line,#2C3640);border-radius:14px;padding:10px 12px;margin-top:8px}
+.fpRS .quiet{font:inherit;font-size:13px;border:1px solid var(--line,#2C3640);background:#1F262E;color:var(--muted,#A3ADB8);border-radius:99px;padding:6px 12px;margin-top:10px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.fpRS .quiet.on{background:#26301A;color:var(--ink,#F2F5F7);border-color:#4B5A2A}.fpRS .quiet svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.fpRS .recb{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;margin:6px auto;border:3px solid #E5484D;background:none;cursor:pointer}
+.fpRS .recb i{display:block;width:26px;height:26px;border-radius:50%;background:#E5484D;transition:border-radius .2s}
+.fpRS .recb.on i{border-radius:6px}
+.fpRS .rlive{text-align:center;font-variant-numeric:tabular-nums}.fpRS .rlive b{font-size:22px}
+.fpRS .rbar{height:8px;background:#2C3640;border-radius:6px;overflow:hidden;margin:8px 0 4px}.fpRS .rbar i{display:block;height:100%;width:0;background:#E5484D;transition:width .2s linear}
 </style>`);
 function recLive(){const e=Math.min(REC_MAX,(Date.now()-recT0)/1000),t=$('fpRecLiveT'),f=$('fpRecLiveF'),l=$('fpRecLiveL');if(t)t.textContent='0:0'+Math.floor(e);if(f)f.style.width=(e/REC_MAX*100)+'%';if(l)l.textContent='נשארו '+Math.max(0,Math.ceil(REC_MAX-e))+' שנ׳'}
+const TYN={s:'צליל סוף מנוחה',r:'צליל בריצה',c:'צליל באירובי'},TYW={s:'',r:'נשמע בסוף כל חלק, בשינוי קצב ובסיבוב.',c:'נשמע במעבר בין שלבים.'};
+/* the copy inside Settings → אימונים → כוח / ריצה / אירובי: while it is open, every button works on that type */
+window.fpRestOpen=t=>{TY=t||'s';const o=$('fpRestSet');if(o&&TY!=='s'){o.innerHTML='<summary>צליל סוף מנוחה</summary>'}renderSet()};
+setInterval(()=>{if(TY!=='s'&&!$('fpRestSet_'+TY)){TY='s';try{renderSet()}catch(_){}}},700);
 function renderSet(){
-  const sec=$('settings');if(!sec||!state.data)return;let box=$('fpRestSet');
-  if(!box){box=document.createElement('details');box.className='settings-section';box.id='fpRestSet';const a=$('fpWeekSet')||$('calendarSettings')||$('notificationSettings');if(a)a.insertAdjacentElement('afterend',box);else{const h=sec.querySelector('h2');if(!h)return;h.insertAdjacentElement('afterend',box)}}
-  const open=box.open,c=cfg(),vs=heVoices(),hasRec=!!LS.get('fp2.restRec'),tones=SOUNDS.filter(s=>WAVE[s[0]]);
-  let h=`<summary>צליל סוף מנוחה</summary><div class="settings-body">
+  const sec=$('settings');if(!sec||!state.data)return;const copy=$('fpRestSet_'+TY);let box=copy||(TY==='s'?$('fpRestSet'):null);if(!box&&TY!=='s')return;
+  if(!box){box=document.createElement('details');box.className='settings-section fpRS';box.id='fpRestSet';const a=$('fpWeekSet')||$('calendarSettings')||$('notificationSettings');if(a)a.insertAdjacentElement('afterend',box);else{const h=sec.querySelector('h2');if(!h)return;h.insertAdjacentElement('afterend',box)}}
+  const open=box.open,c=cfg(),vs=heVoices(),hasRec=!!LS.get(RK()),tones=SOUNDS.filter(s=>WAVE[s[0]]);
+  let h=`<summary>${TYN[TY]}</summary><div class="settings-body">${TYW[TY]?`<p class="muted" style="margin:0 0 6px;font-size:12.5px">${TYW[TY]}</p>`:''}
     <div class="lbl">צלילים · לחיצה משמיעה ובוחרת</div>
     <div class="snd">${tones.map(([k,l])=>`<button type="button" class="${c.kind===k?'on':''}" aria-pressed="${c.kind===k}" onclick="fpRestPick('${k}')">${waveHtml(k)}<b>${l}</b></button>`).join('')}</div>
     <div class="lbl">משהו אישי</div>
@@ -211,7 +221,7 @@ function renderSet(){
   box.innerHTML=h;box.open=open;if(rec)recLive();
 }
 window.fpRestSet=(k,v,quiet)=>{const c=cfg();c[k]=v;setCfg(c);if(!quiet)renderSet()};
-window.fpRestPick=k=>{const c=cfg();c.kind=k;setCfg(c);renderSet();if(k!=='none'&&!(k==='mine'&&!LS.get('fp2.restRec'))){ctx();restSound()}};
+window.fpRestPick=k=>{const c=cfg();c.kind=k;setCfg(c);renderSet();if(k!=='none'&&!(k==='mine'&&!LS.get(RK()))){ctx();restSound()}};
 window.fpRestTest=()=>{ctx();restSound()};
 /* 2.17: every step says what failed, and a recorder is made with the first format that works */
 window.fpMakeRecorder=function(st,extra){const tries=[];['audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm','audio/ogg'].forEach(t=>{try{if(window.MediaRecorder&&(!MediaRecorder.isTypeSupported||MediaRecorder.isTypeSupported(t)))tries.push(Object.assign({mimeType:t},extra||{}))}catch(_){}});tries.push(extra||undefined);tries.push(undefined);
@@ -221,11 +231,11 @@ window.fpRecBar={t:0,start(total){this.stop();const t0=Date.now(),mm=x=>Math.flo
   document.body.insertAdjacentHTML('beforeend',`<div id="fpRecBar" role="status" style="position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:2147482000;background:#171C22;border:1px solid #E5484D;border-radius:14px;padding:10px 12px;direction:rtl;color:#F2F5F7;font:600 14px/1.3 -apple-system,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.45)"><div style="display:flex;justify-content:space-between;gap:8px"><span>מקליט… <span id="fpRecBarL"></span></span><span id="fpRecBarT" dir="ltr">0:00 / ${mm(total)}</span></div><div style="height:8px;background:#2C3640;border-radius:6px;overflow:hidden;margin-top:7px"><i id="fpRecBarF" style="display:block;height:100%;width:0;background:#E5484D;transition:width .2s linear"></i></div></div>`);
   this.t=setInterval(()=>{const e=(Date.now()-t0)/1000,f=$('fpRecBarF'),tx=$('fpRecBarT'),l=$('fpRecBarL');if(!f){clearInterval(this.t);return}f.style.width=Math.min(100,e/total*100)+'%';if(tx)tx.textContent=mm(Math.min(e,total))+' / '+mm(total);if(l)l.textContent='נשארו '+Math.max(0,Math.ceil(total-e))+' שנ׳'},200)},
  stop(){clearInterval(this.t);const b=$('fpRecBar');if(b)b.remove()}};
-async function keepRec(blob,from){try{const c=await cleanRec(await blob.arrayBuffer());LS.set('fp2.restRec',c.data);mineUrl='';mineSrc='';toast(from==='file'?'הקול נשמר':'ההקלטה נשמרה ('+(Math.round(c.sec*10)/10)+' שנ׳)')}
+async function keepRec(blob,from){const key=RK();try{const c=await cleanRec(await blob.arrayBuffer());LS.set(key,c.data);mineUrl='';mineSrc='';toast(from==='file'?'הקול נשמר':'ההקלטה נשמרה ('+(Math.round(c.sec*10)/10)+' שנ׳)')}
   catch(e){if(e&&e.fpMsg){toast(e.fpMsg,true);return}
     /* could not clean it: keep it as it is, if it is small enough */
     if(blob.size>600000){toast(from==='file'?'הקובץ גדול מדי. קובץ של כמה שניות':'ההקלטה ארוכה מדי',true);return}
-    const d=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(blob)});LS.set('fp2.restRec',d);mineUrl='';mineSrc='';toast('נשמר')}
+    const d=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(blob)});LS.set(key,d);mineUrl='';mineSrc='';toast('נשמר')}
   renderSet()}
 window.fpRestRec=async()=>{
   if(rec){try{rec.stop()}catch(_){}return}

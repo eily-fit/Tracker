@@ -221,14 +221,14 @@ function showUnplanned(e){
   const c=bankCtx(),t=todayISO(),when=e.date===t?'היום':e.date===addD(t,1)?'מחר':'ביום '+NAMES[new Date(e.date+'T12:00:00').getDay()]+' '+displayDate(e.date);
   const range=c.saveRange||[10,15],lo=range[0],hi=range[1],opts=[...new Set([lo,Math.round((lo+hi)/2),hi])];
   if(UP.pct==null||opts.indexOf(UP.pct)<0)UP.pct=c.savePct&&opts.indexOf(c.savePct)>=0?c.savePct:hi;
-  const others=bankEvents().filter(x=>x.id!==e.id),cut=Math.round((c.goal||2200)*UP.pct/1000)*10;
+  const others=bankEvents().filter(x=>x.id!==e.id),cut=Math.round((c.maint||c.goal||2200)*UP.pct/1000)*10;
   const p=bankPlanFor(e.date,e.extra||700,'spread',others),days=p.days.length;
   const daysTxt=days?(days===1?'יום אחד':days+' ימים'):'';
   const opt=(m,title,sub,rec)=>`<button type="button" class="remind-opt${rec?' rec':''}" onclick="fpUnplanned('${e.id}','${m}')"><b>${title}${rec?' (מומלץ)':''}</b><span>${sub}</span></button>`;
   const canSave=!c.noDeficit&&days>0;
   document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fpUnplanned"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">אירוע חדש מהיומן: ${esc(e.label)}</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpUnplanned').remove();setTimeout(()=>window.fpUnplannedCheck&&fpUnplannedCheck(),600)">✕</button></div>
     <p class="muted" style="margin:0 0 10px">${esc(when)} · איך להתכונן? עד שתבחר, היעדים לא משתנים.</p>
-    ${canSave?`<div class="field" style="margin:0 0 4px"><label>אם חוסכים, עד כמה ביום?</label><div class="meal-tabs" style="flex-wrap:wrap">${opts.map(v=>`<button type="button" class="chip${UP.pct===v?' active':''}" onclick="fpUnplannedPct('${e.id}',${v})">${v}% · <bdi>${kc(Math.round((c.goal||2200)*v/1000)*10)}</bdi> קל׳</button>`).join('')}</div></div>`:''}
+    ${canSave?`<div class="field" style="margin:0 0 4px"><label>אם חוסכים, עד כמה ביום?</label><div class="meal-tabs" style="flex-wrap:wrap">${opts.map(v=>`<button type="button" class="chip${UP.pct===v?' active':''}" onclick="fpUnplannedPct('${e.id}',${v})">${v}% · <bdi>${kc(Math.round((c.maint||c.goal||2200)*v/1000)*10)}</bdi> קל׳</button>`).join('')}</div></div>`:''}
     ${canSave?opt('spread','לחסוך כל יום עד האירוע',`${daysTxt}, עד ${kc(cut)} קל׳ פחות ביום. מה שנחסך מחכה לך ביום האירוע.`,true):''}
     ${opt('day','רק ביום עצמו','שאר הימים רגילים. ביום האירוע אוכלים קל וחלבוני עד האירוע.',!canSave)}
     ${opt('none','ללא שינוי','היעדים לא משתנים. אם תעבור ביום האירוע, זה מתאזן למחרת.')}
@@ -288,7 +288,7 @@ if(typeof renderTotals==='function'){const o2=renderTotals;renderTotals=function
 /* ---------- how much to save per day for an event ---------- */
 window.fpSetSavePct=async function(v){
   try{await call('saveSettings',{event_cut_pct:v});
-    const c=state.data.bank&&state.data.bank.ctx;if(c){c.savePct=v;c.saveOff=Number(v)===0;c.maxCut=c.noDeficit?0:Math.max(0,Math.min(Math.round(c.goal*v/1000)*10,c.goal-c.minDay))}
+    const c=state.data.bank&&state.data.bank.ctx;if(c){c.savePct=v;c.saveOff=Number(v)===0;c.maxCut=c.noDeficit||c.noRoom?0:Math.max(0,Math.min(Math.floor((c.maint||c.goal)*v/1000)*10,c.room!=null?Math.floor(c.room/10)*10:1e9,c.goal-c.minDay))}
     if(state.data.settings)state.data.settings.event_cut_pct=v;
     if(state.ev)renderEventSheet();
   }catch(e){toast(e.message,true)}
