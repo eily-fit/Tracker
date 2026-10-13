@@ -18,7 +18,7 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .fp-portion .row2{display:flex;gap:8px;align-items:center;margin-top:8px}
 .fp-portion .row2 input{width:110px}
 .fp-more-opt{display:flex;gap:12px;align-items:center;width:100%;text-align:right;background:var(--card,#171C22);border:1px solid var(--line,#2A333C);border-radius:14px;padding:13px;margin-top:8px;color:inherit;font:inherit}
-.fp-more-opt .ic{font-size:22px;flex:none;width:30px;text-align:center}.fp-more-opt span{display:block;color:var(--muted,#93A09A);font-size:13px;margin-top:2px}
+.fp-more-opt .ic{font-size:22px;flex:none;width:40px;height:40px;border-radius:12px;background:#1F262E;border:1px solid var(--line,#2A333C);display:grid!important;place-items:center;color:var(--brand,#D7F36B)!important;margin:0!important}.fp-more-opt span{display:block;color:var(--muted,#93A09A);font-size:13px;margin-top:2px}
 .fp-meal-tools{display:flex;flex-wrap:wrap;gap:6px}
 .fp-step{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line,#2A333C);border-radius:10px;padding:2px}
 .fp-step button{width:30px;height:30px;border:0;border-radius:8px;background:var(--card,#171C22);color:inherit;font:inherit;font-size:18px}
@@ -44,14 +44,16 @@ function sheet(id,title,body){
 }
 /* 2.23.1: a small "AI" mark on the ways that use AI */
 const opt=(ic,t,sub,fn,ai)=>`<button type="button" class="fp-more-opt" onclick="${fn}"><span class="ic">${ic}</span><div><b>${t}${ai?' <i style="font-style:normal;font-size:10.5px;font-weight:800;color:#14190a;background:#D7F36B;border-radius:6px;padding:1px 6px;vertical-align:middle;margin-inline-start:4px">AI</i>':''}</b><span>${sub}</span></div></button>`;
+/* 2.24: a thin line icon for every way (camera, gallery, barcode, recipe, link, typing the number) */
+const MI={cam:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10.5H4z"/><circle cx="12" cy="13.3" r="3.4"/></svg>',gal:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/></svg>',bar:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6v12M7 6v12M9.5 6v12M13 6v12M15 6v12M18 6v12M20 6v12"/><path d="M3 4.5h3M18 4.5h3M3 19.5h3M18 19.5h3" opacity=".6"/></svg>',rec:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h9l3 3v14H6z"/><path d="M15 3.5v3h3M9 10h6M9 13h6M9 16h4"/></svg>',lnk:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg>',key:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M7 9h.01M10 9h.01M13 9h.01M16 9h.01M7 12h.01M10 12h.01M13 12h.01M16 12h.01M8 15.5h8"/></svg>'};
 window.fpAddMore=function(){
   sheet('fpAddMoreSheet','עוד דרכים להוסיף',
-    opt('','לצלם את הארוחה','ה-AI מזהה מה בצלחת וכמה','fpMore(\'photo\')',1)+
-    opt('','תמונה של הארוחה מהגלריה','תמונה שכבר צילמת','fpMore(\'photoGal\')',1)+
-    opt('','לסרוק ברקוד','מוצר ארוז: הערכים מגיעים לבד','fpMore(\'barcode\')')+
-    opt('','תמונה של מתכון או רשימת מרכיבים','ה-AI קורא את המרכיבים ומחשב','fpMore(\'recipePhoto\')',1)+
-    opt('','מתכון מקישור','מדביקים קישור לאתר מתכונים','fpMore(\'link\')',1)+
-    opt('','להקליד מספר ברקוד','אם הסריקה לא עובדת','fpMore(\'barcodeType\')'));
+    opt(MI.cam,'לצלם את הארוחה','ה-AI מזהה מה בצלחת וכמה','fpMore(\'photo\')',1)+
+    opt(MI.gal,'תמונה של הארוחה מהגלריה','תמונה שכבר צילמת','fpMore(\'photoGal\')',1)+
+    opt(MI.bar,'לסרוק ברקוד','מוצר ארוז: הערכים מגיעים לבד','fpMore(\'barcode\')')+
+    opt(MI.rec,'תמונה של מתכון או רשימת מרכיבים','ה-AI קורא את המרכיבים ומחשב','fpMore(\'recipePhoto\')',1)+
+    opt(MI.lnk,'מתכון מקישור','מדביקים קישור לאתר מתכונים','fpMore(\'link\')',1)+
+    opt(MI.key,'להקליד מספר ברקוד','אם הסריקה לא עובדת','fpMore(\'barcodeType\')'));
 };
 window.fpMore=function(k){
   const s=$('fpAddMoreSheet');if(s)s.remove();

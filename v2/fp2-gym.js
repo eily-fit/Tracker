@@ -73,11 +73,13 @@ let busyUntil=0;
 const inWorkout=()=>{try{return !!((document.getElementById('workouts')||{}).classList&&document.getElementById('workouts').classList.contains('active'))||!!(state.restEnd&&state.restEnd>Date.now())||!!document.getElementById('fpCarFloat')||!!document.querySelector('#fpTSheet .fpT-timer,#fpTSheet .fpTm')||!!document.getElementById('fpRestSet')&&document.getElementById('fpRestSet').open}catch(_){return false}};
 function unlockEl(){
   if(!inWorkout())return;
+  /* 2.24: the silent unlock plays as "ambient" (mixes with Spotify). Under "auto" an <audio> element becomes "playback" and iPhone paused the music every time the app opened on the workout screen. */
+  if(!recording)AS('ambient');
   try{const a=el();if(Date.now()>busyUntil&&(a.paused||a.ended)){a.muted=false;a.src=SILENT;const p=a.play();if(p&&p.then)p.then(()=>{elReady=true}).catch(()=>{});else elReady=true}}catch(_){}
   try{const c=ctx();if(c&&!c.__fpUnlock){c.__fpUnlock=1;const b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0)}}catch(_){}
   const k=cfg().kind;if(k!=='voice'&&k!=='mine'&&k!=='none')wavFor(k).catch(()=>{})}
 document.addEventListener('touchend',unlockEl,{passive:true});document.addEventListener('click',unlockEl,true);document.addEventListener('keydown',unlockEl,true);
-document.addEventListener('visibilitychange',()=>{try{if(document.visibilityState==='visible'&&state.audioCtx&&state.audioCtx.state!=='running')state.audioCtx.resume()}catch(_){}});
+document.addEventListener('visibilitychange',()=>{try{if(document.visibilityState==='visible'&&state.audioCtx&&state.audioCtx.state!=='running'){if(!recording)AS('ambient');state.audioCtx.resume()}}catch(_){}});
 /* play a source on the element; if it did not really start within a moment, run the fallback */
 function playSrc(src,len,fallback){const a=el();let fell=false;const fb=()=>{if(fell)return;fell=true;busyUntil=0;try{fallback&&fallback()}catch(_){}};
   try{busyUntil=Date.now()+Math.max(1500,(len||2)*1000+800);a.muted=false;a.volume=1;a.src=src;try{a.currentTime=0}catch(_){}const p=a.play();if(p&&p.catch)p.catch(fb);

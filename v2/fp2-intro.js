@@ -80,6 +80,8 @@ function place(){
   const [b0,b1,b2,b3]=root.querySelectorAll('.fpI-blk'),ring=root.querySelector('.fpI-ring'),card=root.querySelector('.fpI-card');
   const set=(e,l,t,w,h)=>{e.style.left=l+'px';e.style.top=t+'px';e.style.width=Math.max(0,w)+'px';e.style.height=Math.max(0,h)+'px'};
   const ch=card.offsetHeight,bot=innerHeight-NAVH()-8;
+  /* 2.24: the target is not found yet (the screen is still drawing): keep the dim as it was, so it does not go fully dark and back every step */
+  if(!r&&s&&s.t&&b0.style.width!==''&&ST[I]===s){return}
   if(!r){set(b0,0,0,innerWidth,innerHeight);[b1,b2,b3].forEach(x=>set(x,0,0,0,0));ring.style.display='none';card.style.top=Math.max(12,(bot-ch)/2)+'px';return}
   set(b0,0,0,innerWidth,r.t);set(b1,0,r.b,innerWidth,innerHeight-r.b);set(b2,0,r.t,r.l,r.b-r.t);set(b3,r.r,r.t,innerWidth-r.r,r.b-r.t);
   ring.style.display='block';ring.className='fpI-ring '+(s.kind==='s'?'s':'b');set(ring,r.l,r.t,r.r-r.l,r.b-r.t);
@@ -109,6 +111,7 @@ function go(n){
   try{if(s.view&&!(q('#'+s.view)||{}).classList?.contains('active'))showView(s.view)}catch(_){}
   try{window.scrollTo(0,0)}catch(_){}
   if(s.before)try{s.before()}catch(_){}
+  try{if(s.t){const e=s.t();if(e&&vis(e)){tgt=e;if(scrolled!==I){scrolled=I;e.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}}}catch(_){}
   /* 2.23.1 (sketch B): the card does not fade out and back in; it slides to its new place (CSS transition on top) */
   draw();lastRect='';place();
   {const t0=performance.now();const follow=()=>{if(!root||ST[I]!==s)return;if(tgt&&vis(tgt))place();if(performance.now()-t0<900)requestAnimationFrame(follow)};requestAnimationFrame(follow)}

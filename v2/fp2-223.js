@@ -323,6 +323,8 @@ function badgeDraw(){const n=BADGE.sug+BADGE.req,b=document.querySelector('nav b
   const sg=document.querySelector('#fpSugSet>summary');if(sg){let e=sg.querySelector('.fpBadge');if(!BADGE.sug){if(e)e.remove()}else{if(!e){sg.insertAdjacentHTML('beforeend',' <span class="fpBadge in"></span>');e=sg.querySelector('.fpBadge')}e.textContent=BADGE.sug}}}
 document.head.insertAdjacentHTML('beforeend','<style>.fpBadge{position:absolute;top:-6px;right:-14px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#FF5A4F;color:#fff;font-size:11px;font-weight:800;display:inline-grid;place-items:center;line-height:1}.fpBadge.in{position:static;vertical-align:middle}</style>');
 setInterval(()=>{if(typeof state!=='undefined'&&state.data)badgeLoad()},10*60*1000);
+/* 2.24: the 224 module refreshes these right after a send / an approval, and when you open a screen */
+window.fp223.badgeLoad=()=>badgeLoad();window.fp223.reqInbox=()=>reqInbox();
 
 /* ---------- hooks ---------- */
 if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{renderSugSet();badgeDraw()}catch(e){console.error(e)}try{renderChk()}catch(e){console.error(e)}return r}}

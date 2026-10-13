@@ -50,6 +50,7 @@ const P={
   gym:'<path d="M3 21V9l9-5 9 5v12"/><path d="M8 14h8M9 12v4M15 12v4"/>',house:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
   free:'<path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/>',mach:'<rect x="4" y="3" width="6" height="18" rx="1.5"/><path d="M10 7h8M10 12h6M18 5v4"/><path d="M14 17h6"/>',
   bw:'<circle cx="12" cy="4.5" r="2"/><path d="M12 7v6M7 10l5-2 5 2M9 21l3-8 3 8"/>',
+  r_track:'<rect x="2.5" y="6" width="19" height="12" rx="6"/><rect x="6.5" y="9.5" width="11" height="5" rx="2.5"/>',
   r_easy:'<path d="M4 15.5c0-2 1.5-3 3.5-3H10l2-4.5 3 1 .5 3 3.5 1c1 .3 1.5 1 1.5 2v1.5H4z"/><path d="M4 17.5h16"/>',
   r_long:'<path d="M9 21l2-18M15 21l-2-18"/><path d="M12 7v1.5M12 12v1.5M12 17v1.5"/>',
   r_int:'<circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V10M10 3h4M12 3v3.5"/>',
@@ -317,20 +318,31 @@ function mount(){const home=$('workoutHome');if(!home||!window.fpW)return;
 function libHeader(){const lib=$('workoutLibrary');if(!lib)return;let h=$('fpLibHd');if(!h){lib.insertAdjacentHTML('afterbegin','<div id="fpLibHd"></div>');h=$('fpLibHd')}
   h.innerHTML=`<div class="mhd"><button type="button" onclick="showView('workoutHome')">→ חזרה</button><b>האימונים שלי</b><span></span></div>`;
   /* 2.23: search and the plans first; the weekly plan and today's recommendation under the list */
-  const wp=$('workoutPlans');let f=$('fpLibFoot');if(!f&&wp){wp.insertAdjacentHTML('afterend','<div id="fpLibFoot" class="f21" style="margin-top:14px"></div>');f=$('fpLibFoot')}if(f){f.innerHTML='<div id="fpLibDate"></div>'+strData();const dt=$('libraryStartDate'),fl=dt&&dt.closest('.field');if(fl)$('fpLibDate').appendChild(fl)}}
+  const wp=$('workoutPlans');let f=$('fpLibFoot');if(!f&&wp){wp.insertAdjacentHTML('afterend','<div id="fpLibFoot" class="f21" style="margin-top:14px"></div>');f=$('fpLibFoot')}if(f){/* 2.23.1 fix: keep the date field when the bottom is redrawn (it was wiped, and "התחל" then failed on libraryStartDate) */
+    const keep=$('libraryStartDate')&&$('libraryStartDate').closest('.field');if(keep)keep.remove();
+    f.innerHTML='<div id="fpLibDate"></div>'+strData();if(keep)$('fpLibDate').appendChild(keep);const dt=$('libraryStartDate'),fl=dt&&dt.closest('.field');if(fl)$('fpLibDate').appendChild(fl)}}
 /* 2.23.1: under "שלי" in every type: the data of that type. Strength: the weekly plan, my records (tap for all of them), medals. */
 function medalsOf(ids){let have={},got={};try{have=J('MEDALS',{});got=fp219Week.earned()}catch(_){}const M=(window.fp219Week&&fp219Week.MEDALS)||[];
   return `<div class="md fpMds">${ids.map(id=>M.find(m=>m[0]===id)).filter(Boolean).map(m=>{const on=have[m[0]]||got[m[0]];return `<div class="${on?'':'no'}">${window.fpMedalBadge?fpMedalBadge(m[0],on,'sm'):''}${esc(m[2])}</div>`}).join('')}</div>`}
 window.fpMedalsOf=medalsOf;
-function liftBests(){const m={},from=(J('RESET_AT',{})||{}).s||'';((state.data&&state.data.workout&&state.data.workout.history)||[]).forEach(h=>{if(!h||!h.exercise||h.muscleGroup==='אירובי'||h.group==='אירובי'||(from&&String(h.date||'')<from))return;(h.sets||[]).forEach(x=>{const w=Number(x.weight)||0,r=Number(x.reps)||0;if(!r)return;const b=m[h.exercise];
-    if(!b||w>b.w||(w===b.w&&r>b.r))m[h.exercise]={w,r,d:h.date}})});
+function liftBests(){const m={};((state.data&&state.data.workout&&state.data.workout.history)||[]).forEach(h=>{if(!h||!h.exercise||h.muscleGroup==='אירובי'||h.group==='אירובי'||!fpVis('s',h))return;(h.sets||[]).forEach(x=>{const w=Number(x.weight)||0,r=Number(x.reps)||0;if(!r)return;const b=m[h.exercise];
+    if(!b||w>b.w||(w===b.w&&r>b.r))m[h.exercise]={w,r,d:h.date,g:h.muscleGroup||h.group||''}})});
   return Object.keys(m).map(k=>Object.assign({n:k},m[k])).sort((a,b)=>b.w-a.w||b.r-a.r)}
 const liftTxt=b=>b.w?b.w+' ק״ג × '+b.r:b.r+' חזרות';
+/* 2.24 (sketch 19A): the records in 2×2 cards, a color line by push / pull / legs. A tap opens all of them, with a filter on top. */
+const PPLG=g=>/רגל|ישבן|תאומ/.test(g)?'l':/גב|יד קדמית|משיכ/.test(g)?'pl':/חזה|כתפ|יד אחורית|דחיפ/.test(g)?'ps':'o';
+const PPLN={ps:'דחיפה',pl:'משיכה',l:'רגליים',o:'אחר'},PPLC={ps:'#D7F36B',pl:'#7CC4FF',l:'#FFB86B',o:'#6B7682'};
 function strData(){const B=liftBests();
   return `<div class="fpDh">נתוני כוח</div>${planRow()}
-    <div class="fpCard"><h3>השיאים שלי</h3>${B.length?B.slice(0,3).map(b=>`<div class="fpRow"><span>${esc(b.n)}</span><b style="color:var(--brand,#D7F36B)">${liftTxt(b)}</b></div>`).join('')+(B.length>3?`<button type="button" class="btn light full" style="margin-top:8px" onclick="fp222.lifts()">כל השיאים (${B.length})</button>`:''):'<p class="mu" style="margin:0">אחרי האימון הראשון יופיעו כאן.</p>'}</div>
+    <div class="fpCard"><div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 8px"><h3 style="margin:0">השיאים שלי</h3>${B.length?`<button type="button" class="linkb" style="color:var(--brand,#D7F36B);font-weight:700" onclick="fp222.lifts()">כל השיאים (${B.length}) ‹</button>`:''}</div>
+    ${B.length?`<div class="fpRec4">${B.slice(0,4).map(b=>{const c=PPLG(b.g);return `<button type="button" style="border-top:3px solid ${PPLC[c]}" onclick="fp222.lifts('${c}')"><small>${esc(b.n)}</small><b>${liftTxt(b)}</b><small>${PPLN[c]}</small></button>`}).join('')}</div>`:'<p class="mu" style="margin:0">אחרי האימון הראשון יופיעו כאן.</p>'}</div>
     <div class="fpCard"><h3>מדליות כוח</h3>${medalsOf(['w25','w100','w200','w500','bwsq','bwbp','pull10','s4','s12'])}</div>`}
-function liftsSheet(){const B=liftBests();fpT._.sheet('השיאים שלי בכוח',`<div class="fpCard">${B.map(b=>`<div class="fpRow"><span>${esc(b.n)}<br><small class="mu">${dd(b.d)}</small></span><b style="color:var(--brand,#D7F36B)">${liftTxt(b)}</b></div>`).join('')}</div><p class="mu">הסט הכי כבד בכל תרגיל. אותו משקל עם יותר חזרות נחשב שיא.</p>`)}
+let LF='';
+function liftsSheet(f){if(f!==undefined)LF=f||'';const all=liftBests(),B=LF?all.filter(b=>PPLG(b.g)===LF):all;const has=k=>all.some(b=>PPLG(b.g)===k);
+  const chip=(k,t)=>`<button type="button" class="${LF===k?'on':''}" onclick="fp222.lifts('${k}')">${t}</button>`;
+  fpT._.sheet('השיאים שלי בכוח',`<div class="fpRecF">${chip('','הכל')}${['ps','pl','l'].map(k=>chip(k,PPLN[k])).join('')}${has('o')?chip('o','אחר'):''}</div><div class="fpCard">${B.length?B.map(b=>`<div class="fpRow"><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${PPLC[PPLG(b.g)]};margin-inline-end:7px"></i>${esc(b.n)}<br><small class="mu">${dd(b.d)}</small></span><b style="color:var(--brand,#D7F36B)">${liftTxt(b)}</b></div>`).join(''):'<p class="mu" style="margin:0">אין עדיין שיאים כאן.</p>'}</div><p class="mu">הסט הכי כבד בכל תרגיל. אותו משקל עם יותר חזרות נחשב שיא.</p>`)}
+document.head.insertAdjacentHTML('beforeend',`<style id="fp224rec">.fpRec4{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fpRec4 button{font:inherit;color:inherit;text-align:right;background:#1F262E;border:1px solid var(--line,#2C3640);border-radius:14px;padding:10px;cursor:pointer}.fpRec4 small{display:block;color:var(--muted,#A3ADB8);font-size:11.5px;line-height:1.3}.fpRec4 b{display:block;font-size:19px;margin:3px 0;text-align:right}
+.fpRecF{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:7px;margin:0 0 10px}.fpRecF button{font:inherit;font-size:13.5px;border-radius:12px;min-height:44px;background:#1F262E;border:1px solid var(--line,#2C3640);color:var(--muted,#A3ADB8);cursor:pointer}.fpRecF button.on{background:#222D17;border-color:var(--brand,#D7F36B);color:var(--ink,#F2F5F7);font-weight:700}</style>`);
 function planRow(){if(wpGet().plan==='none')return '';const S=setSummary();return `<div class="fpCard" style="padding:4px 14px"><button type="button" class="fpRowBtn" onclick="fp222.ed.open(1)"><span><b>${ic('cal')} התוכנית השבועית</b><small>${S.plan}</small></span>${ic('chev')}</button></div>`}
 function refreshAll(){try{mount()}catch(e){console.error(e)}try{if(window.fpW&&fpW.tab)fpW.tab(fpW.cur)}catch(_){}try{refreshPage()}catch(_){}try{if($('workoutDiary')&&$('workoutDiary').classList.contains('active'))jRender()}catch(_){}}
 
@@ -454,11 +466,14 @@ function recoRow(t){return `<div class="fpCard"><div class="fpRow" style="paddin
 /* 2.23.1: on top of every type's page: show it in the workouts or not. At the bottom: reset only that type (the journal stays). */
 function showRow(t){const o=ON(),last=o[t]&&VT().length===1;return `<div class="fpCard" style="border-color:#4B5A2A"><div class="fpRow" style="padding:0"><span><b>להציג ${TN[t]} באימונים</b><br><span class="mu">${last?'צריך לפחות סוג אחד':'כבוי = נעלם מהמסך. שום דבר לא נמחק'}</span></span><label class="fpSw"><input type="checkbox" ${o[t]?'checked':''} ${last?'disabled':''} onchange="fp222.typeOn('${t}',this.checked)" aria-label="להציג ${TN[t]}"><span></span></label></div></div>`}
 function resetRow(t){return `<div class="fpCard" style="padding:4px 14px"><button type="button" class="fpRowBtn" onclick="fp222.reset('${t}')"><span><b style="color:#F09595">לאפס את ה${TN[t]}</b><small>מתחילים נקי. היומן נשאר</small></span>${ic('chev')}</button></div>`}
-const RESETW={s:[['השיאים בכוח','ההמלצה מתחילה מחדש'],['היומן, כל האימונים','האימונים הקבועים שלך','המדליות']],r:[['הריצות במסכי הריצה','הסיכום והשיאים','התוכנית חוזרת לשבוע 1'],['היומן, כל הריצות','הריצות הקבועות שלך','המדליות והנעליים']],c:[['האירובי במסכי האירובי','הסיכום והשיאים','התוכנית חוזרת לשבוע 1'],['היומן, כל האימונים','האירובי הקבוע שלך','המדליות']]};
+const RESETW={s:[['השיאים בכוח','המדליות של הכוח','ההמלצה מתחילה מחדש'],['היומן, כל האימונים','האימונים הקבועים שלך']],r:[['הריצות במסכי הריצה','הסיכומים, הממוצע והשיאים','המדליות של הריצה','התוכנית חוזרת לשבוע 1'],['היומן, כל הריצות','הריצות הקבועות שלך','הנעליים']],c:[['האירובי במסכי האירובי','הסיכומים והשיאים','המדליות של האירובי','התוכנית חוזרת לשבוע 1'],['היומן, כל האימונים','האירובי הקבוע שלך']]};
+/* 2.24: which medals belong to which type (a reset starts them again; the old ones wait in MEDALS_OLD) */
+const MEDAL_T={r:/^(run|sub\d|km\d|shoe)/,c:/^c(10|44|50|100|150)$/,s:/^(w\d|t10|t100|bwsq|bwbp|pull)/};
 function resetSheet(t){const w=RESETW[t];fpT._.sheet('לאפס את ה'+TN[t]+'?',`<div class="fpCard"><b>מתאפס</b>${w[0].map(x=>`<div class="fpRow" style="padding:6px 0"><span>✕ ${x}</span></div>`).join('')}</div>
   <div class="fpCard"><b style="color:#6EE787">נשמר</b>${w[1].map(x=>`<div class="fpRow" style="padding:6px 0"><span>✓ ${x}</span></div>`).join('')}</div>
   <button type="button" class="btn full" style="background:#F09595;color:#2a0d0d" onclick="fp222.resetGo('${t}')">אפס</button><button type="button" class="btn light full" style="margin-top:8px" onclick="fp222.page('${t}')">ביטול</button>`)}
-function resetGo(t){const d=today(),o=J('RESET_AT',{})||{};o[t]=d;setProp('RESET_AT',JSON.stringify(o));
+function resetGo(t){const d=today(),now=new Date(),o=J('RESET_AT',{})||{};o[t]=d+'T'+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');setProp('RESET_AT',JSON.stringify(o));
+  {const have=J('MEDALS',{})||{},old=J('MEDALS_OLD',{})||{};let ch=false;Object.keys(have).forEach(k=>{if(MEDAL_T[t].test(k)){old[k]=old[k]||have[k];delete have[k];ch=true}});if(ch){setProp('MEDALS',JSON.stringify(have));setProp('MEDALS_OLD',JSON.stringify(old))}}
   if(t==='r'){const p=J('RUN_PLAN',null);if(p){p.resetAt=d;p.since=d;setProp('RUN_PLAN',JSON.stringify(p))}}
   if(t==='c'){const c=J('CARDIO_LVL',null)||{};c.since=weekStart(d);c.rep=0;if(!c.lvl)c.lvl='beg';setProp('CARDIO_LVL',JSON.stringify(c))}
   fpT.close();try{toast(TN[t]+': מתחילים נקי. היומן נשאר')}catch(_){}refreshAll()}
@@ -466,6 +481,7 @@ function pageHtml(t){return showRow(t)+pageBody(t)+resetRow(t)}
 function pageBody(t){
   if(t==='s'){const w=wpGet(),T=TP();return recoRow('s')+`<div class="fpCard"><div class="fpRow" style="padding-top:0"><span>אימוני כוח בשבוע</span>${w.plan==='none'?`<span class="fpStp"><button type="button" aria-label="פחות" onclick="fp222.str(-1)">−</button><b>${Number(T.str)||0}</b><button type="button" aria-label="יותר" onclick="fp222.str(1)">+</button></span>`:`<b>${w.days.filter(d=>d.includes('s')).length}</b>`}</div>
       ${w.plan!=='none'?'<p class="mu" style="margin:0">הימים נקבעים בתוכנית השבועית.</p>':''}
+      <div class="fpRow"><span>סטים לכל תרגיל חדש<br><span class="mu">כשבונים אימון קבוע</span></span><span class="fpStp"><button type="button" aria-label="פחות" onclick="fp224.defSets(-1)">−</button><b id="fpDefSets">${window.fp224&&fp224.defSetsN?fp224.defSetsN():2}</b><button type="button" aria-label="יותר" onclick="fp224.defSets(1)">+</button></span></div>
       <button type="button" class="fpRowBtn" onclick="fpT.close();openOnboarding(false)"><span>זמן האימון, ניסיון וציוד</span>${ic('chev')}</button></div>`}
   if(t==='r')return recoRow('r')+fpW.runSetHtml();
   if(t==='c')return recoRow('c')+fpW.carSetHtml();
@@ -495,7 +511,7 @@ if(typeof renderCheckin==='function'){const o=renderCheckin;renderCheckin=functi
 /* a run or cardio saved / a plan changed elsewhere → refresh */
 setInterval(()=>{try{if($('workoutHome')&&$('workoutHome').classList.contains('active')){const s=$('fpStrip');if(s){const on=stripOn();s.hidden=!on;const h=on?stripHtml():'';if(s.dataset.sig!==h){s.innerHTML=h;s.dataset.sig=h}}}}catch(_){}},4000);
 
-window.fp222={lifts:()=>liftsSheet(),reset:t=>resetSheet(t),resetGo,
+window.fp222={lifts:f=>liftsSheet(f===undefined?'':f),reset:t=>resetSheet(t),resetGo,
   ed,refreshPage,planChanged:refreshAll,planRow,
   hdr(){const h=$('fpHdr');if(h)h.innerHTML=hdrHtml();const r=$('fpReco');if(r)r.innerHTML=fpW.cur==='s'?strRecoHtml():''},
   tab(t){fpW.tab(t);mount()},

@@ -120,8 +120,8 @@ const runLog=()=>J('RUN_LOG',[]);
 const carLog=()=>J('CARDIO_LOG',[]);
 /* 2.23.1: what the run and cardio screens show starts after a reset of that type. The journal keeps everything. */
 const RSA=t=>(J('RESET_AT',{})||{})[t]||'';
-const runLogV=()=>{const f=RSA('r');return runLog().filter(r=>!f||r.d>=f)};
-const carLogV=()=>{const f=RSA('c');return carLog().filter(r=>!f||r.d>=f)};
+const runLogV=()=>runLog().filter(r=>fpVis('r',r));
+const carLogV=()=>carLog().filter(r=>fpVis('c',r));
 const sessions=()=>((state.data&&state.data.workout&&state.data.workout.sessions)||[]);
 const isCardioS=s=>s.type==='אירובי'||/^ריצה$|^אירובי$/.test(s.name||'');
 function weekDone(ws){const we=addDays(ws,6),inW=d=>d&&d>=ws&&d<=we;
@@ -229,8 +229,8 @@ const dataHd=(n)=>`<div class="fpDh">${n}</div>`+(window.fp222&&fp222.planRow?fp
 const FAVK='FAV_MY';
 const favOf=t=>{const o=J(FAVK,{})||{};return Array.isArray(o[t])?o[t]:[]};
 const QK={r:LS.get('fp2.qRun')||'easy',c:''};
-const RQ=['easy','long','int','hill','tempo','fart','prog','stride'];
-const RQN={easy:'קלה',long:'ארוכה',int:'אינטרוולים',hill:'עליות',tempo:'טמפו',fart:'פרטלק',prog:'התקדמות',stride:'האצות'};
+const RQ=['easy','long','int','hill','tempo','fart','prog','stride','track'];
+const RQN={easy:'קלה',long:'ארוכה',int:'אינטרוולים',hill:'עליות',tempo:'טמפו',fart:'פרטלק',prog:'התקדמות',stride:'האצות',track:'מסלול'};
 let SK={r:'all',c:'all'},FL={r:'all',c:'all'};
 function fixRow(t,x,sub,go,edit){const on=favOf(t).includes(x.id);
   return `<div class="fpFx"><button type="button" class="st${on?' on':''}" aria-pressed="${on}" aria-label="${on?'להוציא ממועדפים':'להוסיף למועדפים'}" onclick="fpW.star('${t}','${x.id}')">${IC('star')}</button><div class="t"><b>${esc(x.name)}</b>${sub}</div><div class="acts"><button type="button" class="btn" onclick="${go}">התחל</button><button type="button" class="btn light" onclick="${edit}">עריכה</button></div></div>`}
@@ -246,7 +246,7 @@ function goalBar(p){const best=p.best||0,goal=Number(p.goal)||5,ms=[1,3,5,7,10,1
 
 function quickRunHtml(){const k=RQ.includes(QK.r)?QK.r:'easy';
   return `<div class="sec"><h3>התחל ריצה</h3><p class="mu" style="margin:0 0 10px">בוחרים סוג ומתחילים. השעון וה-GPS רצים, בלי יעד ובלי הגדרות.</p>
-    <div class="fpQ r">${RQ.map(x=>`<button type="button" class="${x===k?'on':''}" aria-pressed="${x===k}" onclick="fpW.qk('r','${x}')">${IC('r_'+x)}${RQN[x]}</button>`).join('')}</div>
+    <div class="fpQ r c3">${RQ.map(x=>`<button type="button" class="${x===k?'on':''}" aria-pressed="${x===k}" onclick="fpW.qk('r','${x}')">${IC('r_'+x)}${RQN[x]}</button>`).join('')}</div>
     <button type="button" class="btn full" onclick="fpW.qrun()">התחל ריצה</button>
     <button type="button" class="linkb" style="display:block;margin:10px auto 0" onclick="fpW.qfill()">רצתי בלי האפליקציה: למלא נתונים</button></div>`}
 function renderRun(){const box=$('fp221Run');if(!box)return;const T=T_();if(!T)return;
@@ -278,7 +278,7 @@ function renderMineRun(box){const my=runMy(),L=runLogV(),RK=RKx();
   h+=`<div class="sec"><h3>הסיכום</h3>${runSum()}</div>`;
   h+=`<div class="sec"><h3>השיאים שלי</h3>${runRecords()}<button type="button" class="btn light full" style="margin-top:8px" onclick="fpW.recs('r')">כל השיאים</button></div>`;
   const p=fpT.plan();
-  if(p){const T=T_(),goal=Number(p.goal)||5,total=T.planWeeks?Math.max(12,T.planWeeks(p.start,goal)):12,runs=fpT.weekRuns(p,p.week),doneW=runLog().filter(r=>r.d>=weekStart(today())).length;
+  if(p){const T=T_(),goal=Number(p.goal)||5,total=T.planWeeks?Math.max(12,T.planWeeks(p.start,goal)):12,runs=fpT.weekRuns(p,p.week),doneW=runLogV().filter(r=>r.d>=weekStart(today())).length;
     h+=`<div class="sec"><h3>בדרך ל-${goal===21.1?'חצי מרתון':goal+' ק״מ'}</h3>${goalBar(p)}
       <details style="margin-top:10px"><summary class="mu" style="cursor:pointer">התוכנית: ${esc(p.name)} · שבוע ${p.week} מתוך ${total}</summary>${Array.from({length:total},(_,i)=>i+1).map(w=>`<div class="pl ${w<p.week?'done':w===p.week?'cur':'lock'}"><i>${w}</i><div>${fpT.weekRuns(p,w).map(r=>esc(r[0])+': '+esc(r[1].split(',')[0])).join(' · ')}${w===p.week?`<div class="mu">השבוע · ${doneW} מתוך ${runs.length}</div>`:''}</div></div>`).join('')}</details></div>`}
   const total=runLog().reduce((s,r)=>s+(Number(r.km)||0),0),onShoe=Math.max(0,total-(Number(prop('SHOE_START'))||0));
@@ -310,7 +310,7 @@ function recSheet(t){const T=T_();
   const M=T.MACH,L=carLogV(),wk=Math.max(0,...lastWeeks(52,(a,b)=>L.filter(r=>r.d>=a&&r.d<=b).reduce((s,r)=>s+(Number(r.min)||0),0)));
   const per=Object.keys(M).filter(k=>L.some(r=>r.k===k)).map(k=>{const A=L.filter(r=>r.k===k);return [M[k].n,Math.max(...A.map(r=>Number(r.min)||0))+' דק׳ · '+A.length+' אימונים']});
   T.sheet('השיאים שלי באירובי',`<div class="f21"><div class="sec"><div class="rw"><span>האימון הכי ארוך</span><b>${L.length?Math.max(...L.map(r=>Number(r.min)||0))+' דק׳':'—'}</b></div><div class="rw"><span>הכי הרבה דקות בשבוע</span><b>${wk?wk+' דק׳':'—'}</b></div><div class="rw"><span>אימונים חזקים</span><b>${L.filter(r=>r.hard).length}</b></div></div>${per.length?`<div class="sec"><b>לפי מכשיר</b><p class="mu" style="margin:2px 0 6px">הכי ארוך · כמה אימונים</p>${per.map(r=>`<div class="rw"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')}</div>`:''}</div>`)}
-function runStats(){const L=runLog(),km=L.reduce((s,r)=>s+(Number(r.km)||0),0),ts=L.filter(r=>r.s&&r.km),pace=ts.length?ts.reduce((s,r)=>s+r.s,0)/ts.reduce((s,r)=>s+Number(r.km),0):0;
+function runStats(){const L=runLogV(),km=L.reduce((s,r)=>s+(Number(r.km)||0),0),ts=L.filter(r=>r.s&&r.km),pace=ts.length?ts.reduce((s,r)=>s+r.s,0)/ts.reduce((s,r)=>s+Number(r.km),0):0;
   const vals=lastWeeks(4,(a,b)=>L.filter(r=>r.d>=a&&r.d<=b).reduce((s,r)=>s+(Number(r.km)||0),0)),max=Math.max(4,...vals);
   return `<div class="stats"><div><b>${kmTxt(km)}</b><span>ק״מ בסך הכל</span></div><div><b>${L.length}</b><span>ריצות</span></div><div><b>${pace?mmss(pace):'—'}</b><span>קצב ממוצע</span></div></div>
    ${L.length?chartHtml(vals,wkLabels(4),Math.ceil(max/2)*2)+`<div class="ls">${L.slice(-5).reverse().map(r=>`<div class="r"><div>${W[dow(r.d)]} ${r.d.slice(8,10)}.${r.d.slice(5,7)} · ${r.km?kmTxt(r.km):'?'} ק״מ${r.name?' · '+esc(r.name):''}<small>${r.s?mmss(r.s)+(r.km?' · קצב '+mmss(r.s/r.km):''):''}</small></div><span class="pill ${r.ok?'g':'w'}">${r.ok?'בלי לעצור':'עצרתי'}</span></div>`).join('')}</div><p class="mu" style="margin:6px 0 0">לעריכה: ביומן.</p>`:'<p class="mu" style="margin:0">עוד אין ריצות. אחרי הריצה הראשונה יופיעו כאן.</p>'}`}
@@ -331,6 +331,8 @@ function tgLine(x){const km=Number(String(x.km||'').replace(',','.'))||0,t=sec(x
 const kmNum=x=>Number(String(x.km||'').replace(',','.'))||0;
 function srcSec(x){return x.tmode==='pace'?sec(x.tp):sec(x.tt)}
 function syncTm(x){const v=x.tmode==='pace'?x.tp:x.tt;if(v)x.tm=v;else if(x._typed)x.tm=''}
+/* 2.24: intervals, hills, fartlek and track are built from parts (warm-up, repeat × N, cool-down) — see fp2-224 */
+const STK=['int','hill','fart','track'];
 function myRunForm(id){const T=T_(),p=fpT.plan(),RK=RKx(),x=id===null?WK.edit:Object.assign({id:'',name:'',cat:FOLD.r||'easy',type:'',km:'',min:'',tm:'',tmode:'total',per:false,tgIn:null},JSON.parse(JSON.stringify(runMy().find(r=>r.id===id)||{})));WK={edit:x};id=x.id;
   /* 2.23.1 (sketch A): all 8 kinds as tiles; km, total time and pace in one row (type two, the third fills in); a pace per km with − and + */
   const m3=!!(p&&p.m3);let kk=RQ.find(k=>RK[k].n===x.type)||kindOf2({type:x.type});if(!RQ.includes(kk))kk='easy';x.type=RK[kk].n;x.cat=RK[kk].cat;
@@ -341,16 +343,16 @@ function myRunForm(id){const T=T_(),p=fpT.plan(),RK=RKx(),x=id===null?WK.edit:Ob
   if(x.per&&km&&t){x.tgIn=Array.from({length:n},(_,i)=>(x.tgIn&&x.tgIn[i])||mmss(Math.round(avg)))}
   const fld=(lab,idn,val,ph,fn,on)=>`<label style="display:block;background:#1F262E;border:1px solid ${on?'var(--brand,#D7F36B)':'var(--line,#2C3640)'};border-radius:12px;padding:6px 9px"><span style="display:block;font-size:11.5px;color:#6B7682">${lab}</span><input id="${idn}" inputmode="decimal" value="${esc(val)}" placeholder="${ph}" oninput="${fn}" onchange="fpW._rfc()" style="width:100%;background:none;border:0;padding:2px 0;font:inherit;font-size:19px;font-weight:800;color:var(--ink,#F2F5F7);outline:none"></label>`;
   T.sheet(id?'עריכת ריצה קבועה':'ריצה קבועה חדשה',`<div class="f21"><div class="field"><label>שם</label><input id="fpMyN" value="${esc(x.name)}" placeholder="למשל: סיבוב השכונה" oninput="fpW._e('name',this.value)"></div>
-    <label>סוג הריצה</label><div class="fpQ r" style="margin-top:4px">${RQ.map(k=>`<button type="button" class="${k===kk?'on':''}" aria-pressed="${k===kk}" onclick="fpW._rk('${k}')">${IC('r_'+k)}${RQN[k]}</button>`).join('')}</div>
+    <label>סוג הריצה</label><div class="fpQ r c3" style="margin-top:4px">${RQ.map(k=>`<button type="button" class="${k===kk?'on':''}" aria-pressed="${k===kk}" onclick="fpW._rk('${k}')">${IC('r_'+k)}${RQN[k]}</button>`).join('')}</div>
     <div class="why" style="margin:0 0 4px"><b>${esc(RK[kk].n)}:</b> ${esc(RK[kk].d)}</div>
     ${(x.cat==='fast'||x.cat==='pace')&&!m3?'<p class="mu" style="margin:0 0 4px">ריצות מהירות ושינויי קצב מומלצות אחרי 3 ק״מ בלי לעצור. אפשר לשמור עכשיו ולהשתמש אחר כך.</p>':''}
-    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0 4px">
+    ${STK.includes(kk)&&window.fp224&&fp224.blocksHtml?fp224.blocksHtml(x,kk):`    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0 4px">
       ${fld('ק״מ','fpRK',x.km,'5',"fpW._rf('km',this.value)",!!km)}
       ${fld('זמן כולל (דק׳)','fpTT',x.tmode==='pace'?(tot?mmss(tot):''):x.tt,'30',"fpW._rf('total',this.value)",x.tmode!=='pace'&&!!t)}
       ${fld('קצב לק״מ','fpTP',x.tmode==='pace'?x.tp:(avg&&km?mmss(avg):''),'6:00',"fpW._rf('pace',this.value)",x.tmode==='pace'&&!!t)}</div>
     <p class="mu" id="fpTgL" style="margin:0 0 10px;font-size:12.5px">כותבים בשניים מהשלושה, השלישי מתמלא לבד. ״30״ = 30 דקות.</p>
     <div class="sec" style="padding:8px 12px"><div class="rw" style="border:0;padding:4px 0"><span><b>קצב לכל ק״מ</b><br><small class="mu">לא חובה</small></span><label class="fpSw"><input type="checkbox" ${x.per?'checked':''} ${km&&t?'':'disabled'} onchange="fpW._e('per',this.checked,1)" aria-label="קצב לכל ק״מ"><span></span></label></div>
-      ${x.per&&km&&t?x.tgIn.map((v,i)=>`<div class="rw" style="padding:6px 0"><span class="mu">ק״מ ${i+1}${km-i<1?' ('+(Math.round((km-i)*10)/10)+')':''}</span><span class="stp"><button type="button" aria-label="מהר יותר" onclick="fpW._tgs(${i},-5)">−</button><b style="min-width:52px;font-variant-numeric:tabular-nums">${esc(v)}</b><button type="button" aria-label="לאט יותר" onclick="fpW._tgs(${i},5)">+</button></span></div>`).join('')+`<p class="mu" id="fpTgP" style="margin:6px 0 0">${tgLine(x)}</p>`:(km&&t?'':'<p class="mu" style="margin:0 0 4px;font-size:12.5px">אחרי שממלאים ק״מ וזמן או קצב.</p>')}</div>
+      ${x.per&&km&&t?x.tgIn.map((v,i)=>`<div class="rw" style="padding:6px 0"><span class="mu">ק״מ ${i+1}${km-i<1?' ('+(Math.round((km-i)*10)/10)+')':''}</span><span class="stp"><button type="button" aria-label="מהר יותר" onclick="fpW._tgs(${i},-5)">−</button><b style="min-width:52px;font-variant-numeric:tabular-nums">${esc(v)}</b><button type="button" aria-label="לאט יותר" onclick="fpW._tgs(${i},5)">+</button></span></div>`).join('')+`<p class="mu" id="fpTgP" style="margin:6px 0 0">${tgLine(x)}</p>`:(km&&t?'':'<p class="mu" style="margin:0 0 4px;font-size:12.5px">אחרי שממלאים ק״מ וזמן או קצב.</p>')}</div>`}
     <button type="button" class="btn full" onclick="fpW.myRunSave()">שמור</button>${id?`<button type="button" class="btn light full" style="margin-top:8px" onclick="fpW.myDel('RUN_MY','${id}')">מחק</button>`:''}</div>`)}
 
 /* =========================================================
@@ -457,7 +459,7 @@ function tTick(){if(!TM||!TM.run||TM.pa)return;const s=tmState();
   if(TM.open&&$('fpWtBig')){const v=tmView();$('fpWtBig').textContent=v.big;const a=$('fpWtArc');if(a){const c=2*Math.PI*44;a.setAttribute('stroke-dashoffset',(c*(1-Math.min(1,Math.max(0,v.pct)))).toFixed(1))}
     const pr=$('fpWtProg');if(pr)pr.style.width=Math.min(100,v.el/tmTotal()*100)+'%';const tt=$('fpWtTot');if(tt)tt.textContent=mmss(v.el)+' מתוך '+mmss(tmTotal())}
   else if(!TM.open)showFloat()}
-async function saveCardio(min,k,hard,hm,name){const T=T_(),m=T.MACH[k]||{n:'אירובי'};const log=carLog();const row={d:today(),min,k,hard:!!hard,hm:hm||0};if(name)row.name=name;log.push(row);setProp('CARDIO_LOG',JSON.stringify(log.slice(-400)));
+async function saveCardio(min,k,hard,hm,name){const T=T_(),m=T.MACH[k]||{n:'אירובי'};const log=carLog();const row={d:today(),t:Date.now(),min,k,hard:!!hard,hm:hm||0};if(name)row.name=name;log.push(row);setProp('CARDIO_LOG',JSON.stringify(log.slice(-400)));
   try{const r=await call('createWorkoutSession',{date:state.date,name:'אירובי',type:'אירובי'});state.data.workout=await call('saveWorkout',{date:state.date,muscleGroup:'אירובי',exercise:m.n,sets:[{weight:'',reps:1,note:min+' דקות'+(hard?' · חזק':'')}],notes:min+' דקות',sessionName:'אירובי',sessionId:r.id});
     try{state.data.workout=(await call('finishWorkoutSession',{id:r.id,minutes:min})).workout||state.data.workout}catch(_){}}catch(e){console.warn(e)}}
 
@@ -499,6 +501,7 @@ window.fpW={
   mine(t,on){if(t==='s'){if(on!==0)showView('workoutLibrary');return}MINE[t]=on===undefined?!MINE[t]:!!on;mount();window.scrollTo(0,0)},
   isMine(t){return !!MINE[t]},
   fold(t,k){FOLD[t]=FOLD[t]===k?'':k;mount()},
+  _edit(){return WK&&WK.edit},_form(){myRunForm(null)},_mount(){try{mount()}catch(_){}},
   _e(k,v,re){if(!WK||!WK.edit)return;WK.edit[k]=v;if(re===1)myRunForm(null);if(re===2)myCarForm(null)},
   _tgl(){const l=$('fpTgP');if(l&&WK&&WK.edit)l.innerHTML=tgLine(WK.edit)},
   _rk(k){if(!WK||!WK.edit)return;const RK=RKx();WK.edit.type=RK[k].n;WK.edit.cat=RK[k].cat;myRunForm(null)},

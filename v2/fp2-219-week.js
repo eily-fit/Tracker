@@ -50,7 +50,10 @@ const MEDALS=[
  ['c50','','50 שעות אירובי','כל דקות האירובי ביחד.'],['c100','','100 שעות אירובי',''],['c150','','חודש של 150 דקות כל שבוע','4 שבועות ברצף, 150 דקות אירובי ומעלה.'],
  ['goalw','','הגעת ליעד המשקל','המשקל הממוצע בשבוע הגיע ליעד.'],['waist5','','5 ס״מ פחות בהיקף הטבור','מהמדידה הראשונה.']];
 function earned(){
-  const got={},log=J('RUN_LOG',[]),ok=log.filter(r=>r.ok),maxOk=ok.reduce((m,r)=>Math.max(m,Number(r.km)||0),0),km=log.reduce((s,r)=>s+(Number(r.km)||0),0);
+  /* 2.24: a reset type starts its medals again — only rows newer than its reset count */
+  const V=(t,r)=>!window.fpVis||fpVis(t,r);const history=()=>((state.data&&state.data.workout&&state.data.workout.history)||[]).filter(h=>V('s',h));const strSessions=()=>sessions().filter(s=>!isCardio(s)&&(s.items||[]).length&&V('s',{d:s.date,createdAt:s.startedAt}));
+  const bestByExercise=()=>{const m={};history().forEach(h=>(h.sets||[]).forEach(s=>{const w=Number(s.weight)||0;if(w>0&&(!m[h.exercise]||w>m[h.exercise]))m[h.exercise]=w}));return m};const tonnage=()=>{let t=0;history().forEach(h=>(h.sets||[]).forEach(s=>{t+=(Number(s.weight)||0)*(Number(s.reps)||0)}));return t};const CL=()=>J('CARDIO_LOG',[]).filter(r=>V('c',r));
+  const got={},log=J('RUN_LOG',[]).filter(r=>V('r',r)),ok=log.filter(r=>r.ok),maxOk=ok.reduce((m,r)=>Math.max(m,Number(r.km)||0),0),km=log.reduce((s,r)=>s+(Number(r.km)||0),0);
   if(log.length)got.run1=1;if(maxOk>=1)got.run1k=1;if(maxOk>=3)got.run3=1;[[5,'run5'],[7,'run7'],[10,'run10'],[15,'run15'],[21,'run21']].forEach(([k,id])=>{if(maxOk>=k)got[id]=1});
   log.forEach(r=>{if(Number(r.km)>=5&&r.s){if(r.s<=1800)got.sub30=1;if(r.s<=1500)got.sub25=1}});
   [[50,'km50'],[100,'km100'],[250,'km250'],[500,'km500'],[1000,'km1000']].forEach(([k,id])=>{if(km>=k)got[id]=1});
@@ -64,10 +67,10 @@ function earned(){
   if(maxOk>=12)got.run12=1;if(maxOk>=42)got.run42=1;if(km>=550)got.shoe=1;
   let pr30=0,b30=0,pp30='';h.forEach(x=>{if(x.protein>=pg*.95){pr30=pp30&&addDays(pp30,1)===x.date?pr30+1:1;pp30=x.date;b30=Math.max(b30,pr30)}});if(b30>=30)got.prot30=1;
   {const cg=settingsNum('calorie_goal',0);if(cg){const by={};h.forEach(x=>{if(x.calories>0){const m=x.date.slice(0,7);(by[m]=by[m]||{n:0,ok:0}).n++;if(x.calories<=cg*1.05&&x.calories>=cg*.85)by[m].ok++}});const cur=today().slice(0,7);if(Object.keys(by).some(m=>m<cur&&by[m].n>=25&&by[m].ok>=20))got.cal30=1}}
-  {const wk={};J('CARDIO_LOG',[]).forEach(r=>{const k=sunday(r.d);wk[k]=(wk[k]||0)+(Number(r.min)||0)});log.forEach(r=>{if(r.d&&r.s){const k=sunday(r.d);wk[k]=(wk[k]||0)+r.s/60}});const ks=Object.keys(wk).sort();let st=0,last='';ks.forEach(k=>{if(wk[k]>=150){st=last&&addDays(last,7)===k?st+1:1;last=k;if(st>=4)got.c150=1}else{st=0;last=''}})}
+  {const wk={};CL().forEach(r=>{const k=sunday(r.d);wk[k]=(wk[k]||0)+(Number(r.min)||0)});log.forEach(r=>{if(r.d&&r.s){const k=sunday(r.d);wk[k]=(wk[k]||0)+r.s/60}});const ks=Object.keys(wk).sort();let st=0,last='';ks.forEach(k=>{if(wk[k]>=150){st=last&&addDays(last,7)===k?st+1:1;last=k;if(st>=4)got.c150=1}else{st=0;last=''}})}
   {const rows=((state.data&&state.data.process&&state.data.process.rows)||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));const ws=rows.filter(r=>Number(r.waist)>0);if(ws.length>1&&Number(ws[0].waist)-Number(ws[ws.length-1].waist)>=5)got.waist5=1;
    const pf=profile(),tw=Number(pf.targetWeight||pf.target_weight)||0;if(tw){const wv=h.filter(x=>Number(x.weight)>0).slice(-7).map(x=>Number(x.weight));const lastWeek=wv.filter((_,i)=>i>=wv.length-4);if(lastWeek.length>=2){const avg=lastWeek.reduce((s,v)=>s+v,0)/lastWeek.length;const start=Number(pf.weight)||avg;if((tw<start&&avg<=tw)||(tw>start&&avg>=tw))got.goalw=1}}}
-  const cmin=J('CARDIO_LOG',[]).reduce((s,r)=>s+(Number(r.min)||0),0);if(cmin>=600)got.c10=1;if(cmin>=3000)got.c50=1;if(cmin>=6000)got.c100=1;if(J('CARDIO_LOG',[]).some(r=>r.hard))got.c44=1;
+  const cmin=CL().reduce((s,r)=>s+(Number(r.min)||0),0);if(cmin>=600)got.c10=1;if(cmin>=3000)got.c50=1;if(cmin>=6000)got.c100=1;if(CL().some(r=>r.hard))got.c44=1;
   const ids=new Set(MEDALS.map(m=>m[0]));Object.keys(got).forEach(k=>{if(!ids.has(k))delete got[k]});
   return got;
 }
@@ -159,7 +162,7 @@ function due(){if(!state.data||!state.data.settings)return false;if($('fpI')||!$
   /* the first time after the update: start from next Saturday, don't show an old week */
   if(!LS.get('fp2.weekSum')){LS.set('fp2.weekSum',r.to);return false}if(first&&first>r.from)return false;if(!getProfile())return false;return(LS.get('fp2.weekSum')||'')<r.to}
 setInterval(()=>{try{if(due()&&(document.querySelector('#today.active')))fpWeekSummary()}catch(e){}},5000);
-setInterval(()=>{try{if(state.data&&!$('fpI'))checkMedals(false)}catch(_){}},15000);
+setInterval(()=>{try{if(state.data&&!$('fpI')&&!$('fpSR')&&!$('fpRunScr'))checkMedals(false)}catch(_){}},15000);
 
 /* ---------- settings ---------- */
 function renderSet(){const sec=$('settings');if(!sec||!state.data)return;let box=$('fpMedalSet');

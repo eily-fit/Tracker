@@ -14,6 +14,11 @@ const today=()=>state.todayDate||state.date||new Date().toISOString().slice(0,10
 const mmss=x=>Math.floor(x/60)+':'+String(Math.round(x%60)).padStart(2,'0');
 /* 2.23.1: "30" = 30 minutes (and "6" = 6:00), not only "30:00" */
 const sec=s=>{const v=String(s||'').trim();if(/^\d{1,3}$/.test(v))return Number(v)>0?Number(v)*60:null;const m=v.match(/^(\d{1,3})[:.](\d{1,2})$/);return m?(+m[1])*60+(+m[2]):null};
+/* 2.24: reset per type = a date AND a time ("2026-10-12T22:05:00"). A row is shown only if it is newer than the reset.
+   Rows from before 2.24 have only a date: on the reset day itself they count as "before". New rows get t=Date.now(). */
+window.fpRA=t=>{const o=J('RESET_AT',{})||{};return o[t]||''};
+window.fpVis=(t,r)=>{const a=fpRA(t);if(!a||!r)return true;const d=a.slice(0,10),rd=String(r.d||r.date||'').slice(0,10);if(rd>d)return true;if(rd<d)return false;
+  if(a.length<=10)return true;const ts=Date.parse(a),rt=r.t||(r.createdAt?Date.parse(r.createdAt):0);return !!(rt&&ts&&rt>=ts)};
 const daysBetween=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5);
 document.head.insertAdjacentHTML('beforeend',`<style id="fp219tcss">
 .fpT-card{background:var(--card,#171C22);border:1px solid var(--line,#2C3640);border-radius:16px;padding:12px 14px;margin:0 0 12px}
@@ -50,17 +55,18 @@ const RK={easy:{n:'קלה',cat:'easy',d:'ריצה בקצב נוח שאפשר ל�
   tempo:{n:'טמפו',cat:'fast',d:'15–30 דקות רצופות בקצב ״קשה אבל נשלט״, אותו קצב כל הזמן. אפשר להגיד רק כמה מילים.'},
   fart:{n:'פרטלק',cat:'pace',d:'ריצה רצופה שמחליפים בה קצב לפי ההרגשה: מהר עד עמוד, לאט עד הפינה. בלי עצירות.'},
   prog:{n:'ריצת התקדמות',cat:'pace',d:'מתחילים קל ומאיצים בהדרגה. החלק האחרון הכי מהיר.'},
+  track:{n:'מסלול',cat:'pace',d:'סיבובים על מסלול (בדרך כלל 400 מ׳). לוחצים ״+ סיבוב״ בסוף כל סיבוב ורואים את הזמן של כל אחד.'},
   stride:{n:'האצות',cat:'pace',d:'בסוף ריצה קלה: 4–8 האצות של 15–20 שניות, מהר אבל לא ספרינט מלא, והליכה ביניהן.'},
   plan:{n:'מהתוכנית',cat:null,d:''}};
 function kindOf(r){const t=String((r&&r.type)||'');if(!t||t==='plan')return 'plan';
-  if(/ספרינט|אינטרוול/.test(t))return 'int';if(/עליות/.test(t))return 'hill';if(/טמפו/.test(t))return 'tempo';if(/פרטלק/.test(t))return 'fart';if(/התקדמות/.test(t))return 'prog';if(/האצות/.test(t))return 'stride';if(/ארוכה/.test(t))return 'long';return 'easy'}
+  if(/ספרינט|אינטרוול/.test(t))return 'int';if(/עליות/.test(t))return 'hill';if(/טמפו/.test(t))return 'tempo';if(/פרטלק/.test(t))return 'fart';if(/התקדמות/.test(t))return 'prog';if(/האצות/.test(t))return 'stride';if(/מסלול|סיבוב/.test(t))return 'track';if(/ארוכה/.test(t))return 'long';return 'easy'}
 const kindByName=n=>Object.keys(RK).find(k=>RK[k].n===n)||kindOf({type:n});
 /* 2.23: settings — skip the warm-up / the stretches */
 const skip=()=>{const s=J('RUN_SKIP',{})||{};return {w:!!s.w,s:!!s.s}};
 function plan(){const p=J('RUN_PLAN',null);if(!p)return null;p.goal=Number(p.goal)||5;p.start=Number(p.start)||0;p.runs=Math.max(1,Number(p.runs)||2);p.kind=p.start<3?'start':p.goal<=5?'k5':p.goal<=10?'k10':p.goal<=15?'k15':'half';
   p.name={start:'מתחילים לרוץ',k5:'משפרים 5 ק״מ',k10:'עד 10 ק״מ',k15:'עד 15 ק״מ',half:'עד חצי מרתון'}[p.kind];p.gp=sec(p.paceGoal);p.now=sec(p.paceNow);
   /* 2.23: a new plan "from zero" counts only the runs since it started (the old runs stay in the journal) */
-  const log=J('RUN_LOG',[]).filter(r=>!p.resetAt||(r.d||'')>=p.resetAt);p.best=log.filter(r=>r.ok).reduce((m,r)=>Math.max(m,Number(r.km)||0),0);p.base=Math.max(p.start,p.best);
+  const log=J('RUN_LOG',[]).filter(r=>(!p.resetAt||(r.d||'')>=p.resetAt)&&fpVis('r',r));p.best=log.filter(r=>r.ok).reduce((m,r)=>Math.max(m,Number(r.km)||0),0);p.base=Math.max(p.start,p.best);
   /* the week moves on by itself every 7 days; "the week was hard" (weekly summary) repeats it */
   p.week=Math.max(1,Math.floor(daysBetween(p.since||today(),today())/7)+1-(Number(p.rep)||0));return p}
 function savePlan(p){const keep=Object.assign({},p);['kind','name','gp','now','best','base'].forEach(k=>delete keep[k]);setProp('RUN_PLAN',JSON.stringify(keep))}
@@ -237,7 +243,7 @@ function pvaHtml(r,opt){opt=opt||{};if(!r||!Array.isArray(r.tg)||!r.tg.length)re
   return `<div class="fpT-card"><span class="muted">${r.d?r.d.split('-').reverse().slice(0,2).join('.')+' · ':''}${r.km?(Math.round(r.km*100)/100)+' ק״מ':''}</span>
     <div style="display:flex;justify-content:space-between;align-items:end;margin-top:4px"><span style="font-size:34px;font-weight:900;font-variant-numeric:tabular-nums">${tot?mmss(tot):'—'}</span>${dt==null?'':dt<=0?`<span class="fpPill g">${dt===0?'בדיוק ביעד':mmss(-dt)+' מתחת ליעד'}</span>`:`<span class="fpPill r">${mmss(dt)} מעל היעד</span>`}</div>
     <span class="muted" style="font-size:12.5px">יעד ${mmss(ttg)}${tot&&r.km?' · קצב '+mmss(tot/r.km):''}</span></div>
-    ${n?`<div class="fpT-card"><table class="fpPva"><tr><th>ק״מ</th><th>יעד</th><th>בפועל</th><th>הפרש</th></tr>${sp.map((a,i)=>`<tr><td>${i+1}</td><td>${mmss(tgAt(r.tg,i))}</td><td>${mmss(a)}</td><td>${pill(a-tgAt(r.tg,i))}</td></tr>`).join('')}</table></div>`:'<p class="muted">לא נרשם קצב לכל ק״מ, אז אין השוואה לכל קילומטר.</p>'}
+    ${n?`<div class="fpT-card"><table class="fpPva"><tr><th>ק״מ</th><th>יעד</th><th>בפועל</th><th>הפרש</th></tr>${sp.map((a,i)=>`<tr><td>${i+1}</td><td>${mmss(tgAt(r.tg,i))}</td><td>${mmss(a)}</td><td>${pill(a-tgAt(r.tg,i))}</td></tr>`).join('')}</table></div>`:`<div class="fpT-card"><table class="fpPva"><tr><th>ק״מ</th><th>יעד</th><th>בפועל</th><th>הפרש</th></tr>${r.tg.slice(0,Math.max(1,Math.ceil(Number(r.km)||r.tg.length))).map((t,i)=>`<tr><td>${i+1}</td><td>${mmss(t)}</td><td>—</td><td></td></tr>`).join('')}</table><p class="muted" style="margin:6px 0 0;font-size:12.5px">לא נרשם זמן לכל ק״מ. עם GPS זה נרשם לבד, או ממלאים ב״זמן לכל ק״מ״.</p></div>`}
     ${rec?`<div class="fpRec"><span class="muted">בפעם הבאה</span><p style="margin:3px 0 0;font-size:13.5px">${esc(rec.text)}</p></div>${rec.tg&&r.fid&&opt.apply!==false?`<button type="button" class="btn full" onclick="fpT.recApply('${esc(r.fid)}',${JSON.stringify(rec.tg)})">שמור יעדים לפעם הבאה</button>`:''}`:''}`}
 /* 2.22: the run questionnaire on one organized screen: where you are today, where you want to get, your plan */
 function planWeeks(start,goal){const base=Math.max(1.5,Number(start)||0),g=Number(goal)||5;let w=base>=g?4:Math.ceil(Math.log(g/base)/Math.log(1.1));w+=Math.floor(w/3);return Math.max(4,Math.min(30,w))}
@@ -267,7 +273,7 @@ function planSum(s){const start=s.mode==='zero'?0:Number(String(s.now).replace('
 async function logRun(ok){
   const km=Number(String(($('fpTkm')||{}).value||'').replace(',','.'))||0,tm=sec(($('fpTtime')||{}).value)||null;
   const p=plan();const log=J('RUN_LOG',[]);const sp=[...document.querySelectorAll('#fpSplits input')].map(i=>sec(i.value)).filter(x=>x!=null);gpsStop(true);V.km='';V.tm='';V.sp=[];
-  const row={d:today(),km,s:tm,ok:!!ok,type:V.pick==='own'?V.own.type:'plan'};if(V.fixed)row.name=V.fixed;if(V.fid)row.fid=V.fid;if(V.tg&&V.tg.length)row.tg=V.tg.slice();if(sp.length)row.sp=sp;if(V.gps)row.gps=1;V.gps=0;log.push(row);setProp('RUN_LOG',JSON.stringify(log.slice(-400)));
+  const row={d:today(),t:Date.now(),km,s:tm,ok:!!ok,type:V.pick==='own'?V.own.type:'plan'};if(V.fixed)row.name=V.fixed;if(V.fid)row.fid=V.fid;if(V.tg&&V.tg.length)row.tg=V.tg.slice();if(sp.length)row.sp=sp;if(V.gps)row.gps=1;V.gps=0;log.push(row);setProp('RUN_LOG',JSON.stringify(log.slice(-400)));
   const note=(km?km+' ק״מ':'')+(tm?' · '+mmss(tm):'')+(ok?'':' · עצרתי באמצע');
   try{const r=await call('createWorkoutSession',{date:state.date,name:'ריצה',type:'אירובי'});state.data.workout=await call('saveWorkout',{date:state.date,muscleGroup:'אירובי',exercise:'ריצה',sets:[{weight:'',reps:1,note}],notes:note,sessionName:'ריצה',sessionId:r.id});
     try{state.data.workout=(await call('finishWorkoutSession',{id:r.id,minutes:tm?Math.round(tm/60):''})).workout||state.data.workout}catch(_){}try{renderWorkouts(false)}catch(_){}}catch(e){console.warn(e)}
@@ -314,7 +320,7 @@ function cardioSheet(){const t=cplan()||{lvl:'beg',kinds:['ell'],carGoal:2,week:
 let cInt=0;
 function cTick(){const lvl=C.lvl||(cplan()||{lvl:'beg'}).lvl,ph=carPhases(lvl,C.day);if(!C.run)return;C.run.t++;if(C.run.t>=ph[C.run.i][1]){C.run.i++;C.run.t=0;try{fpRestSound&&fpRestSound()}catch(_){}if(C.run.i>=ph.length){clearInterval(cInt);return fpT.cStop(1)}}
   const big=document.querySelector('#fpTSheet .fpT-timer .big');if(big){const cur=ph[C.run.i];big.textContent=mmss(Math.max(0,cur[1]-C.run.t))}}
-async function saveCardio(minutes,k){const m=MACH[k]||{n:'אירובי'};const log=J('CARDIO_LOG',[]);log.push({d:today(),min:minutes,k,hard:C.day==='hard'});setProp('CARDIO_LOG',JSON.stringify(log.slice(-400)));
+async function saveCardio(minutes,k){const m=MACH[k]||{n:'אירובי'};const log=J('CARDIO_LOG',[]);log.push({d:today(),t:Date.now(),min:minutes,k,hard:C.day==='hard'});setProp('CARDIO_LOG',JSON.stringify(log.slice(-400)));
   try{const r=await call('createWorkoutSession',{date:state.date,name:'אירובי',type:'אירובי'});state.data.workout=await call('saveWorkout',{date:state.date,muscleGroup:'אירובי',exercise:m.n,sets:[{weight:'',reps:1,note:minutes+' דקות'}],notes:minutes+' דקות',sessionName:'אירובי',sessionId:r.id});
     try{state.data.workout=(await call('finishWorkoutSession',{id:r.id,minutes})).workout||state.data.workout}catch(_){}try{renderWorkouts(false)}catch(_){}}catch(e){console.warn(e)}}
 
@@ -336,6 +342,11 @@ window.fpT={
     V={step:0,pick:'own',own:{type:x.type||'קלה',km:x.km?String(x.km):'',min:x.min?String(x.min):''},fixed:x.name,fid:x.id,tg:Array.isArray(x.tg)&&x.tg.length?x.tg.slice():null,rec:recFor(last)};runSheet()},
   recApply(fid,tg){const a=J('RUN_MY',[]),x=a.find(r=>r.id===fid);if(!x||!Array.isArray(tg))return;x.tg=tg.map(Number);const tot=x.tg.slice(0,Math.ceil(Number(x.km)||x.tg.length)).reduce((s,v)=>s+v,0);x.tm=mmss(tot);x.tmode='total';x.per=new Set(x.tg).size>1;setProp('RUN_MY',JSON.stringify(a));try{toast('היעדים לפעם הבאה נשמרו')}catch(_){}
     document.querySelectorAll('#fpTSheet button').forEach(b=>{if(/שמור יעדים לפעם הבאה/.test(b.textContent)){b.disabled=true;b.textContent='✓ נשמר'}})},
+  /* 2.24: a run with sets (fp2-224) saves through here: the log, the journal, shoes and medals */
+  async saveRow(row,note){const log=J('RUN_LOG',[]);row.d=row.d||today();row.t=row.t||Date.now();log.push(row);setProp('RUN_LOG',JSON.stringify(log.slice(-400)));const tm=row.s||0;
+    try{const r=await call('createWorkoutSession',{date:state.date,name:'ריצה',type:'אירובי'});state.data.workout=await call('saveWorkout',{date:state.date,muscleGroup:'אירובי',exercise:'ריצה',sets:[{weight:'',reps:1,note}],notes:note,sessionName:'ריצה',sessionId:r.id});
+      try{state.data.workout=(await call('finishWorkoutSession',{id:r.id,minutes:tm?Math.round(tm/60):''})).workout||state.data.workout}catch(_){}try{renderWorkouts(false)}catch(_){}}catch(e){console.warn(e)}
+    try{shoes(log.reduce((a,r)=>a+(Number(r.km)||0),0))}catch(_){}if(row.ok)setProp('RUN_STOPS','0');setTimeout(()=>{try{fp219Week.checkMedals(false)}catch(_){}},350);return row},
   gpsOn(){return !!(G&&G.on)},
   runMin(){if(!G||!G.on)return;RUNMIN=true;scrOff();const s=$('fpTSheet');if(s)s.remove();cancelAnimationFrame(raf);floatOn()},
   runMax(){if(!G||!G.on)return;RUNMIN=false;floatOff();if(!$('fpTSheet'))runSheet();scrOpen()},

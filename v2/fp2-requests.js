@@ -127,6 +127,7 @@ function badge(){
   const nav=document.querySelector('nav button[data-tab="more"]');
   if(nav){let x=nav.querySelector('.fp-badge');if(!n){if(x)x.remove()}else{if(!x){nav.insertAdjacentHTML('beforeend','<span class="fp-badge"></span>');x=nav.querySelector('.fp-badge')}x.textContent=n>99?'99+':String(n)}}
 }
+window.fpReqRefresh=()=>refreshBadge();
 async function refreshBadge(){const f=fb();if(!f||!f.isAdmin||!f.isAdmin())return;try{A.list=await f.reqList(true);badge()}catch(_){}}
 function injectAdmin(){
   try{const f=fb();if(!f||!f.isAdmin||!f.isAdmin()||$('fpAdmEntry'))return;const s=$('settings');if(!s)return;

@@ -9,8 +9,8 @@ const FOLDERS=[
   {id:'fpFolderTrain',title:'אימונים',match:[/אימונים: כוח/,/צליל סוף מנוחה/]},
   {id:'fpFolderDay',title:'היום, השבוע ומדליות',match:[/היום, חגים ושבת/,/מדליות וסיכום שבוע/]},
   {id:'fpFolderAcc',title:'חשבון, התראות ויומן',match:[/השם שלי/,/^[^א-ת]*התראות/,/חיבור יומן/,/צ׳ק-אין שבועי/]},
-  {id:'fpFolderTools',title:'גיבוי, בדיקות והגדרות נוספות',match:[/גיבוי וייצוא/,/בדיקת AI/,/הגדרות נוספות/,/צמרת/]},
-  {id:'fpFolderAdm',title:'ניהול (רק למנהל)',admin:true,match:[/משתמשים/,/הצעות לתרגילים/,/מכונת זמן/]}
+  {id:'fpFolderTools',title:'גיבוי והגדרות נוספות',match:[/גיבוי וייצוא/,/הגדרות נוספות/]},
+  {id:'fpFolderAdm',title:'ניהול (רק למנהל)',admin:true,match:[/משתמשים/,/הצעות לתרגילים/,/מכונת זמן/,/בדיקת AI/,/^מתקדם/,/צמרת/]}
 ];
 /* the order of what stays on top (now nothing: all in folders) */
 const TOP=[];
