@@ -46,7 +46,9 @@ const STEPS=[
  {kind:'b',view:'process',t:()=>q('#processTrends'),title:'המגמה',text:'הקו של כל התהליך: לאן אתה הולך, ולא מה קרה ביום אחד.'},
  {kind:'b',view:'process',t:()=>q('nav button[data-tab="more"]'),title:'ההגדרות',text:'עוברים להגדרות.',tap:true,tapText:'לחץ על ״עוד״'},
  {kind:'b',view:'settings',t:()=>q('#fpGoalSet')||q('#settings h2'),title:'כל מה שאמרנו, משתנה כאן',text:'היעד והאירועים, איך אתה מבשל, חגים ושבת, צליל מנוחה, הקיצורים, מדליות וסיכום שבוע, ו״אימונים: כוח, ריצה, אירובי״ עם התוכנית השבועית. הכל כבר מוגדר לפי השאלון, ואפשר לשנות מתי שרוצים.'},
- {kind:'end',view:'today',t:null,title:'זהו, אתה מוכן',text:'יאללה, תרשום את הארוחה הראשונה. הסיור נשאר בהגדרות.'}
+ /* 2.27: each type can be turned off and on */
+ {kind:'b',view:'settings',before:()=>{try{const f=q('#fpFolderTrain');if(f)f.open=true;fp222.page('s')}catch(_){}},t:()=>{const c=q('#fpTSheet .fpSw');return c?c.closest('.fpCard'):null},title:'לכבות ולהדליק כל סוג',text:'הגדרות ← אימונים ← כוח / ריצה / אירובי: בראש כל עמוד ״להציג באימונים״. מכבים מה שלא עושים (למשל ריצה), והוא נעלם מהמסך. שום דבר לא נמחק, ומדליקים שוב מתי שרוצים.'},
+ {kind:'end',view:'today',before:()=>{try{fpT.close()}catch(_){}},t:null,title:'זהו, אתה מוכן',text:'יאללה, תרשום את הארוחה הראשונה. הסיור נשאר בהגדרות.'}
 ];
 const old=window.fpIntro;
 window.fpIntro=function(start,steps,opt){return old(start,Array.isArray(steps)&&steps.length?steps:STEPS,opt||{endLabel:'יאללה, לרשום ארוחה ראשונה'})};

@@ -194,6 +194,8 @@ async function shrink(file,onp){const okType=/^video\//.test(file.type||'video/m
 let XV=null;
 function xvSheet(){const x=XV;if(!x)return;let o=$('fpExV');if(!o){document.body.insertAdjacentHTML('beforeend','<div class="overlay" id="fpExV"><div class="sheet" style="max-height:92vh;overflow:auto"></div></div>');o=$('fpExV');o.addEventListener('click',e=>{if(e.target===o&&!x.busy)fp223.xvClose()})}
   const ex=x.ex,sh=sharedOf(x.name),mine=ex?EXV()[exKey(ex)]:null,adm=isAdmin(),canName=ex&&!sh&&!ex.sourceUrl;
+  /* 2.27: after the exercise was approved for everyone, a user may still keep his OWN video (only for him) */
+  const personal=!!(sh&&mine&&mine.status==='private'&&mine.fid&&!adm);
   let h=`<div class="sheet-head"><h3 style="margin:0">${esc(x.name)}</h3><button type="button" class="trash" aria-label="סגור" onclick="fp223.xvClose()">✕</button></div>`;
   if(canName)h+=`<div class="nm"><div class="field"><label for="fpXvN">שם התרגיל</label><input id="fpXvN" value="${esc(x.name)}" maxlength="60"></div><button type="button" class="btn light" onclick="fp223.xvRename()">שמור שם</button></div>`;
   /* 2.25: a chosen video waits here: "רק לי" or "לשתף עם כולם (המנהל מחליט)", then "שלח" or "מחק". Nothing goes out by itself. */
@@ -202,9 +204,15 @@ function xvSheet(){const x=XV;if(!x)return;let o=$('fpExV');if(!o){document.body
       <div class="row" style="margin-top:10px"><button type="button" class="btn light" style="color:#F09595" onclick="fp223.xvDrop()">מחק</button><button type="button" class="btn" onclick="fp223.xvSend()">שלח</button></div>`;o.querySelector('.sheet').innerHTML=h;o.classList.remove('hide');return}
   if(x.busy)h+=`<div class="ph"><div><b>${esc(x.busy)}</b><div class="prog" style="width:220px"><i id="fpXvP" style="width:${Math.round((x.p||0)*100)}%"></i></div><small class="mu">אפשר להשאיר את המסך פתוח עד שזה נגמר</small></div></div>`;
   else if(sh||mine)h+=x.url?`<video class="vid" src="${x.url}" controls playsinline loop muted autoplay></video>`:`<div class="ph">${x.err?esc(x.err):'טוען את הסרטון…'}</div>`;
-  if(!x.busy&&sh){h+=`<div class="who"><span class="mu">מי רואה</span><span class="pill all">כולם</span></div>`;
+  if(!x.busy&&personal){h+=`<div class="who"><span>${ic('check')} הסרטון שלך</span><span class="pill me">רק אתה רואה</span></div>
+      <label class="btn light full" style="display:block;text-align:center;margin-top:8px">להחליף את הסרטון שלי<input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0])"></label>
+      <button type="button" class="btn light full" style="margin-top:8px" onclick="fp223.xvDel()">לחזור לסרטון של כולם</button>`}
+  else if(!x.busy&&sh){h+=`<div class="who"><span class="mu">מי רואה</span><span class="pill all">כולם</span></div>`;
     if(adm)h+=`<label class="btn light full" style="display:block;text-align:center">להחליף את הסרטון לכולם<input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0],'admin')"></label>`;
-    else h+=`<p class="mu" style="margin:0">התרגיל והסרטון אושרו לכולם. רק המנהל משנה אותם.</p>`}
+    else h+=`<p class="mu" style="margin:0 0 8px">התרגיל והסרטון אושרו לכולם. רק המנהל משנה אותם לכולם.</p><label class="btn light full" style="display:block;text-align:center">סרטון אחר רק לי<input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0])"></label>`}
+  else if(!x.busy&&mine&&mine.status==='suggested'){
+    /* 2.27: sent to the admin — nothing to change now. It stays saved for you meanwhile. */
+    h+=`<div class="who"><span>${ic('check')} שמור אצלך</span><span class="pill wait">נשלח למנהל</span></div><p class="mu" style="margin:6px 0 0">נשלח למנהל לאישור. כרגע התרגיל והסרטון שמורים אצלך. כשהמנהל יחליט, תקבל הודעה.</p>`}
   else if(!x.busy&&mine){const st=mine.status||'private',on=st==='suggested'||st==='public';
     /* 2.23.1 (sketch B): saved for you always, right away. Sharing with everyone is a separate switch, and only the admin approves it. */
     h+=`<div class="who"><span>${ic('check')} שמור אצלך</span><span class="pill me">רק אתה רואה</span></div>
@@ -218,7 +226,7 @@ function xvSheet(){const x=XV;if(!x)return;let o=$('fpExV');if(!o){document.body
       <button type="button" class="tile" ${asked?'disabled':''} onclick="fp223.xvAsk()">${ic('chat')}${asked?'הבקשה כבר נשלחה':'לבקש הדגמה מהמנהל'}<small>${asked?'המנהל יראה אותה ברשימה':'פעם אחת, הבקשה נשמרת'}</small></button></div>
       ${!ex?'<p class="fpHint" style="margin:0">כדי להעלות סרטון, התרגיל צריך להיות ברשימת התרגילים שלך.</p>':''}`}
   o.querySelector('.sheet').innerHTML=h;o.classList.remove('hide')}
-async function xvLoad(){const x=XV;if(!x)return;const sh=sharedOf(x.name),mine=x.ex?EXV()[exKey(x.ex)]:null,fid=sh?sh.fid:mine&&mine.fid;if(!fid)return;
+async function xvLoad(){const x=XV;if(!x)return;const sh=sharedOf(x.name),mine=x.ex?EXV()[exKey(x.ex)]:null,own=sh&&mine&&mine.status==='private'&&mine.fid&&!isAdmin(),fid=own?mine.fid:sh?sh.fid:mine&&mine.fid;if(!fid)return;
   try{const u=await videoUrl(fid);if(XV!==x)return URL.revokeObjectURL(u);if(x.url)URL.revokeObjectURL(x.url);x.url=u;x.err=''}catch(e){x.err='הסרטון לא נטען: '+errMsg(e)}xvSheet()}
 async function xvSyncStatus(){const x=XV;if(!x||!x.ex)return;const m=EXV(),k=exKey(x.ex),mine=m[k];if(!mine||mine.status!=='suggested')return;await loadShared(true);if(XV!==x)return;
   if((SHARED.items||[]).some(s=>s.fid===mine.fid)){mine.status='public';m[k]=mine;exvSave(m)}xvSheet()}
@@ -237,12 +245,12 @@ Object.assign(window.fp223,{
       if(mode==='admin'){const r=await push('adminSetSharedVideo',{b64,type:s.type,name:x.name,group:ex.group||'',equipment:ex.equipment||''});vput(r.fid,s.blob);await loadShared(true);toast('הסרטון הוחלף אצל כולם')}
       else{const r=await push('exVideoUpload',{b64,type:s.type,name:x.name,group:ex.group||'',equipment:ex.equipment||'',exId:k,replace:old&&old.status!=='public'?old.fid:''});vput(r.fid,s.blob);m[k]={fid:r.fid,status:'private',name:x.name,ts:new Date().toISOString()};exvSave(m);
         /* 2.23.1: "share with everyone": saved for you right away, and the suggestion goes to the admin */
-        if(mode==='share'){try{await push('exVideoSuggest',{fid:r.fid,name:x.name,group:ex.group||'',equipment:ex.equipment||''});m[k].status='suggested';exvSave(m);toast('נשמר אצלך. נשלח למנהל לאישור לכולם')}catch(e){toast('נשמר אצלך. השליחה למנהל נכשלה: '+errMsg(e),true)}}
+        if(mode==='share'){try{await push('exVideoSuggest',{fid:r.fid,name:x.name,group:ex.group||'',equipment:ex.equipment||''});m[k].status='suggested';exvSave(m);toast('נשלח למנהל. כרגע התרגיל שמור אצלך')}catch(e){toast('נשמר אצלך. השליחה למנהל נכשלה: '+errMsg(e),true)}}
         else toast('הסרטון נשמר. רק אתה רואה אותו')}
       x.busy='';if(x.url)URL.revokeObjectURL(x.url);x.url='';xvSheet();xvLoad()}
     catch(e){x.busy='';xvSheet();toast('הסרטון לא נשמר: '+errMsg(e),true)}},
   async xvSug(){const x=XV;if(!x||!x.ex)return;const m=EXV(),k=exKey(x.ex),mine=m[k];if(!mine)return;
-    try{await push('exVideoSuggest',{fid:mine.fid,name:x.name,group:x.ex.group||'',equipment:x.ex.equipment||''});mine.status='suggested';m[k]=mine;exvSave(m);toast('נשלח למנהל. תקבל הודעה כשיאושר');xvSheet()}catch(e){toast(errMsg(e),true)}},
+    try{await push('exVideoSuggest',{fid:mine.fid,name:x.name,group:x.ex.group||'',equipment:x.ex.equipment||''});mine.status='suggested';m[k]=mine;exvSave(m);toast('נשלח למנהל. כרגע התרגיל שמור אצלך');xvSheet()}catch(e){toast(errMsg(e),true)}},
   async xvUnsug(){const x=XV;if(!x||!x.ex)return;const m=EXV(),k=exKey(x.ex),mine=m[k];if(!mine)return;
     try{await push('exVideoUnsuggest',{fid:mine.fid});mine.status='private';m[k]=mine;exvSave(m);toast('ההצעה בוטלה');xvSheet()}catch(e){toast(errMsg(e),true)}},
   async xvDel(){const x=XV;if(!x||!x.ex)return;const m=EXV(),k=exKey(x.ex),mine=m[k];if(!mine||!confirm('למחוק את הסרטון?'))return;
@@ -254,10 +262,14 @@ Object.assign(window.fp223,{
     try{state.data.workout=await call('updateExercise',{id:x.ex.id,name:n});const m=EXV(),k=exKey(x.ex);if(m[k]){m[k].name=n;exvSave(m)}x.name=n;x.ex=findEx(n)||x.ex;try{renderWorkouts(false)}catch(_){}toast('השם עודכן');xvSheet()}catch(e){toast(errMsg(e),true)}}
 });
 /* approved exercises from other people come into my list of exercises (once each) */
-async function syncShared(){if(!state.data||!state.data.workout)return;const items=await loadShared(false);const added=J('SHARED_ADDED',[]);let ch=false;
-  for(const s of items){const n=low(s.name);if(added.includes(n))continue;if(!findEx(s.name)){try{state.data.workout=await call('saveExercise',{muscleGroup:s.group||'כללי',name:s.name,equipment:s.equipment||'משקולות חופשיות'});ch=true}catch(_){continue}}added.push(n)}
+async function syncShared(force){if(!state.data||!state.data.workout)return;const items=await loadShared(!!force);const added=J('SHARED_ADDED',[]);let ch=false;
+  for(const s of items){const n=low(s.name);if(added.includes(n))continue;/* 2.27: only what came from the shared list is marked as ״added״ — an exercise I already had (maybe I created it) stays mine */
+    if(!findEx(s.name)){try{state.data.workout=await call('saveExercise',{muscleGroup:s.group||'כללי',name:s.name,equipment:s.equipment||'משקולות חופשיות'});ch=true}catch(_){continue}added.push(n)}}
   /* 2.25: the admin removed an approved exercise from everyone → it leaves my list too (only if it came from the shared list) */
-  for(const nm of (SHARED.removed||[])){const n=low(nm),i=added.indexOf(n);if(i<0)continue;const ex=findEx(nm);if(ex){try{state.data.workout=await call('deleteExercise',ex.id);ch=true}catch(_){continue}}added.splice(i,1)}
+  for(const nm of (SHARED.removed||[])){const n=low(nm),i=added.indexOf(n);if(i<0)continue;const ex=findEx(nm);
+    /* the one who uploaded its video keeps it (it is his, for his plan) */
+    if(ex&&EXV()[exKey(ex)]){added.splice(i,1);continue}
+    if(ex){try{state.data.workout=await call('deleteExercise',ex.id);ch=true}catch(_){continue}}added.splice(i,1)}
   setProp('SHARED_ADDED',JSON.stringify(added.slice(-300)));if(ch){try{if($('workoutLibrary')&&$('workoutLibrary').classList.contains('active'))renderWorkoutPlans()}catch(_){}}}
 /* the admin: suggestions to approve (Settings) */
 let SUG=null;
@@ -326,19 +338,23 @@ if(typeof showView==='function'){const o=showView;showView=function(id){const r=
 /* 2.23.1 (sketch A): the admin sees a red number on "עוד" and next to what waits: video suggestions and new requests */
 let BADGE={sug:0,req:0};
 async function badgeLoad(){if(!isAdmin())return;try{const r=await push('adminListExSuggestions',{});BADGE.sug=((r&&r.items)||[]).length}catch(_){}
-  try{const l=await FP2.reqList(true);BADGE.req=(l||[]).filter(x=>!x.status||x.status==='new').length}catch(_){}badgeDraw()}
+  /* 2.27: the requests count comes from the requests module (same rule: new and not opened yet) */
+  if(window.fpReqRefresh){try{await fpReqRefresh()}catch(_){}}else{try{const l=await FP2.reqList(true);BADGE.req=(l||[]).filter(x=>!x.status||x.status==='new').length}catch(_){}}badgeDraw()}
 function badgeDraw(){const n=BADGE.sug+BADGE.req,b=document.querySelector('nav button[data-tab="more"] b');
   if(b){let e=b.querySelector('.fpBadge');if(!n){if(e)e.remove()}else{if(!e){b.style.position='relative';b.insertAdjacentHTML('beforeend','<span class="fpBadge"></span>');e=b.querySelector('.fpBadge')}e.textContent=n>99?'99+':n}}
   const sg=document.querySelector('#fpSugSet>summary');if(sg){let e=sg.querySelector('.fpBadge');if(!BADGE.sug){if(e)e.remove()}else{if(!e){sg.insertAdjacentHTML('beforeend',' <span class="fpBadge in"></span>');e=sg.querySelector('.fpBadge')}e.textContent=BADGE.sug}}}
 document.head.insertAdjacentHTML('beforeend','<style>.fpBadge{position:absolute;top:-6px;right:-14px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#FF5A4F;color:#fff;font-size:11px;font-weight:800;display:inline-grid;place-items:center;line-height:1}.fpBadge.in{position:static;vertical-align:middle}</style>');
 setInterval(()=>{if(typeof state!=='undefined'&&state.data)badgeLoad()},10*60*1000);
 /* 2.24: the 224 module refreshes these right after a send / an approval, and when you open a screen */
-window.fp223.badgeLoad=()=>badgeLoad();window.fp223.loadShared=f=>loadShared(f);window.fp223.sharedNow=()=>SHARED.items||[];window.fp223.reqInbox=()=>reqInbox();
+/* 2.27: the exercise page asks which video an exercise has (mine for me only, or the shared one), and its link */
+window.fp223.vidFor=name=>{try{const ex=findEx(name),sh=sharedOf(name),mine=ex?EXV()[exKey(ex)]:null;return (sh&&mine&&mine.status==='private'&&mine.fid&&!isAdmin())?mine.fid:sh?sh.fid:(mine&&mine.fid)||''}catch(_){return ''}};window.fp223.vurl=fid=>videoUrl(fid);
+window.fp223.setReq=n=>{BADGE.req=Number(n)||0;badgeDraw()};window.fp223.badgeLoad=()=>badgeLoad();window.fp223.loadShared=f=>loadShared(f);window.fp223.sharedNow=()=>SHARED.items||[];window.fp223.reqInbox=()=>reqInbox();
 
 /* ---------- hooks ---------- */
 if(typeof renderSettings==='function'){const o=renderSettings;renderSettings=function(){const r=o.apply(this,arguments);try{renderSugSet();badgeDraw()}catch(e){console.error(e)}try{renderChk()}catch(e){console.error(e)}return r}}
 if(typeof renderNotificationSettings==='function'){const o=renderNotificationSettings;renderNotificationSettings=function(){const r=o.apply(this,arguments);try{renderChk()}catch(_){}return r}}
 const boot=setInterval(()=>{if(typeof state==='undefined'||!state.data||!window.FP2)return;clearInterval(boot);
-  setTimeout(()=>{syncShared().catch(()=>{})},3000);setTimeout(()=>{reqInbox().catch(()=>{})},5000);setTimeout(()=>{badgeLoad().catch(()=>{})},4000);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>{reqInbox().catch(()=>{})},1500)})},800);
+  /* 2.27: the shared list is read fresh on every opening (an exercise the admin removed leaves right away, not after 6 hours) */
+  setTimeout(()=>{syncShared(true).catch(()=>{})},3000);setTimeout(()=>{reqInbox().catch(()=>{})},5000);setTimeout(()=>{badgeLoad().catch(()=>{})},4000);
+  let lastSync=Date.now();document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible')return;setTimeout(()=>{reqInbox().catch(()=>{})},1500);if(Date.now()-lastSync>120000){lastSync=Date.now();setTimeout(()=>{syncShared(true).catch(()=>{})},2500)}})},800);
 })();

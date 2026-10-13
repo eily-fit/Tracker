@@ -125,8 +125,9 @@ function badge(){
     /* the service worker adds 1 for every request push; keep its count in step with what the app shows */
     try{if(window.caches)caches.open('fitpro-badge').then(c=>c.put('n',new Response(String(n)))).catch(()=>{})}catch(_){}},0)}
   const b=$('fpAdmBadge');if(b)b.innerHTML=n?` <span class="fp-badge">${n}</span>`:'';
-  const nav=document.querySelector('nav button[data-tab="more"]');
-  if(nav){let x=nav.querySelector('.fp-badge');if(!n){if(x)x.remove()}else{if(!x){nav.insertAdjacentHTML('beforeend','<span class="fp-badge"></span>');x=nav.querySelector('.fp-badge')}x.textContent=n>99?'99+':String(n)}}
+  /* 2.27: one red number on "עוד" (it was drawn twice: here and by the 2.23 module). The 2.23 module draws it, with this count. */
+  const nav=document.querySelector('nav button[data-tab="more"]');const x=nav&&nav.querySelector('.fp-badge');if(x)x.remove();
+  try{window.fp223&&fp223.setReq&&fp223.setReq(n)}catch(_){}
 }
 window.fpReqRefresh=()=>refreshBadge();
 async function refreshBadge(){const f=fb();if(!f||!f.isAdmin||!f.isAdmin())return;try{A.list=await f.reqList(true);badge()}catch(_){}}
@@ -156,7 +157,8 @@ window.fpTimeMachine=async function(date){
     let msg='';
     if(date&&!on)await call('debugStart',{});
     if(date)await call('saveSettings',{debug_today:date});
-    else{const r=await call('debugEnd',{});try{['fp2.streakEnd','fp2.evSum','fp2.holAsked','fp2.shabLook','fp2.shabFill','fp2.shabSaved','fp2.cutAsked','fp2.twoAsked'].forEach(k=>localStorage.removeItem(k))}catch(_){}msg=r?` · נמחקו ${r.entries||0} פריטים${r.events?`, ${r.events} אירועים`:''}`:''}
+    else{const r=await call('debugEnd',{});try{['fp2.streakEnd','fp2.evSum','fp2.holAsked','fp2.shabLook','fp2.shabFill','fp2.shabSaved','fp2.cutAsked','fp2.twoAsked'].forEach(k=>localStorage.removeItem(k))}catch(_){}/* 2.27: count everything that was removed or brought back (food, workouts, events, measures, check-ins, foods, app data) */
+      if(r){const parts=[[r.entries,'פריטי אוכל'],[r.workouts,'תרגילים באימונים'],[r.sessions,'אימונים'],[r.events,'אירועים'],[r.measures,'מדידות'],[r.checkins,'צ׳ק-אינים'],[r.foods,'מזונות'],[r.props,'נתוני אפליקציה (ריצות, אירובי, סימונים)']].filter(x=>Number(x[0])>0).map(x=>x[0]+' '+x[1]);msg=parts.length?' · חזר למה שהיה: '+parts.join(', '):' · לא היה מה להחזיר'}else msg=''}
     ['fp2.cutAsked','fp2.twoAsked','fp2.evStart'].forEach(k=>{try{localStorage.removeItem(k)}catch(_){}});
     state.data=await call('getBootstrapData');state.date=state.data.date;state.todayDate=state.data.date;renderAll();tmBanner();
     toast(date?'מצב בדיקה: היום = '+displayDate(date):'חזרת להיום האמיתי'+msg);

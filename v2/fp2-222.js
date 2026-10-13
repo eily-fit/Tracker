@@ -504,7 +504,11 @@ function renderSet(){const sec=$('settings');if(!sec||!state.data||!window.fpW)r
   const o=ON(),n=VT().length;
   box.innerHTML=`<summary>אימונים: כוח, ריצה, אירובי</summary><div class="settings-body">
     <button type="button" class="fpRowBtn" onclick="fp222.ed.open()"><span><b>תוכנית שבועית</b><small>${S.plan}</small></span>${ic('chev')}</button>
-    ${TYPES.map(t=>`<button type="button" class="fpRowBtn" onclick="fp222.page('${t}')"><span><b>${dot(t)} ${TN[t]}</b><small>${o[t]?S[t]:'מוסתר באימונים'}</small></span>${ic('chev')}</button>`).join('')}</div>`;box.open=open}
+    ${TYPES.map(t=>`<button type="button" class="fpRowBtn" onclick="fp222.page('${t}')"><span><b>${dot(t)} ${TN[t]}</b><small>${o[t]?S[t]:'מוסתר באימונים'}</small></span>${ic('chev')}</button>`).join('')}</div>`;
+  /* 2.27: inside the ״אימונים״ folder it is open by itself, without its own title (no folder inside a folder) */
+  box.open=box.closest('#fpFolderTrain')?true:open}
+document.head.insertAdjacentHTML('beforeend','<style id="fp227tr">#fpFolderTrain #fpTrainSet{border:0;background:none;padding:0;margin:0!important;box-shadow:none}#fpFolderTrain #fpTrainSet>summary{display:none}#fpFolderTrain #fpTrainSet>.settings-body{padding:0}</style>');
+document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.id==='fpFolderTrain'&&d.open){const b=$('fpTrainSet');if(b)b.open=true}},true);
 
 /* =========================================================
    hooks and actions

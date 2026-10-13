@@ -5,7 +5,7 @@
 /* 2.23.1: everything sits in a few clear folders (the sections themselves did not change).
    The "ניהול" folder is for the admin only — a user never sees it. */
 const FOLDERS=[
-  {id:'fpFolderFood',title:'אוכל ויעדים',match:[/היעד והאירועים/,/יעדים יומיים/,/איך אתה מבשל/]},
+  {id:'fpFolderFood',title:'אוכל ויעדים',match:[/היעד והאירועים/,/יעדים יומיים/,/שעות הארוחות/,/ארבע ארוחות/,/איך אתה מבשל/]},
   {id:'fpFolderTrain',title:'אימונים',match:[/אימונים: כוח/,/צליל סוף מנוחה/]},
   {id:'fpFolderDay',title:'היום, השבוע ומדליות',match:[/היום, חגים ושבת/,/מדליות וסיכום שבוע/]},
   {id:'fpFolderAcc',title:'חשבון, התראות ויומן',match:[/השם שלי/,/^[^א-ת]*התראות/,/חיבור יומן/,/צ׳ק-אין שבועי/]},

@@ -14,7 +14,7 @@ let TY='s';const SFX=()=>TY==='s'?'':'.'+TY,RK=()=>'fp2.restRec'+SFX();
 const cfg=()=>{let c={};try{c=JSON.parse(LS.get('fp2.restSound'+SFX())||LS.get('fp2.restSound')||'{}')||{}}catch(_){}c=Object.assign({kind:'chime',phrase:0,style:'normal',voice:'',vol:1},c);if(c.kind==='beepvoice')c.kind='voice';if(c.kind==='horn')c.kind='chime';return c};
 const setCfg=c=>LS.set('fp2.restSound'+SFX(),JSON.stringify(c));
 
-function ctx(){try{if(!state.audioCtx){AS('ambient');const AC=window.AudioContext||window.webkitAudioContext;if(AC)state.audioCtx=new AC()}const c=state.audioCtx;if(c&&c.state!=='running'&&c.state!=='closed'&&c.resume)c.resume().catch(()=>{});return c}catch(_){return null}}
+function ctx(){try{if(!state.audioCtx){const AC=window.AudioContext||window.webkitAudioContext;if(AC)state.audioCtx=new AC()}const c=state.audioCtx;if(c&&c.state!=='running'&&c.state!=='closed'&&c.resume)c.resume().catch(()=>{});return c}catch(_){return null}}
 /* 2.26 — the audio, after the sound lab on the iPhone (iOS 18.7, from the home screen, Spotify playing):
    - the app is "ambient" all the time: it mixes with the music and never stops it (a tap, opening the app, moving between screens).
    - every sound is played with Web Audio (never an <audio> element: that one came late and stopped Spotify),
@@ -34,13 +34,13 @@ if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&!navigator.media
   navigator.mediaDevices.getUserMedia=async function(c){
     const audio=!!(c&&c.audio);if(!audio)return gum(c);
     clearTimeout(backT);AS('play-and-record');
-    recording++;
-    try{const st=await gum(c);st.getTracks().forEach(t=>{const o=t.stop.bind(t);t.stop=function(){o();recording=Math.max(0,recording-1);if(!recording)setTimeout(idle,300)}});return st}
-    catch(e){recording=Math.max(0,recording-1);if(!recording)idle();
+    /* 2.27: counted only once the microphone is really open (a request that never answers must not block the sound forever) */
+    try{const st=await gum(c);recording++;st.getTracks().forEach(t=>{const o=t.stop.bind(t);let done=false;t.stop=function(){o();if(done)return;done=true;recording=Math.max(0,recording-1);if(!recording)setTimeout(idle,300)}});return st}
+    catch(e){if(!recording)idle();
       const m=e&&e.name==='NotAllowedError'?'אין הרשאה למיקרופון. באייפון: הגדרות ← Safari ← מיקרופון ← לאפשר, ואז לסגור ולפתוח את האפליקציה.':e&&e.name==='NotFoundError'?'לא נמצא מיקרופון':'המיקרופון לא נפתח: '+((e&&e.message)||'');
       const err=new Error(m);err.name=e&&e.name;err.fpMsg=m;throw err}
   };
-  navigator.mediaDevices.__fp=true;
+  navigator.mediaDevices.__fp=true;navigator.mediaDevices.__gum=gum;
 }
 window.fpMicMsg=e=>(e&&e.fpMsg)||'אין גישה למיקרופון';
 function out(c){const comp=c.createDynamicsCompressor();comp.threshold.value=-10;comp.ratio.value=4;comp.connect(c.destination);return comp}
@@ -59,14 +59,16 @@ function playTones(kind,oc){
   return 0;
 }
 
-/* 2.26: a tap wakes the sound, silently (in the lab this never stopped the music) */
+/* 2.27: the sound is woken silently only by the buttons that START something that will sound later
+   (a set / rest, a run, cardio, a lap, recording). Lab 3: waking on every tap stopped the music from going down for the sound. */
 function wakeSound(){if(recording)return;const c=ctx();try{if(c&&!c.__fpUnlock){c.__fpUnlock=1;const bf=c.createBuffer(1,1,22050),sr=c.createBufferSource();sr.buffer=bf;sr.connect(c.destination);sr.start(0)}}catch(_){}}
-document.addEventListener('touchend',wakeSound,{passive:true});document.addEventListener('click',wakeSound,true);
+const WAKE_RE=/start|Start|Go\(|go\(|fxGo|runGo|carStart|cStart|tstart|fpT\.run|fpT\.gps|qrun|sr\('lap'|saveWorkout|addSetRow|fpRestRec/;
+document.addEventListener('click',e=>{try{const b=e.target.closest&&e.target.closest('[onclick]');if(b&&WAKE_RE.test(b.getAttribute('onclick')||''))wakeSound()}catch(_){}},true);
 document.addEventListener('visibilitychange',()=>{try{if(document.visibilityState==='visible'){idle();if(state.audioCtx&&state.audioCtx.state!=='running')state.audioCtx.resume().catch(()=>{})}}catch(_){}});
 /* never wait forever for the sound to wake (a resume without a tap can hang): at most 0.4 s, then play anyway */
 async function live(){const c=ctx();if(!c)return null;try{if(c.state!=='running')await Promise.race([c.resume(),new Promise(r=>setTimeout(r,400))])}catch(_){}return c}
 async function webTones(kind){const c=await live();if(!c)return 0;return playTones(kind,c)||0}
-window.fp2SoundInfo=()=>({ctx:state.audioCtx&&state.audioCtx.state,session:navigator.audioSession&&navigator.audioSession.type});
+window.fp2SoundInfo=()=>({ctx:state.audioCtx&&state.audioCtx.state,session:navigator.audioSession&&navigator.audioSession.type,recording});
 function heVoices(){try{return speechSynthesis.getVoices().filter(v=>/^he|^iw/i.test(v.lang))}catch(_){return []}}
 function speak(text){try{if(!('speechSynthesis' in window))return false;const c=cfg(),u=new SpeechSynthesisUtterance(text);u.lang='he-IL';const vs=heVoices(),pick=vs.find(v=>v.name===c.voice)||vs[0];if(pick)u.voice=pick;
   const st=STYLES.find(s=>s[0]===c.style)||STYLES[0];u.rate=st[2];u.pitch=st[3];u.volume=Math.max(0.1,Math.min(1,c.vol));
@@ -156,7 +158,7 @@ window.fpConfetti=confetti;
 if(typeof toast==='function'){const o=toast;toast=function(msg){try{const m=String(msg||'').match(/^[^א-ת]*שיא חדש ב(.+)$/);if(m){confetti(m[1]);return}}catch(_){}return o.apply(this,arguments)}}
 
 /* ---------- settings: 2.23 — a board of sounds (each with its shape), personal sounds apart, volume, and quiet ---------- */
-let rec=null,recT0=0,recInt=0;const REC_MAX=4;
+let rec=null,recT0=0,recInt=0,recSt='',recBusy=0;const REC_MAX=4;
 const WAVE={chime:[6,14,20,12,18,8,4],marimba:[16,8,16,8,16,4],softbell:[10,12,10,6,4],beeps:[20,3,20,3,20],whistle:[4,9,15,20,14,5],bell:[18,14,10,6,4]};
 const waveHtml=k=>`<span class="w" aria-hidden="true">${(WAVE[k]||[]).map(h=>`<i style="height:${h}px"></i>`).join('')}</span>`;
 const IC={voice:'<path d="M4 5h16v11H9l-5 4z"/>',mine:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',none:'<path d="M5 9v6h4l5 4V5L9 9z"/><path d="M17 9l4 6M21 9l-4 6"/>'};
@@ -182,7 +184,7 @@ document.head.insertAdjacentHTML('beforeend',`<style id="fp223snd">
 function recLive(){const e=Math.min(REC_MAX,(Date.now()-recT0)/1000),t=$('fpRecLiveT'),f=$('fpRecLiveF'),l=$('fpRecLiveL');if(t)t.textContent='0:0'+Math.floor(e);if(f)f.style.width=(e/REC_MAX*100)+'%';if(l)l.textContent='נשארו '+Math.max(0,Math.ceil(REC_MAX-e))+' שנ׳'}
 const TYN={s:'צליל סוף מנוחה',r:'צליל בריצה',c:'צליל באירובי'},TYW={s:'',r:'נשמע בסוף כל חלק, בשינוי קצב ובסיבוב.',c:'נשמע במעבר בין שלבים.'};
 /* the copy inside Settings → אימונים → כוח / ריצה / אירובי: while it is open, every button works on that type */
-window.fpRestOpen=t=>{TY=t||'s';renderSet()};
+window.fpRestOpen=t=>{TY=t||'s';if(!rec)recSt='';renderSet()};
 setInterval(()=>{if(TY!=='s'&&!$('fpRestSet_'+TY))TY='s'},700);
 function renderSet(){
   /* 2.26: only inside Settings → אימונים → כוח / ריצה / אירובי (the separate section outside is gone) */
@@ -200,12 +202,13 @@ function renderSet(){
   if(c.kind==='mine')h+=`<div class="panel">${rec?`<div class="rlive"><b id="fpRecLiveT">0:00</b> / 0:0${REC_MAX}<div class="rbar"><i id="fpRecLiveF"></i></div><span class="muted" id="fpRecLiveL">נשארו ${REC_MAX} שנ׳</span></div>`:`<p class="muted" style="margin:0;text-align:center">${hasRec?'יש הקלטה שמורה. אפשר להקליט מחדש.':'עד '+REC_MAX+' שניות. מדברים קרוב לטלפון.'}</p>`}
     <button type="button" class="recb${rec?' on':''}" id="fpRecBtn" onclick="fpRestRec()" aria-label="${rec?'לעצור':'להקליט'}"><i></i></button>
     <p class="muted" style="margin:0 0 8px;text-align:center;font-size:12.5px">${rec?'מקליט… לחיצה עוצרת':'האפליקציה חותכת שקט ומאזנת עוצמה לבד'}</p>
+    <p id="fpRecSt" role="status" style="margin:0 0 8px;text-align:center;font-size:13px;min-height:18px;color:var(--ink,#F2F5F7)">${recSt}</p>
     ${hasRec&&!rec?'<button type="button" class="btn light full" onclick="fpRestTest()">▶ לשמוע את ההקלטה</button>':''}
     <label class="btn light full" style="margin-top:8px;display:block;text-align:center">או לבחור קובץ קול<input type="file" accept="audio/*" style="display:none" onchange="fpRestFile(this.files&&this.files[0])"></label></div>`;
   h+=`<div class="lbl">עוצמה</div><input type="range" id="fpRestVol" min="0.2" max="1" step="0.1" value="${c.vol}" oninput="fpRestSet('vol',Number(this.value),true)" onchange="fpRestTest()" style="width:100%" aria-label="עוצמה">
     <button type="button" class="quiet${c.kind==='none'?' on':''}" onclick="fpRestPick('none')">${svgI('none')}שקט, בלי צליל</button>
     <p class="muted" style="font-size:12.5px;margin:12px 0 0">בזמן מנוחה, ריצה ואירובי המסך נשאר דלוק לבד, כי כשהמסך נעול הצליל לא נשמע. מוזיקה ברקע ממשיכה: היא יורדת לרגע בזמן הצליל וחוזרת.</p></div>`;
-  box.innerHTML=h;box.open=open;if(rec)recLive();
+  if(box.__h!==h||!box.firstChild){box.innerHTML=h;box.__h=h}box.open=open;if(rec)recLive();
 }
 window.fpRestSet=(k,v,quiet)=>{const c=cfg();c[k]=v;setCfg(c);if(!quiet)renderSet()};
 window.fpRestPick=k=>{const c=cfg();c.kind=k;setCfg(c);renderSet();if(k!=='none'&&!(k==='mine'&&!LS.get(RK())))restSound()};
@@ -218,27 +221,41 @@ window.fpRecBar={t:0,start(total){this.stop();const t0=Date.now(),mm=x=>Math.flo
   document.body.insertAdjacentHTML('beforeend',`<div id="fpRecBar" role="status" style="position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:2147482000;background:#171C22;border:1px solid #E5484D;border-radius:14px;padding:10px 12px;direction:rtl;color:#F2F5F7;font:600 14px/1.3 -apple-system,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.45)"><div style="display:flex;justify-content:space-between;gap:8px"><span>מקליט… <span id="fpRecBarL"></span></span><span id="fpRecBarT" dir="ltr">0:00 / ${mm(total)}</span></div><div style="height:8px;background:#2C3640;border-radius:6px;overflow:hidden;margin-top:7px"><i id="fpRecBarF" style="display:block;height:100%;width:0;background:#E5484D;transition:width .2s linear"></i></div></div>`);
   this.t=setInterval(()=>{const e=(Date.now()-t0)/1000,f=$('fpRecBarF'),tx=$('fpRecBarT'),l=$('fpRecBarL');if(!f){clearInterval(this.t);return}f.style.width=Math.min(100,e/total*100)+'%';if(tx)tx.textContent=mm(Math.min(e,total))+' / '+mm(total);if(l)l.textContent='נשארו '+Math.max(0,Math.ceil(total-e))+' שנ׳'},200)},
  stop(){clearInterval(this.t);const b=$('fpRecBar');if(b)b.remove()}};
-async function keepRec(blob,from){const key=RK();try{const c=await cleanRec(await blob.arrayBuffer());LS.set(key,c.data);mineBuf.buf=null;toast(from==='file'?'הקול נשמר':'ההקלטה נשמרה ('+(Math.round(c.sec*10)/10)+' שנ׳)')}
-  catch(e){if(e&&e.fpMsg){toast(e.fpMsg,true);return}
+async function keepRec(blob,from){const key=RK();try{const c=await cleanRec(await blob.arrayBuffer());LS.set(key,c.data);mineBuf.buf=null;const m=from==='file'?'הקול נשמר':'ההקלטה נשמרה ('+(Math.round(c.sec*10)/10)+' שנ׳)';setSt(m+' ✓');toast(m)}
+  catch(e){if(e&&e.fpMsg){setSt('<b>'+esc(e.fpMsg)+'</b>');toast(e.fpMsg,true);renderSet();return}
     /* could not clean it: keep it as it is, if it is small enough */
     if(blob.size>600000){toast(from==='file'?'הקובץ גדול מדי. קובץ של כמה שניות':'ההקלטה ארוכה מדי',true);return}
-    const d=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(blob)});LS.set(key,d);mineBuf.buf=null;toast('נשמר')}
+    const d=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(blob)});LS.set(key,d);mineBuf.buf=null;setSt('נשמר ✓');toast('נשמר')}
   renderSet()}
+/* 2.27: recording never gets stuck. Every step shows in the panel; if the microphone does not answer in 6 s,
+   a second try uses the 2.25 way ("auto"); a recorder left from an earlier try is cleared. */
+function setSt(t){recSt=t;document.querySelectorAll('#fpRecSt').forEach(e=>e.innerHTML=t)}
+const TO=(p,ms)=>Promise.race([p,new Promise((_,no)=>setTimeout(()=>no(Object.assign(new Error('timeout'),{name:'Timeout'})),ms))]);
 window.fpRestRec=async()=>{
-  if(rec){try{rec.stop()}catch(_){}return}
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('המיקרופון לא זמין כאן. אפשר לבחור קובץ קול במקום.',true);return}
-  if(typeof MediaRecorder==='undefined'){toast('ההקלטה לא נתמכת בטלפון הזה. אפשר לבחור קובץ קול במקום.',true);return}
-  let st=null;
-  /* 2.23: without the "phone call" processing, it sounds like you and not like a phone line */
-  /* 2.23.1: the plain request, like 2.22 (the special settings did not record on iPhone) */
-  try{st=await navigator.mediaDevices.getUserMedia({audio:true})}
-  catch(e2){rec=null;toast(fpMicMsg(e2)+(e2&&e2.name&&!e2.fpMsg?' ('+e2.name+')':''),true);renderSet();return}
+  if(rec&&rec.state==='recording'){try{rec.stop()}catch(_){}return}
+  if(rec){try{rec.stop()}catch(_){}rec=null;clearInterval(recInt);fpRecBar.stop()}
+  if(recBusy&&Date.now()-recBusy<12000){setSt('מחכה למיקרופון…');return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setSt('המיקרופון לא זמין כאן. אפשר לבחור קובץ קול.');return}
+  if(typeof MediaRecorder==='undefined'){setSt('ההקלטה לא נתמכת בטלפון הזה. אפשר לבחור קובץ קול.');return}
+  recBusy=Date.now();setSt('פותח מיקרופון…');let st=null;
+  const keepLate=p=>p.then(s=>{try{s.getTracks().forEach(t=>t.stop())}catch(_){}}).catch(()=>{});
+  const first=navigator.mediaDevices.getUserMedia({audio:true});
+  try{st=await TO(first,6000)}
+  catch(e){
+    if(e&&e.name==='Timeout'){keepLate(first);setSt('המיקרופון לא ענה. מנסה בדרך אחרת…');
+      const raw=navigator.mediaDevices.__gum;clearTimeout(backT);AS('auto');
+      const second=raw?raw({audio:true}):navigator.mediaDevices.getUserMedia({audio:true});
+      try{st=await TO(second,6000);if(raw){recording++;st.getTracks().forEach(t=>{const o=t.stop.bind(t);let done=false;t.stop=function(){o();if(done)return;done=true;recording=Math.max(0,recording-1);if(!recording)setTimeout(idle,300)}})}}
+      catch(e2){keepLate(second);recBusy=0;setSt('<b>המיקרופון לא נפתח</b> ('+esc((e2&&e2.name)||'')+'). לסגור את האפליקציה לגמרי, לפתוח, ולנסות שוב.');idle();renderSet();return}}
+    else{recBusy=0;setSt('<b>'+esc(fpMicMsg(e))+'</b>'+(e&&e.name&&!e.fpMsg?' ('+esc(e.name)+')':''));renderSet();return}}
+  recBusy=0;
   try{const chunks=[];rec=fpMakeRecorder(st);const mt=rec.mimeType||'';rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
-    rec.onstop=()=>{clearInterval(recInt);fpRecBar.stop();st.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:mt||'audio/mp4'});rec=null;
-      if(!blob.size){toast('ההקלטה יצאה ריקה. נסה שוב, או בחר קובץ קול.',true);renderSet();return}
-      renderSet();keepRec(blob,'rec')};
-    rec.start();recT0=Date.now();renderSet();fpRecBar.start(REC_MAX);clearInterval(recInt);recInt=setInterval(recLive,200);setTimeout(()=>{if(rec)try{rec.stop()}catch(_){}},REC_MAX*1000);
-  }catch(e){clearInterval(recInt);fpRecBar.stop();try{st.getTracks().forEach(t=>t.stop())}catch(_){}rec=null;toast(e.fpMsg||('ההקלטה לא התחילה: '+(e.name||'')+' '+(e.message||'')),true);renderSet()}
+    rec.onerror=e=>setSt('<b>שגיאה בהקלטה</b> ('+esc((e&&e.error&&e.error.name)||'')+')');
+    rec.onstop=()=>{clearInterval(recInt);fpRecBar.stop();try{st.getTracks().forEach(t=>t.stop())}catch(_){}const blob=new Blob(chunks,{type:mt||'audio/mp4'});rec=null;
+      if(!blob.size){setSt('<b>ההקלטה יצאה ריקה.</b> לנסות שוב, או לבחור קובץ קול.');renderSet();return}
+      setSt('שומר…');renderSet();keepRec(blob,'rec')};
+    rec.start();recT0=Date.now();setSt('מקליט… לחיצה עוצרת');renderSet();fpRecBar.start(REC_MAX);clearInterval(recInt);recInt=setInterval(recLive,200);setTimeout(()=>{if(rec)try{rec.stop()}catch(_){}},REC_MAX*1000);
+  }catch(e){clearInterval(recInt);fpRecBar.stop();try{st.getTracks().forEach(t=>t.stop())}catch(_){}rec=null;setSt('<b>'+esc(e.fpMsg||('ההקלטה לא התחילה: '+(e.name||'')+' '+(e.message||'')))+'</b>');renderSet()}
 };
 window.fpRestFile=function(f){if(!f)return;if(f.size>3000000)return toast('הקובץ גדול מדי. קובץ של כמה שניות',true);keepRec(f,'file')};
 

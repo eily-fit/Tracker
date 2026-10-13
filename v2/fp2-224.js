@@ -177,7 +177,8 @@ const roundTo=(v,st)=>Math.round(v/st)*st;
 /* the entry before this one, same exercise, another workout */
 function before(h){return hist().filter(x=>x.exercise===h.exercise&&x.sessionId!==h.sessionId&&tOf(x)<tOf(h)).sort((a,b)=>tOf(b).localeCompare(tOf(a)))}
 function twiceWeak(h,o){o=o||MK();if(markOf(h,o)!=='weak')return null;const prev=before(h);if(!prev.length||markOf(prev[0],o)!=='weak')return null;
-  const base=prev.find(x=>markOf(x,o)!=='weak');const from=base?topW(base):0;if(!(from>0))return null;
+  /* 2.27: also for a new exercise (no earlier good result): lower from the heavier of the two weak ones. Without weights: a short note. */
+  const base=prev.find(x=>markOf(x,o)!=='weak');const from=base?topW(base):Math.max(topW(h),topW(prev[0]));if(!(from>0))return {bw:true,name:h.exercise};
   const st=stepFor(from),w=Math.max(st,roundTo(from*0.9,st));if(w>=from)return null;return {from,w,st,name:h.exercise}}
 const DL=()=>J('DELOAD',{})||{};const ASK=()=>J('DELOAD_ASKED',{})||{};
 /* the marks inside the journal sheet of a strength workout */
@@ -203,7 +204,8 @@ function decorate(sid){const sh=$('fpTSheet');if(!sh)return;const s=sessList().f
   const items=[...sh.querySelectorAll('.workout-item')];if(!items.length)return;
   items[0].insertAdjacentHTML('beforebegin',`<div class="fpMkTop">${JUST===sid?'<b>סיימת! איך היה?</b>':'<b>איך היה האימון?</b>'}<small>לכל האימון, או לכל תרגיל לחוד למטה. ״חלש״ לא נכנס ל״פעם שעברה״.</small>${mkBtns('s',sid,o.s[sid]||'','')}</div>`);
   (s.items||[]).forEach((h,i)=>{const el=items[i];if(!el)return;el.insertAdjacentHTML('beforeend',mkBtns('e',h.id,o.e[h.id]||'',o.s[sid]||''));
-    const q=twiceWeak(h,o);if(q&&!ask[h.id]&&!dl[h.exercise])el.insertAdjacentHTML('beforeend',`<div class="fpDlQ" id="fpDlQ_${esc(h.id)}"><b>פעמיים ברצף זה היה חלש</b><p>להוריד ל-${q.w} ק״ג ולעלות חזרה לאט לאט עד ${q.from}?</p><div class="r"><button type="button" class="y" onclick="fp224.dl('${esc(h.id)}',1)">כן</button><button type="button" class="n" onclick="fp224.dl('${esc(h.id)}',0)">לא, נשאר</button></div></div>`);
+    const q=twiceWeak(h,o);if(q&&q.bw&&!ask[h.id])el.insertAdjacentHTML('beforeend',`<div class="fpDlQ" id="fpDlQ_${esc(h.id)}"><b>פעמיים ברצף זה היה חלש</b><p>בפעם הבאה כדאי קצת פחות חזרות או גרסה קלה יותר, ולעלות חזרה לאט לאט.</p><div class="r"><button type="button" class="y" onclick="fp224.dl('${esc(h.id)}',0)">הבנתי</button></div></div>`);
+    else if(q&&!q.bw&&!ask[h.id]&&!dl[h.exercise])el.insertAdjacentHTML('beforeend',`<div class="fpDlQ" id="fpDlQ_${esc(h.id)}"><b>פעמיים ברצף זה היה חלש</b><p>להוריד ל-${q.w} ק״ג ולעלות חזרה לאט לאט עד ${q.from}?</p><div class="r"><button type="button" class="y" onclick="fp224.dl('${esc(h.id)}',1)">כן</button><button type="button" class="n" onclick="fp224.dl('${esc(h.id)}',0)">לא, נשאר</button></div></div>`);
     else if(ask[h.id]==='yes')el.insertAdjacentHTML('beforeend',`<div class="fpDlQ"><b>סגור.</b><p style="margin:3px 0 0">בפעם הבאה ב${esc(h.exercise)} מתחילים ב-${(dl[h.exercise]||{}).w||''} ק״ג ועולים לאט.</p></div>`)})}
 /* 2.25: right after "סיים אימון": only "איך היה האימון?" (no list of sets), then "שמור" */
 function finishSheet(sid){const s=sessList().find(x=>x.id===sid);if(!s||!window.fpT)return;
@@ -214,7 +216,7 @@ fp224.finishSheet=finishSheet;
 fp224.mk=(kind,id,v)=>{const o=MK(),m=kind==='s'?o.s:o.e;m[id]=m[id]===v?'':v;if(!m[id])delete m[id];mkSave(o);
   const sid=kind==='s'?id:((hist().find(h=>h.id===id)||{}).sessionId);try{decorate(sid)}catch(e){console.warn(e)}try{jTags()}catch(_){}};
 fp224.dl=(hid,yes)=>{const h=hist().find(x=>x.id===hid);if(!h)return;const a=ASK();a[hid]=yes?'yes':'no';setProp('DELOAD_ASKED',JSON.stringify(a));
-  if(yes){const q=twiceWeak(h);if(q){const d=DL();d[h.exercise]={w:q.w,from:q.from,st:q.st,d:h.date,since:tOf(h)};setProp('DELOAD',JSON.stringify(d))}}
+  if(yes){const q=twiceWeak(h);if(q&&!q.bw){const d=DL();d[h.exercise]={w:q.w,from:q.from,st:q.st,d:h.date,since:tOf(h)};setProp('DELOAD',JSON.stringify(d))}}
   const el=$('fpDlQ_'+hid);if(el){if(yes)decorate(h.sessionId);else el.remove()}};
 const waitJ=setInterval(()=>{if(!window.fp222||!fp222.jOpen||fp222.jOpen.__224)return;clearInterval(waitJ);const o=fp222.jOpen;
   fp222.jOpen=function(t,id){const r=o.apply(this,arguments);if(t==='s')try{decorate(id)}catch(e){console.warn(e)}return r};fp222.jOpen.__224=true},400);
@@ -468,7 +470,7 @@ document.head.insertAdjacentHTML('beforeend','<style id="fp225vid">#fpExV .tile.
 
 /* ============ 2.25 · the red number also inside Settings, on "ניהול (רק למנהל)" ============ */
 function admBadge(){const sm=document.querySelector('#fpFolderAdm>summary');if(!sm)return;const nav=document.querySelector('nav button[data-tab="more"]');
-  const num=sel=>{const e=nav&&nav.querySelector(sel);return e?parseInt(e.textContent,10)||0:0};const n=Math.max(num('.fpBadge'),num('.fp-badge'));
+  const num=sel=>{const e=nav&&nav.querySelector(sel);return e?parseInt(e.textContent,10)||0:0};const n=num('.fpBadge');
   let b=sm.querySelector('.fpAdmN');if(!n){if(b)b.remove();return}if(!b){sm.insertAdjacentHTML('beforeend',' <span class="fpBadge in fpAdmN"></span>');b=sm.querySelector('.fpAdmN')}b.textContent=n>99?'99+':n}
 setInterval(()=>{try{admBadge()}catch(_){}},1500);
 
@@ -539,7 +541,7 @@ const evById=id=>{try{return bankEvents().find(e=>e.id===id)}catch(_){return nul
 const EP={};
 function availDays(date){const t=bankToday(),out=[];for(let i=3;i>=1;i--){const d=isoAdd(date,-i);if(d>=t)out.push(d)}return out}
 function pctOpts(rec){return [...new Set([rec,Math.round(rec*2/3),Math.round(rec/3)])].filter(v=>v>=1).sort((a,b)=>b-a)}
-function evPick(id){const e=evById(id);if(!e)return;const old=$('fpEvPick');if(old)old.remove();
+function evPick(id){const e=evById(id);if(!e)return;const old=$('fpEvPick');
   const c=bankCtx(),t=bankToday(),av=availDays(e.date),rec=Number(c.recPct!=null?c.recPct:c.savePct)||0;
   if(!EP[id])EP[id]={pct:rec,days:av.length};const P=EP[id];P.pct=Math.min(P.pct,rec);P.days=Math.min(P.days,av.length);
   const others=bankEvents().filter(x=>x.id!==id);
@@ -562,7 +564,10 @@ function evPick(id){const e=evById(id);if(!e)return;const old=$('fpEvPick');if(o
   }
   h+=opt('day','רק ביום האירוע','שאר הימים רגילים. ביום עצמו אוכלים קל וחלבוני עד האירוע.',!canSave);
   h+=opt('none','לא לגעת','היעדים לא משתנים. אם תעבור ביום האירוע, זה מתאזן למחרת.',false);
-  h+=`</div></div>`;document.body.insertAdjacentHTML('beforeend',h)}
+  h+=`</div></div>`;
+  /* 2.27: a change of % or days updates the open window in place (it is not closed and opened again) */
+  if(old){const t=document.createElement('div');t.innerHTML=h;const ns=t.querySelector('.sheet'),os=old.querySelector('.sheet');if(ns&&os){const sc=os.scrollTop;os.innerHTML=ns.innerHTML;os.scrollTop=sc;return}old.remove()}
+  document.body.insertAdjacentHTML('beforeend',h)}
 fp224.evPick=evPick;
 fp224.evSet=(id,k,v)=>{EP[id]=EP[id]||{};EP[id][k]=v;evPick(id)};
 fp224.evGo=async(id,m)=>{const s=$('fpEvPick');if(s)s.remove();const P=EP[id]||{};
