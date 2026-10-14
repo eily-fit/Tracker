@@ -91,7 +91,7 @@ function apiFunctions_(){
     saveCustomMeal,saveMenuMeals,deleteCustomMeal,restoreCustomMeal,hideMeal,restoreMeal,saveSettings,smartFoodSearch,searchFoods,estimateDish,estimateFoodWithOpenAI,lookupBarcode,testUsdaConnection,
     importTzameret,getTzameretData,
     createWorkoutSession,finishWorkoutSession,reopenWorkoutSession,renameWorkoutSession,changeWorkoutSessionDate,deleteWorkoutSession,restoreWorkoutSession,deleteWorkoutSessions,restoreWorkoutSessions,
-    saveWorkout,deleteWorkout,restoreWorkout,moveExerciseToSession,saveExercise,updateExercise,deleteExercise,restoreExercise,saveWorkoutPlan,deleteWorkoutPlan,restoreWorkoutPlan,
+    saveWorkout,deleteWorkout,restoreWorkout,moveExerciseToSession,saveExercise,updateExercise,moveExerciseGroup,deleteExercise,restoreExercise,saveWorkoutPlan,deleteWorkoutPlan,restoreWorkoutPlan,
     getExerciseProgress,startVideoUpload,uploadVideoChunk,checkVideoUpload,deleteWorkoutVideo,restoreWorkoutVideo,
     getProcessData,saveProcessCheckin,deleteProcessCheckin,restoreProcessCheckin,getApiInfo,setApiPassword,getTrash,restoreTrashItem,purgeTrashItem,emptyTrash,createInvite,getUsersInfo,whoAmI,deleteUser,saveProfile,deleteMeals,saveMyFoods,saveProgressPhoto,getProgressPhotos,getProgressPhoto,deleteProgressPhoto,getWeeklyReview,applyCalorieGoal,saveWeeklyCheckin,listWeeklyCheckins,getExportData,cleanupDuplicateWorkouts,
     exportSheetInfo,exportSheet,exportProps,saveBankEvent,chooseBankMethod,mergeDuplicateEntries,saveHealthData,estimateFoodPhoto,deleteBankEvent,restoreBankEvent,setBankWeekAnswer,savePlusMenu,moveEntries,renameMealGroup,duplicateEntries,debugStart,debugEnd};
@@ -1864,6 +1864,8 @@ function saveExercise(payload) {
   allowCustomExerciseGroups_(sh);
   const values = sh.getDataRange().getValues();
   const exists = values.some((r,i)=>i>0 && normalize_(r[1])===normalize_(payload.muscleGroup) && normalize_(r[2])===normalize_(payload.name));
+  /* 2.29: one name = one exercise. The same name in another muscle group (still in the list) is stopped. */
+  if (!exists){const other=values.find((r,i)=>i>0&&r[3]!==false&&normalize_(r[2])===normalize_(payload.name));if(other)throw new Error('יש כבר תרגיל בשם ״'+String(other[2]).trim()+'״');}
   if (!exists) appendRows_(APP.sheets.exercises,[[Utilities.getUuid(),String(payload.muscleGroup),String(payload.name).trim(),true,activeRowCount_(sh)+1,String(payload.notes||''),String(payload.equipment||guessEquipment_(payload.name))]]);
   return getWorkoutData_();
 }
@@ -1873,7 +1875,20 @@ function updateExercise(payload){
   if(!id||!name)throw new Error('חסרים פרטי התרגיל');
   const sh=sheet_(APP.sheets.exercises),values=sh.getDataRange().getValues();
   const idx=values.findIndex((r,i)=>i>0&&String(r[0])===id);if(idx<1)throw new Error('התרגיל לא נמצא');
-  sh.getRange(idx+1,3).setValue(name);return getWorkoutData_();
+  const other=values.find((r,i)=>i>0&&i!==idx&&r[3]!==false&&normalize_(r[2])===normalize_(name));if(other)throw new Error('יש כבר תרגיל בשם ״'+String(other[2]).trim()+'״');
+  sh.getRange(idx+1,3).setValue(name);return getWorkoutData_();}
+/* 2.29: move an exercise to another muscle group. Fixed workouts that use it follow; past workouts stay as they were. */
+function moveExerciseGroup(payload){
+  const id=String(payload&&payload.id||''),group=String(payload&&payload.group||'').trim();
+  if(!id||!group)throw new Error('חסרים פרטי התרגיל');if(group.length>30)throw new Error('שם הקבוצה ארוך מדי');
+  const sh=sheet_(APP.sheets.exercises);allowCustomExerciseGroups_(sh);const values=sh.getDataRange().getValues();
+  const idx=values.findIndex((r,i)=>i>0&&String(r[0])===id&&r[3]!==false);if(idx<1)throw new Error('התרגיל לא נמצא');
+  if(normalize_(values[idx][1])===normalize_(group))return getWorkoutData_();
+  sh.getRange(idx+1,2).setValue(group);
+  try{const ps=sheet_(APP.sheets.plans),rows=ps.getDataRange().getValues();
+    for(let i=1;i<rows.length;i++){let items;try{items=JSON.parse(String(rows[i][2]||'[]'))}catch(_){continue}if(!Array.isArray(items))continue;let ch=false;
+      items.forEach(x=>{if(x&&String(x.exerciseId)===id){x.group=group;ch=true}});if(ch)ps.getRange(i+1,3).setValue(JSON.stringify(items));}}catch(_){}
+  return getWorkoutData_();
 }
 
 function deleteExercise(id){
