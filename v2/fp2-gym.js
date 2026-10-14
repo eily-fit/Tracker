@@ -33,7 +33,7 @@ if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&!navigator.media
   const gum=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
   navigator.mediaDevices.getUserMedia=async function(c){
     const audio=!!(c&&c.audio);if(!audio)return gum(c);
-    clearTimeout(backT);AS('play-and-record');
+    clearTimeout(backT);if(navigator.audioSession&&navigator.audioSession.type!=='play-and-record')AS('auto');
     /* 2.27: counted only once the microphone is really open (a request that never answers must not block the sound forever) */
     try{const st=await gum(c);recording++;st.getTracks().forEach(t=>{const o=t.stop.bind(t);let done=false;t.stop=function(){o();if(done)return;done=true;recording=Math.max(0,recording-1);if(!recording)setTimeout(idle,300)}});return st}
     catch(e){if(!recording)idle();
@@ -231,23 +231,33 @@ async function keepRec(blob,from){const key=RK();try{const c=await cleanRec(awai
    a second try uses the 2.25 way ("auto"); a recorder left from an earlier try is cleared. */
 function setSt(t){recSt=t;document.querySelectorAll('#fpRecSt').forEach(e=>e.innerHTML=t)}
 const TO=(p,ms)=>Promise.race([p,new Promise((_,no)=>setTimeout(()=>no(Object.assign(new Error('timeout'),{name:'Timeout'})),ms))]);
+/* 2.27.1: the microphone, three ways. Each try is a tap (iPhone allows the microphone only right after a tap):
+   'auto' (the 2.25 way, that recorded), 'pnr' (play-and-record, the lab way), 'keep' (the sound mode is not touched).
+   The way that worked is remembered. Every step and every error (with its name) shows under the button. */
+const MODES=['auto','pnr','keep'],MODE_N={auto:'דרך 1',pnr:'דרך 2',keep:'דרך 3'};
+const recMode=()=>{const m=LS.get('fp2.recMode');return MODES.includes(m)?m:'auto'};
+let nextMode='';
+async function micState(){try{if(navigator.permissions&&navigator.permissions.query){const r=await navigator.permissions.query({name:'microphone'});return r&&r.state||''}}catch(_){}return ''}
+const DENY_HELP='באייפון: הגדרות ← אפליקציות ← Safari ← מיקרופון ← ״לשאול״ או ״לאפשר״. אחר כך לסגור את האפליקציה לגמרי ולפתוח שוב.';
 window.fpRestRec=async()=>{
   if(rec&&rec.state==='recording'){try{rec.stop()}catch(_){}return}
   if(rec){try{rec.stop()}catch(_){}rec=null;clearInterval(recInt);fpRecBar.stop()}
-  if(recBusy&&Date.now()-recBusy<12000){setSt('מחכה למיקרופון…');return}
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setSt('המיקרופון לא זמין כאן. אפשר לבחור קובץ קול.');return}
   if(typeof MediaRecorder==='undefined'){setSt('ההקלטה לא נתמכת בטלפון הזה. אפשר לבחור קובץ קול.');return}
-  recBusy=Date.now();setSt('פותח מיקרופון…');let st=null;
+  if(recBusy&&Date.now()-recBusy<7000){setSt('מחכה למיקרופון…');return}
+  const mode=nextMode||recMode();nextMode='';
+  recBusy=Date.now();setSt('פותח מיקרופון… ('+MODE_N[mode]+')');let st=null;
+  const raw=navigator.mediaDevices.__gum||navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  clearTimeout(backT);if(mode==='auto')AS('auto');else if(mode==='pnr')AS('play-and-record');
   const keepLate=p=>p.then(s=>{try{s.getTracks().forEach(t=>t.stop())}catch(_){}}).catch(()=>{});
-  const first=navigator.mediaDevices.getUserMedia({audio:true});
-  try{st=await TO(first,6000)}
-  catch(e){
-    if(e&&e.name==='Timeout'){keepLate(first);setSt('המיקרופון לא ענה. מנסה בדרך אחרת…');
-      const raw=navigator.mediaDevices.__gum;clearTimeout(backT);AS('auto');
-      const second=raw?raw({audio:true}):navigator.mediaDevices.getUserMedia({audio:true});
-      try{st=await TO(second,6000);if(raw){recording++;st.getTracks().forEach(t=>{const o=t.stop.bind(t);let done=false;t.stop=function(){o();if(done)return;done=true;recording=Math.max(0,recording-1);if(!recording)setTimeout(idle,300)}})}}
-      catch(e2){keepLate(second);recBusy=0;setSt('<b>המיקרופון לא נפתח</b> ('+esc((e2&&e2.name)||'')+'). לסגור את האפליקציה לגמרי, לפתוח, ולנסות שוב.');idle();renderSet();return}}
-    else{recBusy=0;setSt('<b>'+esc(fpMicMsg(e))+'</b>'+(e&&e.name&&!e.fpMsg?' ('+esc(e.name)+')':''));renderSet();return}}
+  const req=raw({audio:true});
+  try{st=await TO(req,6000);recording++;st.getTracks().forEach(t=>{const o=t.stop.bind(t);let done=false;t.stop=function(){o();if(done)return;done=true;recording=Math.max(0,recording-1);if(!recording)setTimeout(idle,300)}})}
+  catch(e){recBusy=0;if(e&&e.name==='Timeout')keepLate(req);idle();
+    const nm=(e&&e.name)||'',ms=await micState(),alt=MODES[(MODES.indexOf(mode)+1)%MODES.length];nextMode=alt;
+    if(nm==='NotAllowedError'&&ms==='denied'){setSt('<b>האייפון חוסם את המיקרופון לאפליקציה.</b> '+DENY_HELP)}
+    else setSt('<b>'+(nm==='Timeout'?'המיקרופון לא ענה':nm==='NotAllowedError'?'המיקרופון לא אושר':'המיקרופון לא נפתח')+'</b> ('+esc(MODE_N[mode]+' · '+nm+(ms?' · '+ms:''))+'). <b>לחץ שוב על העיגול</b> כדי לנסות ב'+MODE_N[alt]+'.'+(nm==='NotAllowedError'?' אם זה חוזר: '+DENY_HELP:''));
+    renderSet();return}
+  LS.set('fp2.recMode',mode);
   recBusy=0;
   try{const chunks=[];rec=fpMakeRecorder(st);const mt=rec.mimeType||'';rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
     rec.onerror=e=>setSt('<b>שגיאה בהקלטה</b> ('+esc((e&&e.error&&e.error.name)||'')+')');
