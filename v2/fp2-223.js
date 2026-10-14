@@ -195,7 +195,7 @@ let XV=null;
 function xvSheet(){const x=XV;if(!x)return;let o=$('fpExV');if(!o){document.body.insertAdjacentHTML('beforeend','<div class="overlay" id="fpExV"><div class="sheet" style="max-height:92vh;overflow:auto"></div></div>');o=$('fpExV');o.addEventListener('click',e=>{if(e.target===o&&!x.busy)fp223.xvClose()})}
   const ex=x.ex,sh=sharedOf(x.name),mine=ex?EXV()[exKey(ex)]:null,adm=isAdmin(),canName=ex&&!sh&&!ex.sourceUrl;
   /* 2.27: after the exercise was approved for everyone, a user may still keep his OWN video (only for him) */
-  const personal=!!(sh&&mine&&mine.status==='private'&&mine.fid&&!adm);
+  const personal=!!(sh&&mine&&(mine.status==='private'||mine.status==='suggested')&&mine.fid&&mine.fid!==sh.fid&&!adm);
   let h=`<div class="sheet-head"><h3 style="margin:0">${esc(x.name)}</h3><button type="button" class="trash" aria-label="סגור" onclick="fp223.xvClose()">✕</button></div>`;
   if(canName)h+=`<div class="nm"><div class="field"><label for="fpXvN">שם התרגיל</label><input id="fpXvN" value="${esc(x.name)}" maxlength="60"></div><button type="button" class="btn light" onclick="fp223.xvRename()">שמור שם</button></div>`;
   /* 2.25: a chosen video waits here: "רק לי" or "לשתף עם כולם (המנהל מחליט)", then "שלח" or "מחק". Nothing goes out by itself. */
@@ -204,12 +204,19 @@ function xvSheet(){const x=XV;if(!x)return;let o=$('fpExV');if(!o){document.body
       <div class="row" style="margin-top:10px"><button type="button" class="btn light" style="color:#F09595" onclick="fp223.xvDrop()">מחק</button><button type="button" class="btn" onclick="fp223.xvSend()">שלח</button></div>`;o.querySelector('.sheet').innerHTML=h;o.classList.remove('hide');return}
   if(x.busy)h+=`<div class="ph"><div><b>${esc(x.busy)}</b><div class="prog" style="width:220px"><i id="fpXvP" style="width:${Math.round((x.p||0)*100)}%"></i></div><small class="mu">אפשר להשאיר את המסך פתוח עד שזה נגמר</small></div></div>`;
   else if(sh||mine)h+=x.url?`<video class="vid" src="${x.url}" controls playsinline loop muted autoplay></video>`:`<div class="ph">${x.err?esc(x.err):'טוען את הסרטון…'}</div>`;
-  if(!x.busy&&personal){h+=`<div class="who"><span>${ic('check')} הסרטון שלך</span><span class="pill me">רק אתה רואה</span></div>
+  /* 2.28: your own video for an exercise everyone has: replace it, send it to the admin to replace it for everyone, or go back to everyone's */
+  if(!x.busy&&personal&&mine.status==='suggested'){h+=`<div class="who"><span>${ic('check')} הסרטון שלך</span><span class="pill wait">נשלח למנהל</span></div>
+      <p class="mu" style="margin:6px 0 8px">שלחת אותו למנהל כדי שיחליף את הסרטון של כולם. בינתיים רק אתה רואה אותו. כשהמנהל יחליט, תקבל הודעה.</p>
+      <button type="button" class="btn light full" onclick="fp223.xvUnsug()">לבטל את השליחה</button>
+      <button type="button" class="btn light full" style="margin-top:8px" onclick="fp223.xvDel()">לחזור לסרטון של כולם</button>`}
+  else if(!x.busy&&personal){h+=`<div class="who"><span>${ic('check')} הסרטון שלך</span><span class="pill me">רק אתה רואה</span></div>
       <label class="btn light full" style="display:block;text-align:center;margin-top:8px">להחליף את הסרטון שלי<input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0])"></label>
+      <button type="button" class="btn light full" style="margin-top:8px" onclick="fp223.xvSug()">לשלוח למנהל, שיחליף לכולם</button>
       <button type="button" class="btn light full" style="margin-top:8px" onclick="fp223.xvDel()">לחזור לסרטון של כולם</button>`}
   else if(!x.busy&&sh){h+=`<div class="who"><span class="mu">מי רואה</span><span class="pill all">כולם</span></div>`;
     if(adm)h+=`<label class="btn light full" style="display:block;text-align:center">להחליף את הסרטון לכולם<input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0],'admin')"></label>`;
-    else h+=`<p class="mu" style="margin:0 0 8px">התרגיל והסרטון אושרו לכולם. רק המנהל משנה אותם לכולם.</p><label class="btn light full" style="display:block;text-align:center">סרטון אחר רק לי<input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0])"></label>`}
+    else h+=`<p class="mu" style="margin:0 0 8px">התרגיל והסרטון אושרו לכולם. אפשר סרטון אחר רק לך, או לשלוח למנהל סרטון חדש שיחליף לכולם.</p><label class="btn light full" style="display:block;text-align:center">סרטון אחר רק לי<input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0])"></label>
+      <label class="btn light full" style="display:block;text-align:center;margin-top:8px">סרטון חדש לכולם (המנהל מאשר)<input type="file" accept="video/*" style="display:none" onchange="fp223.xvUp(this.files&&this.files[0],'share')"></label>`}
   else if(!x.busy&&mine&&mine.status==='suggested'){
     /* 2.27: sent to the admin — nothing to change now. It stays saved for you meanwhile. */
     h+=`<div class="who"><span>${ic('check')} שמור אצלך</span><span class="pill wait">נשלח למנהל</span></div><p class="mu" style="margin:6px 0 0">נשלח למנהל לאישור. כרגע התרגיל והסרטון שמורים אצלך. כשהמנהל יחליט, תקבל הודעה.</p>`}
@@ -226,7 +233,7 @@ function xvSheet(){const x=XV;if(!x)return;let o=$('fpExV');if(!o){document.body
       <button type="button" class="tile" ${asked?'disabled':''} onclick="fp223.xvAsk()">${ic('chat')}${asked?'הבקשה כבר נשלחה':'לבקש הדגמה מהמנהל'}<small>${asked?'המנהל יראה אותה ברשימה':'פעם אחת, הבקשה נשמרת'}</small></button></div>
       ${!ex?'<p class="fpHint" style="margin:0">כדי להעלות סרטון, התרגיל צריך להיות ברשימת התרגילים שלך.</p>':''}`}
   o.querySelector('.sheet').innerHTML=h;o.classList.remove('hide')}
-async function xvLoad(){const x=XV;if(!x)return;const sh=sharedOf(x.name),mine=x.ex?EXV()[exKey(x.ex)]:null,own=sh&&mine&&mine.status==='private'&&mine.fid&&!isAdmin(),fid=own?mine.fid:sh?sh.fid:mine&&mine.fid;if(!fid)return;
+async function xvLoad(){const x=XV;if(!x)return;const sh=sharedOf(x.name),mine=x.ex?EXV()[exKey(x.ex)]:null,own=sh&&mine&&(mine.status==='private'||mine.status==='suggested')&&mine.fid&&mine.fid!==sh.fid&&!isAdmin(),fid=own?mine.fid:sh?sh.fid:mine&&mine.fid;if(!fid)return;
   try{const u=await videoUrl(fid);if(XV!==x)return URL.revokeObjectURL(u);if(x.url)URL.revokeObjectURL(x.url);x.url=u;x.err=''}catch(e){x.err='הסרטון לא נטען: '+errMsg(e)}xvSheet()}
 async function xvSyncStatus(){const x=XV;if(!x||!x.ex)return;const m=EXV(),k=exKey(x.ex),mine=m[k];if(!mine||mine.status!=='suggested')return;await loadShared(true);if(XV!==x)return;
   if((SHARED.items||[]).some(s=>s.fid===mine.fid)){mine.status='public';m[k]=mine;exvSave(m)}xvSheet()}
@@ -255,7 +262,7 @@ Object.assign(window.fp223,{
     try{await push('exVideoUnsuggest',{fid:mine.fid});mine.status='private';m[k]=mine;exvSave(m);toast('ההצעה בוטלה');xvSheet()}catch(e){toast(errMsg(e),true)}},
   async xvDel(){const x=XV;if(!x||!x.ex)return;const m=EXV(),k=exKey(x.ex),mine=m[k];if(!mine||!confirm('למחוק את הסרטון?'))return;
     try{await push('exVideoDelete',{fid:mine.fid})}catch(e){if(!/לא נמצא|FORBIDDEN/.test(errMsg(e))){toast(errMsg(e),true);return}}
-    delete m[k];exvSave(m);if(x.url)URL.revokeObjectURL(x.url);x.url='';toast('הסרטון נמחק');xvSheet()},
+    delete m[k];exvSave(m);if(x.url)URL.revokeObjectURL(x.url);x.url='';toast(sharedOf(x.name)?'חזרת לסרטון של כולם':'הסרטון נמחק');xvSheet();xvLoad()},
   async xvAsk(){const x=XV;if(!x)return;try{const ok=await FP2Anim.request(x.name,x.ex&&x.ex.group,x.ex&&x.ex.equipment);toast(ok?'הבקשה נשלחה למנהל':'הבקשה תישלח כשיהיה חיבור')}catch(_){toast('הבקשה תישלח כשיהיה חיבור')}xvSheet()},
   async xvRename(){const x=XV;if(!x||!x.ex)return;const n=norm(($('fpXvN')||{}).value);if(!n||n===x.name)return;
     if(findEx(n))return toast('כבר יש תרגיל בשם הזה',true);
@@ -347,7 +354,7 @@ document.head.insertAdjacentHTML('beforeend','<style>.fpBadge{position:absolute;
 setInterval(()=>{if(typeof state!=='undefined'&&state.data)badgeLoad()},10*60*1000);
 /* 2.24: the 224 module refreshes these right after a send / an approval, and when you open a screen */
 /* 2.27: the exercise page asks which video an exercise has (mine for me only, or the shared one), and its link */
-window.fp223.vidFor=name=>{try{const ex=findEx(name),sh=sharedOf(name),mine=ex?EXV()[exKey(ex)]:null;return (sh&&mine&&mine.status==='private'&&mine.fid&&!isAdmin())?mine.fid:sh?sh.fid:(mine&&mine.fid)||''}catch(_){return ''}};window.fp223.vurl=fid=>videoUrl(fid);
+window.fp223.vidFor=name=>{try{const ex=findEx(name),sh=sharedOf(name),mine=ex?EXV()[exKey(ex)]:null;return (sh&&mine&&(mine.status==='private'||mine.status==='suggested')&&mine.fid&&mine.fid!==sh.fid&&!isAdmin())?mine.fid:sh?sh.fid:(mine&&mine.fid)||''}catch(_){return ''}};window.fp223.vurl=fid=>videoUrl(fid);
 window.fp223.setReq=n=>{BADGE.req=Number(n)||0;badgeDraw()};window.fp223.badgeLoad=()=>badgeLoad();window.fp223.loadShared=f=>loadShared(f);window.fp223.sharedNow=()=>SHARED.items||[];window.fp223.reqInbox=()=>reqInbox();
 
 /* ---------- hooks ---------- */

@@ -61,6 +61,7 @@ document.head.insertAdjacentHTML('beforeend',`<style id="fp227j">
 #fpJBar button{font:inherit;font-weight:700;font-size:13.5px;border-radius:12px;padding:11px 0;border:1px solid var(--line,#2C3640);background:#1F262E;color:var(--ink,#F2F5F7);display:flex;align-items:center;justify-content:center;gap:6px}
 #fpJBar button.d{color:#FF8A80;border-color:#5a2a2a}#fpJBar button:disabled{opacity:.4}
 #fpJBar .x{background:none;border:0;color:#A3ADB8;padding:4px 0}
+#fp227Move{z-index:2147482600}#fp227Move .sheet{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
 </style>`);
 let SEL=null;/* null = not choosing; a Set of "t:id" while choosing */
 const keyOf=el=>{const m=(el.getAttribute('onclick')||'').match(/jOpen\('([src])','([^']*)'\)/);return m?m[1]+':'+m[2]:''};
@@ -106,7 +107,7 @@ fp227.jDelete=async()=>{const P=parts(),n=P.s.length+P.r.length+P.c.length;if(!n
     const undo=async()=>{try{if(list.length)state.data.workout=await call('restoreWorkoutSessions',list);if(P.r.length)setProp('RUN_LOG',runs0);if(P.c.length)setProp('CARDIO_LOG',cars0);redraw();toast(n===1?'האימון הוחזר':'האימונים הוחזרו')}catch(e){toast(e.message,true)}};
     if(typeof undoToast==='function')undoToast(n===1?'האימון נמחק':n+' אימונים נמחקו',undo);else toast('נמחק')}
   catch(e){toast(e.message,true)}finally{try{loading(false)}catch(_){}}};
-fp227.jMove=()=>{const P=parts(),n=P.s.length+P.r.length+P.c.length;if(!n)return;const t=(window.state&&(state.todayDate||state.date))||'';
+fp227.jMove=()=>{const P=parts(),n=P.s.length+P.r.length+P.c.length;if(!n)return;const t=(typeof state!=='undefined'&&(state.todayDate||state.date))||new Date().toISOString().slice(0,10);
   document.body.insertAdjacentHTML('beforeend',`<div class="overlay" id="fp227Move" onclick="if(event.target===this)this.remove()"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">להעביר ${n===1?'אימון אחד':n+' אימונים'} ליום…</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fp227Move').remove()">✕</button></div>
     <div class="field"><label for="fp227MoveD">תאריך</label><input type="date" id="fp227MoveD" value="${esc(t)}" max="${esc(t)}"></div><button type="button" class="btn full" onclick="fp227.jMoveGo()">העבר</button></div></div>`)};
 fp227.jMoveGo=async()=>{const d=($('fp227MoveD')||{}).value||'';if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return toast('בחר תאריך',true);const o=$('fp227Move');if(o)o.remove();const P=parts();SEL=null;decorate();
@@ -139,19 +140,58 @@ const setsTxt=sets=>{const s=(sets||[]).filter(v=>v&&(Number(v.reps)>0));if(!s.l
 function bestOf(H){let b=null;H.filter(h=>!h.weak).forEach(h=>(h.sets||[]).forEach(v=>{const w=v.weight===''||v.weight==null?null:Number(v.weight),r=Number(v.reps)||0;if(!r)return;
   if(!b||(w!==null&&(b.w===null||w>b.w||(w===b.w&&r>b.r)))||(w===null&&b.w===null&&r>b.r))b={w,r,d:h.date}}));return b}
 let ANraf=0;
-function animSvg(name){try{const A=window.FP2Anim;if(!A||!A.map)return '';const m=A.map[A.norm?A.norm(name):name];if(!m)return '';const x=(A.pat||[]).find(p=>p.id===m[0]);if(!x)return '';
-  return `<svg class="an" data-an="${esc(m[0])}" data-bd="${Number(m[1])||0}" viewBox="0 0 380 270" role="img" aria-label="הדגמה של ${esc(name)}"></svg>`}catch(_){return ''}}
+/* 2.28: the demo with its angles (each exercise has two: from the side, and from the front / top / back — what shows it best) */
+const anPat=name=>{try{const A=window.FP2Anim;if(!A||!A.map)return null;const m=A.map[A.norm?A.norm(name):name];if(!m)return null;const x=(A.pat||[]).find(p=>p.id===m[0]);return x?{x,m}:null}catch(_){return null}};
+function animSvg(name,view){const r=anPat(name);if(!r)return '';
+  return `<svg class="an" data-an="${esc(r.m[0])}" data-vi="${Number(r.m[1])||0}" data-v="${view|0}" viewBox="0 0 380 270" role="img" aria-label="הדגמה של ${esc(name)}"></svg>`}
+function anChips(name,id,cur,extra){const r=anPat(name);if(!r)return '';const v=(r.x.v||[]).slice(0,(r.x.views||[]).length);
+  const btns=(extra||[]).concat(v.map((t,i)=>({k:'v'+i,t})));if(btns.length<2)return '';
+  return `<div class="fpAnV" role="group" aria-label="זווית">${btns.map(b=>`<button type="button" class="${b.k===cur?'on':''}" aria-pressed="${b.k===cur}" onclick="fp227.anView('${id}','${b.k}')">${esc(b.t)}</button>`).join('')}</div>`}
+const ANV={};
+fp227.anView=(id,k)=>{ANV[id]=k;if(id==='ex'){const n=EXN;fp227.ex(n,null,k);return}if(id==='wk'){wkAn(true)}};
+document.head.insertAdjacentHTML('beforeend',`<style id="fp228an">
+.fpAnV{display:flex;gap:6px;justify-content:center;margin:-2px 0 10px;flex-wrap:wrap}
+.fpAnV button{font:inherit;font-size:13px;font-weight:700;border-radius:99px;padding:6px 14px;border:1px solid var(--line,#2C3640);background:#1F262E;color:#A3ADB8;cursor:pointer}
+.fpAnV button.on{background:#222D17;border-color:var(--brand,#D7F36B);color:var(--brand,#D7F36B)}
+#fp228Wk{background:var(--card,#171C22);border:1px solid var(--line,#2C3640);border-radius:16px;padding:10px 12px;margin:10px 0}
+#fp228Wk .hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}#fp228Wk .hd b{font-size:14.5px}
+#fp228Wk .hd button{font:inherit;font-size:12.5px;background:none;border:0;color:#A3ADB8;padding:4px 2px;cursor:pointer}
+#fp228Wk .media{border-radius:14px;background:#0E1318;border:1px solid var(--line,#2C3640);overflow:hidden;margin:0 0 8px;cursor:pointer}
+#fp228Wk svg.an{width:100%;height:190px;display:block}
+</style>`);
 function animate(){cancelAnimationFrame(ANraf);const A=window.FP2Anim;if(!A)return;const t0=performance.now(),reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const fit=svg=>{try{const x=(A.pat||[]).find(p=>p.id===svg.dataset.an);let u=null;for(const e of [0,.25,.5,.75]){svg.innerHTML=x.views[0](e,+svg.dataset.bd,{});const b=A.figBox(svg);if(b)u=u?{x0:Math.min(u.x0,b.x0),y0:Math.min(u.y0,b.y0),x1:Math.max(u.x1,b.x1),y1:Math.max(u.y1,b.y1)}:b}
+  const vf=(x,s)=>x.views[Math.min(+s.dataset.v||0,x.views.length-1)];
+  /* -1 = the right way (no "wrong form" marks); the exercise's own variant (one hand, cable…) */
+  const va=(x,s)=>{const v=(x.variants||[])[+s.dataset.vi||0];return v?v.V:null};
+  const fit=svg=>{try{const x=(A.pat||[]).find(p=>p.id===svg.dataset.an),f=vf(x,svg);let u=null;for(const e of [0,.25,.5,.75]){svg.innerHTML=f(e,-1,va(x,svg));const b=A.figBox(svg);if(b)u=u?{x0:Math.min(u.x0,b.x0),y0:Math.min(u.y0,b.y0),x1:Math.max(u.x1,b.x1),y1:Math.max(u.y1,b.y1)}:b}
     if(u){const w=u.x1-u.x0+30,h=u.y1-u.y0+50,W=Math.max(w,h*1.4);svg.setAttribute('viewBox',`${u.x0-15-(W-w)/2} ${u.y0-36} ${W} ${h}`)}}catch(_){}};
-  document.querySelectorAll('#fp227Ex svg.an').forEach(fit);
-  const tick=now=>{const svgs=document.querySelectorAll('#fp227Ex svg.an');if(!svgs.length)return;svgs.forEach(s=>{const x=(A.pat||[]).find(p=>p.id===s.dataset.an);if(!x)return;const per=x.period||5.2,T=reduce?.3:((now-t0)/1000/per)%1;
-    const d=x.loop?T:(T<.42?T/.42:T<.52?1:T<.92?1-(T-.52)/.4:0);try{s.innerHTML=x.views[0](d,+s.dataset.bd,{}).replace(/<text[^>]*data-cap[^>]*>[\s\S]*?<\/text>/g,'')}catch(_){}});if(!reduce)ANraf=requestAnimationFrame(tick)};ANraf=requestAnimationFrame(tick)}
+  const SEL='#fp227Ex svg.an,#fp228Wk svg.an';
+  document.querySelectorAll(SEL).forEach(fit);
+  const tick=now=>{const svgs=document.querySelectorAll(SEL);if(!svgs.length)return;svgs.forEach(s=>{const x=(A.pat||[]).find(p=>p.id===s.dataset.an);if(!x)return;const per=x.period||5.2,T=reduce?.3:((now-t0)/1000/per)%1;
+    const d=x.loop?T:(T<.42?T/.42:T<.52?1:T<.92?1-(T-.52)/.4:0);try{s.innerHTML=vf(x,s)(d,-1,va(x,s)).replace(/<text[^>]*data-cap[^>]*>[\s\S]*?<\/text>/g,'')}catch(_){}});if(!reduce)ANraf=requestAnimationFrame(tick)};ANraf=requestAnimationFrame(tick)}
+/* 2.28: inside a workout: the demo of the exercise you are on, with its angles. Tap it for the full demo (what to avoid, slow motion). */
+const WKH='fp2.wkAnHide';
+function wkName(){const sl=$('exerciseSelect');if(!sl||!sl.options.length||sl.selectedIndex<0)return '';return (sl.options[sl.selectedIndex].text||'').trim()}
+function wkAn(force){const lp=$('lastPerformance');const old=$('fp228Wk');const name=wkName();
+  if(!lp||!name||!anPat(name)){if(old)old.remove();cancelIfNone();return}
+  if(old&&old.dataset.n===name&&!force)return;
+  const hide=(()=>{try{return localStorage.getItem(WKH)==='1'}catch(_){return false}})();
+  const k=ANV.wk&&ANV.wk!=='vid'?ANV.wk:'v0',v=+k.slice(1)||0;
+  const h=`<div class="hd"><b>איך עושים: ${esc(name)}</b><button type="button" onclick="fp227.wkHide()">${hide?'להציג':'להסתיר'}</button></div>`+(hide?'':`<div class="media" data-n="${esc(name)}" onclick="try{FP2Anim.open(this.dataset.n)}catch(_){}">${animSvg(name,v)}</div>${anChips(name,'wk',k)}`);
+  let box=old;if(!box){box=document.createElement('div');box.id='fp228Wk';lp.insertAdjacentElement('beforebegin',box)}
+  box.dataset.n=name;box.innerHTML=h;if(!hide)animate();else cancelIfNone()}
+function cancelIfNone(){if(!document.querySelector('#fp227Ex svg.an,#fp228Wk svg.an'))cancelAnimationFrame(ANraf)}
+fp227.wkHide=()=>{try{localStorage.setItem(WKH,localStorage.getItem(WKH)==='1'?'0':'1')}catch(_){}wkAn(true)};
+fp227.wkAn=wkAn;
+if(typeof exerciseChanged==='function'){const o=exerciseChanged;exerciseChanged=function(){const r=o.apply(this,arguments);try{ANV.wk='v0';wkAn(true)}catch(e){console.warn('wkAn',e)}return r}}
 let EXN='',EXURL='';
-fp227.ex=async function(name,exId){EXN=name;const ex=exByName(name),H=histOf(name),last=H.find(h=>!h.weak),best=bestOf(H);
+fp227.ex=async function(name,exId,vk){EXN=name;const ex=exByName(name),H=histOf(name),last=H.find(h=>!h.weak),best=bestOf(H);
   const old=$('fp227Ex');if(old)old.remove();if(EXURL){try{URL.revokeObjectURL(EXURL)}catch(_){}EXURL=''}
-  const fid=(window.fp223&&fp223.vidFor)?fp223.vidFor(name):'';const an=fid?'':animSvg(name);
-  const media=fid?`<div class="media" id="fp227Media">טוען את הסרטון…</div>`:an?`<div class="media">${an}<span class="lbl">הדגמה</span></div>`:`<div class="media" style="padding:18px">${ic('cam',26)}<div style="margin-top:6px">לתרגיל הזה עוד אין סרטון</div><button type="button" class="btn light" style="margin-top:10px" onclick="fp227.vid()">להעלות סרטון</button></div>`;
+  const fid=(window.fp223&&fp223.vidFor)?fp223.vidFor(name):'',hasAn=!!anPat(name);
+  /* 2.28: a video first (if there is one); the demo with its angles next to it */
+  const k=vk||(fid?'vid':'v0'),showVid=fid&&k==='vid',an=!showVid&&hasAn?animSvg(name,+k.slice(1)||0):'';
+  const chips=hasAn?anChips(name,'ex',k,fid?[{k:'vid',t:'סרטון'}]:[]):'';
+  const media=(showVid?`<div class="media" id="fp227Media">טוען את הסרטון…</div>`:an?`<div class="media">${an}<span class="lbl">הדגמה</span></div>`:`<div class="media" style="padding:18px">${ic('cam',26)}<div style="margin-top:6px">לתרגיל הזה עוד אין סרטון</div><button type="button" class="btn light" style="margin-top:10px" onclick="fp227.vid()">להעלות סרטון</button></div>`)+chips;
   const rows=H.slice(0,5).filter(h=>h!==last).slice(0,4);
   const h=`<div class="overlay" id="fp227Ex" onclick="if(event.target===this)fp227.exClose()"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">${esc(name)}</h3><button type="button" class="trash" aria-label="סגור" onclick="fp227.exClose()">✕</button></div>
     ${ex?`<p class="mu" style="margin:-4px 0 10px">${esc(ex.group||'')}${ex.equipment?' · '+esc(ex.equipment):''}</p>`:''}
@@ -163,7 +203,7 @@ fp227.ex=async function(name,exId){EXN=name;const ex=exByName(name),H=histOf(nam
     ${fid||an?`<button type="button" class="btn light full" style="margin-top:8px" onclick="fp227.vid()">${fid?'הסרטון: להחליף או לשתף':'להעלות סרטון משלי'}</button>`:''}
   </div></div>`;
   document.body.insertAdjacentHTML('beforeend',h);if(an)animate();
-  if(fid){try{const u=await fp223.vurl(fid);if(EXN!==name||!$('fp227Media')){URL.revokeObjectURL(u);return}EXURL=u;$('fp227Media').innerHTML=`<video src="${u}" controls playsinline loop muted autoplay></video>`}catch(e){const m=$('fp227Media');if(m)m.textContent='הסרטון לא נטען'}}};
+  if(showVid){try{const u=await fp223.vurl(fid);if(EXN!==name||!$('fp227Media')){URL.revokeObjectURL(u);return}EXURL=u;$('fp227Media').innerHTML=`<video src="${u}" controls playsinline loop muted autoplay></video>`}catch(e){const m=$('fp227Media');if(m)m.textContent='הסרטון לא נטען'}}};
 fp227.exClose=()=>{const o=$('fp227Ex');if(o)o.remove();cancelAnimationFrame(ANraf);if(EXURL){try{URL.revokeObjectURL(EXURL)}catch(_){}EXURL=''}};
 fp227.vid=()=>{const n=EXN;fp227.exClose();try{fpExV.open(n)}catch(_){}};
 fp227.exAdd=()=>{const ex=exByName(EXN);fp227.exClose();

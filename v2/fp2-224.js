@@ -214,7 +214,28 @@ function finishSheet(sid){const s=sessList().find(x=>x.id===sid);if(!s||!window.
 fp224.finSave=()=>{try{fpT.close()}catch(_){}try{toast('האימון נשמר ביומן')}catch(_){}};
 fp224.finishSheet=finishSheet;
 fp224.mk=(kind,id,v)=>{const o=MK(),m=kind==='s'?o.s:o.e;m[id]=m[id]===v?'':v;if(!m[id])delete m[id];mkSave(o);
-  const sid=kind==='s'?id:((hist().find(h=>h.id===id)||{}).sessionId);try{decorate(sid)}catch(e){console.warn(e)}try{jTags()}catch(_){}};
+  const sid=kind==='s'?id:((hist().find(h=>h.id===id)||{}).sessionId);try{decorate(sid)}catch(e){console.warn(e)}try{jTags()}catch(_){}
+  /* 2.28: weak the second time in a row → a real popup in the middle of the screen */
+  if(m[id]==='weak')try{dlPop(kind==='s'?((sessList().find(x=>x.id===id)||{}).items||[]).map(x=>x.id):[id])}catch(e){console.warn(e)}};
+document.head.insertAdjacentHTML('beforeend',`<style id="fp228dl">
+#fpDlPop{position:fixed;inset:0;z-index:2147482700;background:rgba(0,0,0,.62);display:grid;place-items:center;padding:20px}
+#fpDlPop .c{width:100%;max-width:360px;background:#171C22;border:1px solid #6b5a22;border-radius:20px;padding:18px 16px 14px;box-shadow:0 20px 60px rgba(0,0,0,.6);color:var(--ink,#F2F5F7)}
+#fpDlPop .ic{width:44px;height:44px;border-radius:14px;background:#2A2410;color:#FFD98A;display:grid;place-items:center;margin:0 0 10px}
+#fpDlPop h3{margin:0 0 4px;font-size:18px}#fpDlPop .n{color:#FFD98A;font-weight:700;font-size:14px;margin:0 0 6px}#fpDlPop p{margin:0 0 14px;color:#C9D1D9;font-size:14.5px;line-height:1.5}
+#fpDlPop .r{display:flex;gap:8px}#fpDlPop .r button{flex:1;font:inherit;font-weight:800;font-size:15px;border-radius:13px;padding:12px 8px;border:0;cursor:pointer}
+#fpDlPop .r .y{background:#D7F36B;color:#14190a}#fpDlPop .r .no{background:#1F262E;color:#F2F5F7;border:1px solid var(--line,#2C3640)}
+</style>`);
+let POPQ=[];
+function dlPop(ids){const o=MK(),ask=ASK(),dl=DL();
+  ids.forEach(hid=>{if(ask[hid]||POPQ.includes(hid))return;const h=hist().find(x=>x.id===hid);if(!h)return;const q=twiceWeak(h,o);if(!q)return;if(!q.bw&&dl[h.exercise])return;POPQ.push(hid)});
+  dlShow()}
+function dlShow(){if($('fpDlPop'))return;const hid=POPQ.shift();if(!hid)return;const h=hist().find(x=>x.id===hid);if(!h)return dlShow();const q=twiceWeak(h);if(!q||ASK()[hid])return dlShow();
+  const icon='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.3"/></svg>';
+  const body=q.bw?`<p>בפעם הבאה כדאי קצת פחות חזרות או גרסה קלה יותר, ולעלות חזרה לאט לאט.</p><div class="r"><button type="button" class="y" onclick="fp224.dlPick('${esc(hid)}',0)">הבנתי</button></div>`
+    :`<p>להוריד ל-${q.w} ק״ג ולעלות חזרה לאט לאט עד ${q.from}?</p><div class="r"><button type="button" class="y" onclick="fp224.dlPick('${esc(hid)}',1)">כן</button><button type="button" class="no" onclick="fp224.dlPick('${esc(hid)}',0)">לא, נשאר</button></div>`;
+  document.body.insertAdjacentHTML('beforeend',`<div id="fpDlPop" role="dialog" aria-modal="true" aria-labelledby="fpDlPopT"><div class="c"><div class="ic">${icon}</div><h3 id="fpDlPopT">פעמיים ברצף זה היה חלש</h3><div class="n">${esc(h.exercise)}</div>${body}</div></div>`)}
+fp224.dlPick=(hid,yes)=>{const p=$('fpDlPop');if(p)p.remove();fp224.dl(hid,yes);setTimeout(dlShow,250)};
+fp224.dlPop=dlPop;
 fp224.dl=(hid,yes)=>{const h=hist().find(x=>x.id===hid);if(!h)return;const a=ASK();a[hid]=yes?'yes':'no';setProp('DELOAD_ASKED',JSON.stringify(a));
   if(yes){const q=twiceWeak(h);if(q&&!q.bw){const d=DL();d[h.exercise]={w:q.w,from:q.from,st:q.st,d:h.date,since:tOf(h)};setProp('DELOAD',JSON.stringify(d))}}
   const el=$('fpDlQ_'+hid);if(el){if(yes)decorate(h.sessionId);else el.remove()}};
@@ -560,9 +581,9 @@ function evPick(id){const e=evById(id);if(!e)return;const old=$('fpEvPick');
     if(av.length>1)h+=`<div class="field" style="margin:0 0 6px"><label>כמה ימים לפני?</label><div class="meal-tabs" style="flex-wrap:wrap">${av.map((_,i)=>av.length-i).map(n=>`<button type="button" class="chip${P.days===n?' active':''}" onclick="fp224.evSet('${id}','days',${n})">${n===1?'יום אחד':n+' ימים'}</button>`).join('')}</div></div>`;
     const tr=(function(){try{return bankTrain(e.date)}catch(_){return []}})();
     const det=p.days.length?p.days.map(d=>`${dnm(d.date)} −${KC(d.cut)}${tr.includes(d.date)?' (אימון, חצי)':''}`).join(' · '):'';
-    h+=opt('spread',`לחסוך ${P.pct}% ל-${P.days===1?'יום אחד':P.days+' ימים'}`,p.days.length?`${KC(p.banked)} קל׳ נחסכים לאירוע. ביום האירוע יעד ${KC(p.dayGoal)}.<span class="fpEvDays">${det}</span>`:'אין מה לחסוך בימים האלה. מטפלים ביום עצמו.',true);
+    h+=opt('spread',`לחסוך ${P.pct}% ל-${P.days===1?'יום אחד':P.days+' ימים'}`,p.days.length?`עד ${KC(p.banked)} קל׳ פחות בימים שלפני. מה שתחסוך בפועל מחכה לך באירוע.<span class="fpEvDays">${det}</span>`:'אין מה לחסוך בימים האלה. מטפלים ביום עצמו.',true);
   }
-  h+=opt('day','רק ביום האירוע','שאר הימים רגילים. ביום עצמו אוכלים קל וחלבוני עד האירוע.',!canSave);
+  h+=opt('day','רק ביום האירוע','שאר הימים רגילים. ביום עצמו שים לב לקלוריות עד האירוע.',!canSave);
   h+=opt('none','לא לגעת','היעדים לא משתנים. אם תעבור ביום האירוע, זה מתאזן למחרת.',false);
   h+=`</div></div>`;
   /* 2.27: a change of % or days updates the open window in place (it is not closed and opened again) */
@@ -583,22 +604,16 @@ const EDK='fp2.evDayAsked';
 const asked=()=>{try{return JSON.parse(localStorage.getItem(EDK)||'[]')}catch(_){return []}};
 function evDay(id,force){const e=evById(id);if(!e)return;const old=$('fpEvDay');if(old)old.remove();
   if(!force){const a=asked();if(a.includes(id))return;a.push(id);try{localStorage.setItem(EDK,JSON.stringify(a.slice(-40)))}catch(_){}}
-  const p=e.plan||{},others=bankEvents().filter(x=>x.id!==id),banked=Number(p.banked)||0;
-  const q=p.method==='none'?bankPlanFor(e.date,e.extra,'day',others):p;
+  /* 2.28: no plan for the day itself. Only a reminder, and what was really saved before (it is added at "התחלתי את האירוע") */
+  const r=e.real||{},amt=Math.max(0,Number(r.amount)||0);
   const tips=(typeof EVENT_TIPS!=='undefined'?EVENT_TIPS:['לא להגיע רעב: ארוחה עם חלבון 3–4 שעות לפני.','להתחיל בסלט או מרק, ולאכול לאט.','למחרת ממשיכים כרגיל, בלי לקזז.']);
-  const opt=(m,title,sub,primary)=>`<button type="button" class="remind-opt${primary?' rec':''}" onclick="fp224.evDayGo('${id}','${m}')"><b>${title}</b><span>${sub}</span></button>`;
   let h=`<div class="overlay" id="fpEvDay"><div class="sheet"><div class="sheet-head"><h3 style="margin:0">היום: ${esc(e.label)}</h3><button type="button" class="trash" aria-label="סגור" onclick="document.getElementById('fpEvDay').remove()">✕</button></div>
-    <p style="margin:0 0 8px;font-weight:700">איך תרצה להתנהל היום?</p>`;
-  if(banked)h+=`<div class="fpEvRec">חסכת ${KC(banked)} קל׳ בימים שלפני. היעד היום ${KC(p.dayGoal)}.</div>`;
-  h+=opt('day','קל וחלבוני עד האירוע (מומלץ)',`עד האירוע כ-${KC(q.preBudget)} קל׳, ולפחות ${q.proteinBefore} ג׳ חלבון. לאירוע נשמרו כ-${KC(q.eventMeal)}.`,true);
-  if(!banked)h+=opt('none','יום רגיל, בלי שינוי','היעד לא משתנה. מה שעובר מתאזן מחר כמו בכל יום.',false);
-  h+=`<div class="fpEvRec" style="margin-top:10px"><b>תזכורת קטנה</b><ul>${tips.slice(0,3).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div></div>`;
+    <p style="margin:0 0 8px;font-weight:700">יש לך היום אירוע, שים לב לקלוריות שלך.</p>`;
+  h+=`<div class="fpEvRec">${amt>0?`חסכת לאירוע <b>${KC(amt)}</b> קל׳ בימים שלפני. כשמגיעים, לוחצים ״התחלתי את האירוע״ והם נוספים למה שנשאר לך מהיום.`:Number(r.raw)<0?`בימים שלפני עברת את היעד ב-${KC(-r.raw)} קל׳, אז לא נשאר חיסכון לאירוע. היום יעד רגיל.`:'לא נשמר חיסכון בימים שלפני. היום יעד רגיל.'}</div>`;
+  h+=`<div class="fpEvRec" style="margin-top:10px"><b>תזכורת קטנה</b><ul>${tips.slice(0,3).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+    <button type="button" class="btn full" onclick="document.getElementById('fpEvDay').remove()">הבנתי</button></div></div>`;
   document.body.insertAdjacentHTML('beforeend',h)}
 fp224.evDay=evDay;
-fp224.evDayGo=async(id,m)=>{const s=$('fpEvDay');if(s)s.remove();const e=evById(id);if(!e)return;const p=e.plan||{};
-  if(m==='day'&&p.method==='none'){await bankMutate('chooseBankMethod',{id,method:'day'});try{renderBankCard()}catch(_){}toast('מעולה · קל וחלבוני עד האירוע')}
-  else if(m==='none'&&p.method!=='none'){await bankMutate('chooseBankMethod',{id,method:'none'});try{renderBankCard()}catch(_){}toast('בסדר, יום רגיל')}
-  else toast(m==='none'?'בסדר, יום רגיל':'מעולה · קל וחלבוני עד האירוע')};
 function evDayCheck(){try{if(typeof state==='undefined'||!state.data||!state.data.bank)return;if(prop('TOUR_DONE')!=='1')return;
   const tv=$('today');if(!tv||!tv.classList.contains('active'))return;if(document.querySelector('.overlay:not(.hide),#fpSR,#fpRunScr,.tour-pop,#fpTour'))return;
   const t=bankToday();if(state.date!==t)return;const e=bankEvents().find(x=>x.date===t&&x.plan&&x.plan.mode!=='past');if(!e||asked().includes(e.id))return;evDay(e.id)}catch(err){console.warn('evDay',err)}}

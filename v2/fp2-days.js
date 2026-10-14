@@ -253,25 +253,28 @@ function eventExtra(d){
 function heldBack(){const d=state.date;if(d!==todayISO())return 0;if(evStart(d))return 0;return eventExtra(d)}
 window.fpEventHeld=heldBack;
 function eventBar(ev,d){
-  const p=ev.plan||{},t=state.data.totals||{},sh=t.shift||{},isView=d===state.date,today=d===todayISO(),none=p.method==='none';
-  const saved=Math.max(0,Math.round((Number(p.eventMeal)||0)+(isView?Number(sh.toEvent)||0:0)));
+  /* 2.28: one number everywhere = what was REALLY saved before the event (the same one in "יתרת פינוק" and in the ring after "התחלתי את האירוע") */
+  const t=state.data.totals||{},isView=d===state.date,today=d===todayISO();
+  const X=isView?eventExtra(d):Math.max(0,Number(ev.real&&ev.real.amount)||0);
   const st=today&&isView?evStart(d):null;
   if(st){
-    // 2.10.0: once the event started, the ring is the only counter: whatever is left today is for the event
-    return `<div class="card fp-evbar" style="padding:10px 12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <span style="font-size:15px"><b>${esc(ev.label)} התחיל!</b></span>
-      <button type="button" class="btn light mini" style="flex:none;padding:6px 10px;min-height:0;font-size:13px" onclick="fpEventStop('${d}')">עדיין לא התחיל</button></div>`;
+    const left=Math.round((Number(t.calorieGoal)||0)-(Number(t.calories)||0));
+    return `<div class="card fp-evbar" style="padding:10px 12px;margin:8px 0">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:15px"><b>${esc(ev.label)} התחיל!</b></span>
+      <button type="button" class="btn light mini" style="flex:none;padding:6px 10px;min-height:0;font-size:13px" onclick="fpEventStop('${d}')">עדיין לא התחיל</button></div>
+      <div class="muted" style="font-size:12.5px;margin-top:4px">${X>0?`נשארו לך ${kc(left)} קל׳: מה שנשאר מהיום ועוד ${kc(X)} שחסכת לאירוע.`:`נשארו לך ${kc(left)} קל׳ לאירוע.`}</div></div>`;
   }
-  const X=isView?eventExtra(d):Math.max(0,Number(p.adj&&p.adj[d])||0),goal=(Number(t.calorieGoal)||0)-(isView&&today?X:0),eaten=Number(t.calories)||0;let pct=0,over=false,sub='',btn='';
-  const line=`${today?'היום':esc(dayName(d))}: ${esc(ev.label)} · `+(X>0?`שמורים לך לאירוע <b>+${kc(X)}</b> קל׳`:'מה שנשאר בעיגול הוא לאירוע');
+  const goal=(Number(t.calorieGoal)||0)-(isView&&today?X:0),eaten=Number(t.calories)||0;let pct=0,over=false,sub='',btn='';
+  const line=`${today?'היום':esc(dayName(d))}: ${esc(ev.label)} · `+(X>0?`חסכת לאירוע עוד <b>${kc(X)}</b> קל׳`:'לא נשאר חיסכון לאירוע');
   if(isView&&goal){pct=Math.min(100,eaten/goal*100);over=eaten>goal;sub=`אכלת היום ${kc(eaten)} מתוך ${kc(goal)}`}
   if(today&&isView)btn=`<button type="button" class="btn mini" style="padding:6px 12px;min-height:0;font-size:13px" onclick="fpEventStart('${d}')">התחלתי את האירוע</button>`;
   return `<div class="card fp-evbar" style="padding:10px 12px;margin:8px 0">
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between"><span style="font-size:14px;line-height:1.4">${line}</span><button type="button" class="icon-btn" aria-label="עריכת האירוע" style="flex:none" onclick="openEventSheet({edit:'${ev.id}'})"></button></div>
+    ${today?'<div style="font-size:13px;color:#FFD98A;margin-top:3px">יש לך היום אירוע, שים לב לקלוריות שלך.</div>':''}
     ${isView?`<div class="meter" style="margin:6px 0 4px"><i style="width:${pct}%;${over?'background:#E5484D':''}"></i></div>`:''}
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="muted" style="font-size:12.5px">${sub}</span>${btn}</div></div>`;
 }
-window.fpEventStart=function(d){const X=eventExtra(d);setEvStart(d,{ts:Date.now(),ids:(state.data.entries||[]).map(x=>String(x.id))});try{renderTotals()}catch(_){}renderBankCard();toast(X>0?`תהנה! נוספו לעיגול ${kc(X)} קל׳ לאירוע`:'תהנה! מה שנשאר בעיגול הוא לאירוע')};
+window.fpEventStart=function(d){const X=eventExtra(d);setEvStart(d,{ts:Date.now(),ids:(state.data.entries||[]).map(x=>String(x.id))});try{renderTotals()}catch(_){}renderBankCard();toast(X>0?`תהנה! נוספו לעיגול ${kc(X)} קל׳ שחסכת`:'תהנה! מה שנשאר בעיגול הוא לאירוע')};
 window.fpEventStop=function(d){setEvStart(d,null);try{renderTotals()}catch(_){}renderBankCard()};
 if(typeof renderBankCard==='function'){
   const o=renderBankCard;
@@ -290,6 +293,11 @@ window.fpSetSavePct=async function(v){
   try{await call('saveSettings',{event_cut_pct:v});
     const c=state.data.bank&&state.data.bank.ctx;if(c){c.savePct=v;c.saveOff=Number(v)===0;c.maxCut=c.noDeficit||c.noRoom?0:Math.max(0,Math.min(Math.floor((c.maint||c.goal)*v/1000)*10,c.room!=null?Math.floor(c.room/10)*10:1e9,c.goal-c.minDay))}
     if(state.data.settings)state.data.settings.event_cut_pct=v;
+    /* 2.28: the coming events follow the new % right away (the days before them change) */
+    const t=todayISO(),up=bankEvents().filter(e=>e.date>t&&e.plan&&e.plan.mode==='future'&&(e.plan.method==='spread'||e.plan.method==='half'));
+    for(const e of up){try{const r=await call('chooseBankMethod',{id:e.id,method:e.plan.method,pct:v,days:e.plan.nd||undefined,viewDate:state.date,train:(typeof bankTrain==='function'?bankTrain(e.date):[])});if(r&&r.bank)state.data.bank=r.bank;if(r&&r.day)try{showDay(r.day)}catch(_){}}catch(err){console.warn('pct',err)}}
+    if(up.length){try{renderBankCard()}catch(_){}toast(Number(v)===0?'בלי חיסכון לפני אירועים':`עכשיו ${v}% ביום · ${up.length===1?'האירוע הקרוב עודכן':up.length+' אירועים עודכנו'}`)}
+    else toast(Number(v)===0?'בלי חיסכון לפני אירועים':`נשמר: ${v}% ביום`);
     if(state.ev)renderEventSheet();
   }catch(e){toast(e.message,true)}
 };
@@ -297,10 +305,29 @@ window.fpSetSavePct=async function(v){
 window.fpMorningChecks=()=>whenFree(morningChecks);
 const boot1=setInterval(()=>{if(typeof state!=='undefined'&&state.data&&state.data.settings&&typeof call==='function'){clearInterval(boot1);setTimeout(()=>whenFree(morningChecks),7000)}},1000);
 
+function treatEvent(ev,t0){
+  const r=ev.real||{days:[]},isToday=ev.date===t0,X=isToday&&state.date===t0?eventExtra(t0):Math.max(0,Number(r.amount)||0);
+  const tot=state.date===t0&&state.data.totals?state.data.totals:null,started=isToday&&!!evStart(t0);
+  const dn=d=>NAMES[new Date(d+'T12:00:00').getDay()];
+  const rows=(r.days||[]).map(x=>`<div class="bank-line"><span>${dn(x.date)}</span><span>${x.skip?'<span class="muted">לא נרשם, לא נספר</span>':`${kc(x.eaten)} / ${kc(x.goal)} <b dir="ltr" style="unicode-bidi:isolate;color:${x.diff>=0?'#7FE0A0':'#FF8A8A'}">${x.diff>=0?'+':'−'}${kc(Math.abs(x.diff))}</b>`}</span></div>`).join('');
+  let today='';
+  if(isToday&&tot){const goal=Math.round((Number(tot.calorieGoal)||0)-X),left=Math.round(goal-(Number(tot.calories)||0));
+    today=started?`<p>אחרי ״התחלתי את האירוע״: נשארו לך <b>${kc(left+X)}</b> קל׳ (${kc(left)} מהיום ועוד ${kc(X)} שחסכת).</p>`:`<p>מהיום נשארו לך <b>${kc(left)}</b> קל׳. כשתלחץ ״התחלתי את האירוע״, יתווספו ${kc(X)}.</p>`}
+  $('treatBody').innerHTML=`<p class="muted">${isToday?'היום':'ב'+dn(ev.date)}: ${esc(ev.label)}. מה שחסכת בפועל בימים שלפני, מול היעד הרגיל שלך.</p>
+    <div class="treat-big">חסכת לאירוע <b>${kc(X)}</b> קל׳</div>
+    ${Number(r.raw)<0?`<p class="muted">בימים שלפני עברת את היעד ב-${kc(-r.raw)} קל׳, אז לא נשאר חיסכון.</p>`:r.capped?`<p class="muted">חסכת ${kc(r.raw)}, ולאירוע אחד נכנסים עד ${kc(r.cap)} קל׳.</p>`:''}
+    ${today}
+    ${rows||'<p class="muted">עוד אין ימים לפני האירוע.</p>'}
+    <p class="muted" style="margin-top:10px">כל יום שאוכלים פחות מהיעד הרגיל מוסיף, וכל יום שעוברים מוריד.</p>`;
+  $('treatSheet').classList.remove('hide');
+}
 /* ---------- "יתרת פינוק": the week without the day shifts, and where the number comes from ---------- */
 if(typeof openTreat==='function'){
   openTreat=async function(){
     try{closePlusMenu()}catch(_){}
+    /* 2.28: an event today or in the coming days → "יתרת פינוק" is what was really saved for it (the same number as the bar and the ring) */
+    try{const t0=todayISO(),ev=(bankEvents()||[]).filter(e=>e.date>=t0&&e.date<=addD(t0,6)&&e.plan&&e.plan.mode!=='pending'&&e.plan.mode!=='past').sort((x,y)=>x.date.localeCompare(y.date))[0];
+      if(ev&&(ev.date===t0||(ev.real&&ev.real.days&&ev.real.days.length))){treatEvent(ev,t0);return}}catch(e){console.warn('treatEvent',e)}
     const t=state.todayDate||state.date,d0=new Date(t+'T12:00:00'),start=new Date(d0);start.setDate(d0.getDate()-d0.getDay());
     const rows=[];let eaten=0,goal=0,todayLeft=0;
     for(let i=0;i<=d0.getDay();i++){const d=new Date(start);d.setDate(start.getDate()+i);const iso=d.toISOString().slice(0,10);

@@ -2233,6 +2233,20 @@ function dayStreak_(y,events,s,base){
   const avg=Math.round(gaps.reduce((n,g)=>n+Math.abs(g),0)/3/10)*10;
   return {dir:gaps[0]>0?'under':'over',avg,start:addDays_(y,-2),end:y};
 }
+/* 2.28: what was really saved for an event: from the Sunday of its week (or the planned days, if earlier) until the day before,
+   only days that were logged, normal goal minus eaten. Over the goal → less. Never below 0, never over the event limit. */
+function realBank_(e,events,s,today){
+  const base=Number(s.calorie_goal)||2200,rules=goalRules_(s),evCap=Math.round(base*rules.event/10)*10,date=e.date;
+  const nd=Math.max(1,Math.min(3,Number(e.plan&&e.plan.nd)||3)),sunday=addDays_(date,-new Date(date+'T12:00:00Z').getUTCDay());
+  let from=addDays_(date,-nd);if(sunday<from)from=sunday;if(e.created&&addDays_(e.created,-3)>from)from=addDays_(e.created,-3);
+  events.forEach(x=>{if(x.id!==e.id&&x.date<date&&x.date>=from)from=addDays_(x.date,1);});
+  const days=[];let raw=0;
+  for(let d=from;d<date;d=addDays_(d,1)){if(d>=today)break;const eaten=Math.round(getEntriesForDate_(d).reduce((n,x)=>n+(Number(x.calories)||0),0));
+    if(eaten<=0||eaten<base*0.5){days.push({date:d,eaten,goal:base,diff:0,skip:true});continue;}
+    const diff=base-eaten;raw+=diff;days.push({date:d,eaten,goal:base,diff});}
+  raw=Math.round(raw);const amount=Math.max(0,Math.min(raw,evCap));
+  return {amount,raw,cap:evCap,capped:raw>evCap,from,days};
+}
 function dayShift_(date,settings,goalBefore){
   const s=settings||getSettings_(),today=getWorkingDateFromSettings_(s),out={total:0,plus:0,cut:0,toEvent:0,eventId:'',source:''};
   const base=Number(s.calorie_goal)||2200,ctx=bankContext_(s),rules=goalRules_(s),cap=Math.round(base*rules.shift/10)*10;
@@ -2244,10 +2258,10 @@ function dayShift_(date,settings,goalBefore){
     out.eventId=own.id;let sum=0;
     // 2.11.0: an event added at the last moment still gets what was saved in the 3 days before it was added
     const gm=gapModes_(s);
-    for(let d=addDays_(date,-6);d<date;d=addDays_(d,1)){if(d<today&&(!own.created||addDays_(own.created,-3)<=d)&&!events.some(e=>e.date===d)&&!(gm[d]==='today'||gm[d]==='none'))sum+=dayGap_(d,events,s,base,cap);}
-    const evCap=Math.round(base*rules.event/10)*10,already=Number(own.plan&&own.plan.adj&&own.plan.adj[date])||0;
-    if(sum>0)sum=Math.max(0,Math.min(sum,evCap-already));
-    out.toEvent=sum;if(sum>0)out.plus=sum;else if(sum<0)out.cut=-sum;out.source='event';
+    /* 2.28: the event gets only what was REALLY saved: each logged day before it, the normal goal minus what was eaten
+       (a day over the goal takes from it). The event day itself has no cut: a regular goal, and the saving waits for "התחלתי את האירוע". */
+    const rb=realBank_(own,events,s,today);sum=rb.amount;out.real=rb;
+    out.toEvent=sum;if(sum>0)out.plus=sum;out.source='event';
     try{if(eventOfDay_(y,events)&&!events.some(e=>e.date===y)){const g=dayGap_(y,events,s,base,1e9);if(g<0)out.weekOver={date:y,over:-g,cut:Math.min(-g,cap),eventId:own.id,eventDate:date,mode:gm[y]||''}}}catch(_){}
   }else if(eventOfDay_(y,events)&&gapModes_(s)[y]==='today'&&userShift_(s)>0){
     const ucap=Math.round(base*userShift_(s)/10)*10,gap=dayGap_(y,events,s,base,ucap),cuts=dayCuts_(s);
@@ -2908,12 +2922,12 @@ function listBankEvents_(settings){
 }
 function bankAdjust_(date,events,settings){
   let delta=0;const items=[],list=events||listBankEvents_(settings),isEventDay=list.some(e=>e.date===date);
-  list.forEach(e=>{const v=Number(e.plan&&e.plan.adj&&e.plan.adj[date])||0;if(v<0&&isEventDay)return;if(v){delta+=v;items.push({id:e.id,label:e.label,eventDate:e.date,amount:v});}});
+  list.forEach(e=>{const v=Number(e.plan&&e.plan.adj&&e.plan.adj[date])||0;if(v<0&&isEventDay)return;if(v>0&&e.date===date)return;/* 2.28: the event day gets what was really saved (dayShift_), not the plan */if(v){delta+=v;items.push({id:e.id,label:e.label,eventDate:e.date,amount:v});}});
   return {delta,items};
 }
 function getBankState_(settings){
   const s=settings||getSettings_(),today=getWorkingDateFromSettings_(s),from=addDays_(today,-62);
-  return {today,ctx:bankContext_(s),events:listBankEvents_(s).filter(e=>e.date>=from)};
+  const evs=listBankEvents_(s).filter(e=>e.date>=from);evs.forEach(e=>{if(e.date>=today)try{e.real=realBank_(e,evs,s,today)}catch(_){}});return {today,ctx:bankContext_(s),events:evs};
 }
 function bankResponse_(viewDate){
   const date=/^\d{4}-\d{2}-\d{2}$/.test(String(viewDate||''))?String(viewDate):getWorkingDate_();
@@ -2960,6 +2974,9 @@ function chooseBankMethod(payload){
   if(e.date<today)throw new Error('האירוע כבר עבר');
   const method=['spread','day','half','none'].includes(p.method)?p.method:'half';
   const plan=computeBankPlan_(bankContext_(settings),today,e.date,e.extra,method,all.filter(x=>x.id!==e.id),{pct:p.pct,days:p.days,train:p.train});
+  /* 2.28: a change in the middle (a new %, another way) does not rewrite days that already passed */
+  try{const old=e.plan||{};if(old.mode!=='pending'&&plan.adj){Object.keys(old.adj||{}).forEach(d=>{const v=Number(old.adj[d])||0;if(d<today&&d<e.date&&v<0&&!(d in plan.adj))plan.adj[d]=v;});
+    (old.days||[]).forEach(x=>{if(x&&x.date<today&&x.date<e.date&&!(plan.days||[]).some(y=>y.date===x.date)){plan.days=[x].concat(plan.days||[]).sort((a,b)=>a.date.localeCompare(b.date));plan.banked=(Number(plan.banked)||0)+(Number(x.cut)||0);}});}}catch(_){}
   const f=findBankEventRow_(e.id);f.sh.getRange(f.row,6,1,2).setValues([[plan.method,JSON.stringify(plan)]]);
   const out=bankResponse_(p.viewDate);out.plan=plan;return out;
 }
