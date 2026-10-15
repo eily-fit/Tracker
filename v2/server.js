@@ -1865,7 +1865,9 @@ function saveExercise(payload) {
   const values = sh.getDataRange().getValues();
   const exists = values.some((r,i)=>i>0 && normalize_(r[1])===normalize_(payload.muscleGroup) && normalize_(r[2])===normalize_(payload.name));
   /* 2.29: one name = one exercise. The same name in another muscle group (still in the list) is stopped. */
-  if (!exists){const other=values.find((r,i)=>i>0&&r[3]!==false&&normalize_(r[2])===normalize_(payload.name));if(other)throw new Error('יש כבר תרגיל בשם ״'+String(other[2]).trim()+'״');}
+  if (!exists){const other=values.find((r,i)=>i>0&&r[3]!==false&&normalize_(r[2])===normalize_(payload.name));if(other)throw new Error('יש כבר תרגיל בשם ״'+String(other[2]).trim()+'״');
+    /* 2.30: the same name was removed from the list before → it comes back (one exercise, its history stays with it) */
+    const gone=values.findIndex((r,i)=>i>0&&r[3]===false&&normalize_(r[2])===normalize_(payload.name));if(gone>0){sh.getRange(gone+1,4).setValue(true);return getWorkoutData_();}}
   if (!exists) appendRows_(APP.sheets.exercises,[[Utilities.getUuid(),String(payload.muscleGroup),String(payload.name).trim(),true,activeRowCount_(sh)+1,String(payload.notes||''),String(payload.equipment||guessEquipment_(payload.name))]]);
   return getWorkoutData_();
 }
@@ -1876,6 +1878,7 @@ function updateExercise(payload){
   const sh=sheet_(APP.sheets.exercises),values=sh.getDataRange().getValues();
   const idx=values.findIndex((r,i)=>i>0&&String(r[0])===id);if(idx<1)throw new Error('התרגיל לא נמצא');
   const other=values.find((r,i)=>i>0&&i!==idx&&r[3]!==false&&normalize_(r[2])===normalize_(name));if(other)throw new Error('יש כבר תרגיל בשם ״'+String(other[2]).trim()+'״');
+  if(normalize_(values[idx][2])!==normalize_(name)&&builtinNameSet_().has(normalize_(name)))throw new Error('יש כבר תרגיל בשם ״'+name+'״');
   sh.getRange(idx+1,3).setValue(name);return getWorkoutData_();}
 /* 2.29: move an exercise to another muscle group. Fixed workouts that use it follow; past workouts stay as they were. */
 function moveExerciseGroup(payload){
@@ -2118,7 +2121,7 @@ function getExerciseCatalog_() {
   values.slice(1).filter(r=>r[0]&&r[3]!==false).sort((a,b)=>(Number(a[4])||0)-(Number(b[4])||0)).forEach(r=>{
     const group=String(r[1]); if(!out[group])out[group]=[];
     let meta=specs.get(normalize_(r[1])+'|'+normalize_(r[2]))||{};const raw=String(r[5]||'');if(raw.startsWith('FITPRO_EXERCISE:'))try{meta=JSON.parse(raw.slice(16))}catch(_){}
-    out[group].push({id:String(r[0]),name:String(r[2]),notes:raw&&!raw.startsWith('FITPRO_EXERCISE:')?raw:meta.instructions||raw,equipment:String(r[6]||guessEquipment_(r[2])),requires:meta.requires||[],sourceUrl:meta.source||''});
+    out[group].push({id:String(r[0]),name:String(r[2]),builtin:builtinNameSet_().has(normalize_(r[2])),notes:raw&&!raw.startsWith('FITPRO_EXERCISE:')?raw:meta.instructions||raw,equipment:String(r[6]||guessEquipment_(r[2])),requires:meta.requires||[],sourceUrl:meta.source||''});
   });
   return out;
 }
@@ -2649,7 +2652,17 @@ function seedExercises_() {
   const sh=sheet_(APP.sheets.exercises);
   allowCustomExerciseGroups_(sh);
   const existing=new Set(sh.getDataRange().getValues().slice(1).filter(r=>r[0]).map(r=>normalize_(r[1])+'|'+normalize_(r[2])));
-  const groups={
+  const groups=seedExerciseGroups_();
+  let order=1,rows=[];
+  Object.keys(groups).forEach(g=>groups[g].forEach(name=>{if(!existing.has(normalize_(g)+'|'+normalize_(name)))rows.push([Utilities.getUuid(),g,name,true,order,'',guessEquipment_(name)]);order++;}));
+  appendRows_(APP.sheets.exercises,rows);
+  seedExerciseDetails_();
+}
+/* 2.30: the exercises that come with the app (the seed list and the detailed ones) */
+let BUILTIN_NAMES_=null;
+function builtinNameSet_(){if(BUILTIN_NAMES_)return BUILTIN_NAMES_;const s=new Set();const g=seedExerciseGroups_();Object.keys(g).forEach(k=>g[k].forEach(n=>s.add(normalize_(n))));builtinExerciseSpecs_().forEach(x=>s.add(normalize_(x.name)));BUILTIN_NAMES_=s;return s;}
+function seedExerciseGroups_(){
+  return {
     'חזה':['שכיבות סמיכה בשיפוע ללא ציוד','שכיבות סמיכה רחבות ללא ציוד','לחיצת חזה במשקולות','פרפר במשקולות','לחיצת חזה במוט','לחיצת חזה בשיפוע עם משקולות','פרפר בכבלים','מקבילים לחזה','שכיבות סמיכה'],
     'גב':['הרמת ידיים W בשכיבה ללא ציוד','הרמת ידיים Y בשכיבה ללא ציוד','חתירת מרפקים בשכיבה ללא ציוד','חתירה בשתי משקולות','מתח','פולי עליון','חתירה במכונה','חתירה עם משקולת','פולאובר בכבל'],
     'כתפיים':['לחיצת כתפיים פייק בשיפוע ללא ציוד','נגיעות כתף בפלאנק ללא ציוד','הרמת ידיים T בשכיבה ללא ציוד','פרפר הפוך במשקולות','לחיצת כתפיים','הרחקת כתפיים לצדדים','כתף אחורית במכונה','הרחקה בכבל'],
@@ -2659,10 +2672,6 @@ function seedExercises_() {
     'אירובי':['הליכה בקצב נוח','צעידה במקום ללא ציוד','הליכה לסירוגין','אופני כושר במכונה','אליפטיקל במכונה','ריצה קלה'],
     'בטן':['כפיפות בטן','פלאנק','קרנץ׳ בכבל','הרמת רגליים']
   };
-  let order=1,rows=[];
-  Object.keys(groups).forEach(g=>groups[g].forEach(name=>{if(!existing.has(normalize_(g)+'|'+normalize_(name)))rows.push([Utilities.getUuid(),g,name,true,order,'',guessEquipment_(name)]);order++;}));
-  appendRows_(APP.sheets.exercises,rows);
-  seedExerciseDetails_();
 }
 
 // Existing installations can have a strict dropdown in App_Exercises!B:B.
@@ -2898,7 +2907,7 @@ function nullableNumber_(v){return v===''||v===null||v===undefined?'':Number(v);
 // v0.31: calorie bank for planned and late events ("free day"), plus the "+" menu settings.
 const BANK_SIZES={small:400,medium:700,large:1000};
 const BANK_TYPES={restaurant:'מסעדה',family:'ארוחה משפחתית',friends:'יציאה עם חברים',other:'אירוע'};
-const PLUS_MENU_IDS=['treat','event','calendar','mealPhoto','food','weight','workout','whatToEat','checkin','shortcuts','request'];
+const PLUS_MENU_IDS=['chat','treat','event','calendar','mealPhoto','food','weight','workout','whatToEat','checkin','shortcuts','request'];
 function bankContext_(settings){
   const s=settings||getSettings_();let profile={};try{profile=JSON.parse(s.profile_json||'{}')}catch(_){}
   const goal=Number(s.calorie_goal)||2200,protein=Number(s.protein_goal)||130;

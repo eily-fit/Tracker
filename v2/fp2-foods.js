@@ -193,10 +193,12 @@ renderCustomLocalResults=basicsFirst('customSearchResults','customShowAll','cust
 /* ---------- default portion of a basic food ---------- */
 const oPortion=defaultPortion;
 defaultPortion=function(x,parsed){
-  try{const L=x&&LASTU[calKey(x)];
+  /* 2.31: the unit AND the amount you used last time (2 כפיות stays 2 כפיות), also from other screens and other devices */
+  try{const L=x&&lastGet(x);
     if(L&&!(parsed&&(parsed.amount!=null||parsed.unitHint||parsed.grams))){
-      if(L.u==='גרם'&&L.a>0)return {amount:L.a,unit:'גרם'};
-      if((x.units||[]).some(u=>u[0]===L.u))return {amount:1,unit:L.u};
+      const a=Number(L.a)>0?Number(L.a):1;
+      if((L.u==='גרם'||L.u==='מ״ל')&&Number(L.a)>0)return {amount:a,unit:L.u};
+      if((x.units||[]).some(u=>u[0]===L.u))return {amount:a,unit:L.u};
     }}catch(_){}
   if(x&&x.fpBasic&&!(parsed&&(parsed.amount!=null||parsed.unitHint||parsed.grams))){
     if(x.fpUnit==='גרם'&&x.fpGrams)return {amount:x.fpGrams,unit:'גרם'};
@@ -251,10 +253,24 @@ const oUpd=updateFoodChoice;
 updateFoodChoice=function(){const r=oUpd.apply(this,arguments);try{weightHint()}catch(e){}return r};
 const LASTU_KEY='fp2.lastUnit';
 let LASTU={};try{LASTU=JSON.parse(localStorage.getItem(LASTU_KEY)||'{}')||{}}catch(_){LASTU={}}
+/* 2.31: kept in the account too (FOOD_LAST), by the food and by its name, so it works from every screen and every device */
+const FL=()=>{try{return JSON.parse((window.FP2&&FP2.getProp&&FP2.getProp('FOOD_LAST'))||'{}')||{}}catch(_){return {}}};
+const nameKey=x=>'n:'+normHe((x&&(x.fpSrc||x.name))||'');
+function lastGet(x){const m=FL(),k=calKey(x),n=nameKey(x),n2='n:'+normHe((x&&x.name)||'');const c=[m[k],m[n],m[n2],LASTU[k],LASTU[n]].filter(Boolean);c.sort((a,b)=>(Number(b.t)||0)-(Number(a.t)||0));return c[0]||null}
+function lastPut(keys,v){try{const m=FL();let ch=false;keys.filter(Boolean).forEach(k=>{const o=m[k];if(!o||(Number(o.t)||0)<=(Number(v.t)||0)){if(!o||o.u!==v.u||o.a!==v.a)ch=true;m[k]=v}});
+  if(!ch)return;const ks=Object.keys(m);if(ks.length>400)ks.sort((a,b)=>(Number(m[a].t)||0)-(Number(m[b].t)||0)).slice(0,ks.length-400).forEach(k=>delete m[k]);
+  if(window.FP2&&FP2.setProp)FP2.setProp('FOOD_LAST',JSON.stringify(m))}catch(_){}}
+window.fpFoodLast={get:x=>lastGet(x),put:lastPut};
+/* what you logged (any screen: one food, a meal, a recipe, a sentence) teaches the default for next time */
+function learnDay(){try{const d=state.data&&state.data.entries;if(!Array.isArray(d)||!d.length)return;
+  d.forEach(e=>{if(!e||!e.name||!(Number(e.amount)>0)||!e.unit||/^tmp/.test(String(e.id||'')))return;if(e.sourceType==='free')return;
+    const t=Date.parse(e.createdAt||'')||0;lastPut(['n:'+normHe(e.name)],{u:e.unit,a:Number(e.amount),t})})}catch(_){}}
+window.fpLearnDay=learnDay;
+if(typeof renderDay==='function'){const oRD=renderDay;renderDay=function(){const r=oRD.apply(this,arguments);try{setTimeout(learnDay,0)}catch(_){}return r}}
 const oSave=saveFood;
 saveFood=async function(){
   try{const x=state.selectedFood,u=$('foodUnit').value,a=Number($('foodAmount').value)||0,k=calKey(x);
-    if(k&&u){LASTU[k]={u,a};const ks=Object.keys(LASTU);if(ks.length>400)delete LASTU[ks[0]];try{localStorage.setItem(LASTU_KEY,JSON.stringify(LASTU))}catch(_){}}}catch(_){}
+    if(k&&u){LASTU[k]={u,a,t:Date.now()};const ks=Object.keys(LASTU);if(ks.length>400)delete LASTU[ks[0]];try{localStorage.setItem(LASTU_KEY,JSON.stringify(LASTU))}catch(_){}lastPut([k,nameKey(x)],{u,a,t:Date.now()})}}catch(_){}
   try{
     const x=state.selectedFood,u=$('foodUnit').value,g=Number(state.foodGramsPerUnit);
     if(x&&u&&u!=='גרם'&&u!=='מ״ל'&&u!=='מנה מהאריזה'&&g>0){
