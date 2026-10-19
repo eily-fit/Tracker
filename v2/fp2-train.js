@@ -133,15 +133,21 @@ if(typeof goToPreviousWorkout==='function'){const o2=goToPreviousWorkout;goToPre
 /* ---------- 2.17: the rest starts when a set is filled (reps written), a set is added, or an exercise is saved. Tap the timer: stop or +30 ---------- */
 /* 2.22: the rest starts the moment you start writing a set's results (the first key in its weight or reps), once per set */
 const restingNow=()=>state.restEnd&&state.restEnd>Date.now();
-const restOnSet=e=>{try{const t=e.target;if(!t||!t.classList||!(t.classList.contains('set-reps')||t.classList.contains('set-weight')))return;if(!String(t.value).trim())return;
+/* 2.32: three cases where the rest did not start —
+   (1) weight written BEFORE lifting used up the set, and the reps written after lifting did nothing;
+   (2) "＋ הוסף סט" counted the last row on the screen, not the set just done (a plan opens 3 rows at once), so set 3 had no rest;
+   (3) rows already full (reps from the plan) and nothing typed. Now:
+   - reps written in a set start the rest (once per set);
+   - weight starts it only when that set already has reps (then reps can still restart it once);
+   - "＋ הוסף סט" starts the rest unless one is already running. */
+const restSetup=ex=>{if(!state.fpRested||state.fpRestedEx!==ex){state.fpRested=new Set();state.fpRestedEx=ex}};
+const restOnSet=e=>{try{const t=e.target;if(!t||!t.classList)return;const isR=t.classList.contains('set-reps'),isW=t.classList.contains('set-weight');if(!isR&&!isW)return;if(!String(t.value).trim())return;
   if(state.editingWorkoutId||state.muscleGroup==='אירובי')return;const card=t.closest('#setRows > .card');if(!card)return;
-  const ex=(document.getElementById('exerciseSelect')||{}).value||'',key=ex+'|'+[...card.parentElement.children].indexOf(card);
-  if(!state.fpRested||state.fpRestedEx!==ex){state.fpRested=new Set();state.fpRestedEx=ex}if(state.fpRested.has(key))return;state.fpRested.add(key);startRestTimer()}catch(_){}};
+  if(isW){const r=card.querySelector('.set-reps');if(!r||!String(r.value).trim())return}
+  const ex=(document.getElementById('exerciseSelect')||{}).value||'',key=ex+'|'+[...card.parentElement.children].indexOf(card)+'|'+(isR?'r':'w');
+  restSetup(ex);if(state.fpRested.has(key))return;state.fpRested.add(key);startRestTimer()}catch(_){}};
 document.addEventListener('input',restOnSet,true);document.addEventListener('change',restOnSet,true);
-/* 2.23: the rest starts on whichever comes first — writing a set's results, or adding a set (then it counts for the set you just did) */
-function restOnAdd(){try{if(state.editingWorkoutId||state.muscleGroup==='אירובי')return;const root=document.getElementById('setRows');if(!root)return;
-  const cards=[...root.children],i=cards.length-1;if(i<0)return;const ex=(document.getElementById('exerciseSelect')||{}).value||'',key=ex+'|'+i;
-  if(!state.fpRested||state.fpRestedEx!==ex){state.fpRested=new Set();state.fpRestedEx=ex}if(state.fpRested.has(key))return;state.fpRested.add(key);startRestTimer()}catch(_){}}
+function restOnAdd(){try{if(state.editingWorkoutId||state.muscleGroup==='אירובי')return;if(!document.getElementById('setRows'))return;if(restingNow())return;startRestTimer()}catch(_){}}
 ['addSetRow','addSetRowSameWeight'].forEach(fn=>{if(typeof window[fn]==='function'){const o=window[fn];window[fn]=function(){restOnAdd();return o.apply(this,arguments)}}});
 window.fpRestingNow=restingNow;
 function restLabels(){const c=$('restCtl');if(!c||c.dataset.fp)return;c.dataset.fp='1';const b=c.querySelectorAll('button');if(b[0])b[0].textContent='+30 שנ׳';if(b[1])b[1].textContent='עצור';

@@ -53,6 +53,14 @@ document.head.insertAdjacentHTML('beforeend',`<style id="fp231css">
 #fpChat .in .s{background:var(--brand,#D7F36B);color:#14190a;border-color:var(--brand,#D7F36B)}
 #fpChat .in .s:disabled{opacity:.4}
 #fpChat .pv{display:flex;align-items:center;gap:8px;padding:6px 14px 0}#fpChat .pv img{height:54px;border-radius:9px}#fpChat .pv button{font:inherit;font-size:12px;background:none;border:0;color:#FF8A80}
+.fcN{align-self:stretch;display:flex;flex-direction:column;gap:7px;background:var(--card,#171C22);border:1px solid var(--line,#2C3640);border-radius:14px;padding:10px}
+.fcN input{font:inherit;font-size:16px;background:#1F262E;border:1px solid var(--line,#2C3640);border-radius:10px;padding:9px 11px;color:var(--ink,#F2F5F7)}
+.fcN .r{display:flex;gap:6px}.fcN button{font:inherit;font-size:13.5px;font-weight:700;border-radius:99px;padding:7px 15px;cursor:pointer}
+.fcN .sv{background:var(--brand,#D7F36B);color:#14190a;border:1px solid var(--brand,#D7F36B)}.fcN .al{background:transparent;color:var(--brand,#D7F36B);border:1px solid var(--brand,#D7F36B)}
+.fcAdd{align-self:flex-start;font:inherit;font-size:12.5px;color:#A3ADB8;background:none;border:1px dashed var(--line,#2C3640);border-radius:99px;padding:5px 11px;cursor:pointer}
+.fcA{margin-top:4px}.fcBig{width:100%;font:inherit;font-size:14px;font-weight:800;background:var(--brand,#D7F36B);color:#14190a;border:0;border-radius:11px;padding:9px;cursor:pointer}
+.fcSm{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.fcSm button{font:inherit;font-size:12.5px;font-weight:700;background:transparent;color:#A3ADB8;border:1px solid var(--line,#2C3640);border-radius:99px;padding:5px 12px;cursor:pointer}
+.fcOk{border:1px solid #2F5A3A;color:#8FD18F;border-radius:11px;padding:8px;text-align:center;font-weight:800;font-size:13.5px}
 #fpChatMemS .ml{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line,#2C3640);padding:9px 2px;font-size:14px}#fpChatMemS .ml span{flex:1}
 #fpChatMemS .ml button{background:none;border:0;color:#FF8A80;font:inherit;font-size:13px;cursor:pointer}
 #fpChatMemS .add{display:flex;gap:8px;margin-top:10px}#fpChatMemS .add input{flex:1;min-width:0}
@@ -62,6 +70,14 @@ document.head.insertAdjacentHTML('beforeend',`<style id="fp231css">
 const MEM=()=>{const a=J('CHAT_MEM',[]);return Array.isArray(a)?a.filter(x=>typeof x==='string'&&x.trim()):[]};
 const memSave=a=>setProp('CHAT_MEM',JSON.stringify(a.slice(-40)));
 function memAdd(lines){const a=MEM(),low=a.map(x=>x.trim().toLowerCase());const added=[];(lines||[]).forEach(l=>{const t=String(l||'').trim().slice(0,80);if(t&&!low.includes(t.toLowerCase())){a.push(t);low.push(t.toLowerCase());added.push(t)}});if(added.length)memSave(a);return added}
+/* 2.32: what the questionnaire said counts too (״איך אתה אוכל״ + ״יש משהו שאתה לא אוכל״) */
+const NO_L={gluten:'גלוטן',lact:'לקטוז',fish:'דגים',peanut:'בוטנים'};
+function onbKnown(){let p={};try{p=(typeof getProfile==='function'&&getProfile())||{}}catch(_){p={}}const o=[];
+  if(p.diet==='veg')o.push('צמחוני (בלי בשר ודגים)');else if(p.diet==='vegan')o.push('טבעוני (בלי מוצרים מהחי)');
+  (Array.isArray(p.no)?p.no:[]).forEach(k=>{if(NO_L[k])o.push('בלי '+NO_L[k])});return o}
+function known(){const a=onbKnown(),low=a.map(x=>x.toLowerCase());MEM().forEach(x=>{if(!low.includes(x.toLowerCase()))a.push(x)});return a}
+const eatsAll=()=>prop('CHAT_EATS_ALL')==='1';
+fpChat.known=known;
 fpChat.memDel=i=>{const a=MEM();a.splice(i,1);memSave(a);memDraw()};
 fpChat.memAddUI=id=>{const el=$(id);const v=el?el.value.trim():'';if(!v)return;memAdd([v]);el.value='';memDraw()};
 function memHtml(inp){const a=MEM();return (a.length?a.map((x,i)=>`<div class="ml"><span>${esc(x)}</span><button type="button" onclick="fpChat.memDel(${i})">מחק</button></div>`).join(''):'<p class="muted" style="margin:4px 0">עוד אין. כשתכתוב בצ׳אט משהו כמו ״אני לא אוכל פטריות״ או ״אני שומר כשרות״, זה יישמר כאן.</p>')+
@@ -80,7 +96,7 @@ function dayCtx(){const t=(state.data&&state.data.totals)||{};let held=0;try{hel
   const ev=(()=>{try{const e=(bankEvents()||[]).find(x=>x.date===today());if(!e)return null;let st=false;try{st=!!(typeof fpEventHeld==='function'&&fpEventHeld()===0&&Number(t.shift&&t.shift.toEvent)>0)}catch(_){}return {name:e.label,savedForIt:Math.round((e.real&&e.real.amount)||0),started:st}}catch(_){return null}})();
   const ate=((state.data&&state.data.entries)||[]).filter(e=>e&&e.name).slice(-15).map(e=>`${e.name} (${kc(e.calories)} קל׳)`);
   let often=[];try{const m=JSON.parse(prop('FOOD_LAST')||'{}');often=Object.entries(m).sort((a,b)=>(Number(b[1].t)||0)-(Number(a[1].t)||0)).slice(0,25).map(([k,v])=>String(k).replace(/^n:/,'')+': '+v.a+' '+v.u).filter(x=>!/^\d/.test(x))}catch(_){}
-  return {date:today(),caloriesLeftToday:goal-eaten,caloriesGoalToday:goal,eatenToday:eaten,proteinLeft:Math.max(0,pg-pe),proteinGoal:pg,goal:c.goalName||'',event:ev,ateToday:ate,eatsOften:often,knownAboutUser:MEM()}}
+  return {date:today(),caloriesLeftToday:goal-eaten,caloriesGoalToday:goal,eatenToday:eaten,proteinLeft:Math.max(0,pg-pe),proteinGoal:pg,goal:c.goalName||'',event:ev,ateToday:ate,eatsOften:often,knownAboutUser:known().concat(eatsAll()&&!known().length?['אוכל הכל']:[])}}
 fpChat.ctx=dayCtx;
 
 /* ---------- the conversation ---------- */
@@ -93,7 +109,18 @@ const STEPS=[
   {k:'type',q:'בשרי, חלבי או פרווה?',o:['בשרי','חלבי','פרווה','לא משנה']},
   {k:'cal',q:()=>{const x=dayCtx();return `כמה קלוריות? נשארו לך היום ${kc(Math.max(0,x.caloriesLeftToday))}.`},o:['לפי מה שנשאר','עד מספר שאבחר','מה הכי טוב לי']},
   {k:'budget',q:'ותקציב?',o:['עד 50 ₪','עד 80 ₪','עד 120 ₪','לא משנה'],only:c=>c.place==='במסעדה'}];
-function fresh(){C={msgs:[],ch:{},step:0,day:today()};ask()}
+function fresh(){C={msgs:[],ch:{},step:0,day:today()};
+  /* 2.32 (sketch B): nothing known yet → ask once, free text. Known → no question, only a way to add */
+  if(!known().length&&!eatsAll()){C.msgs.push({role:'assistant',text:'לפני שמתחילים: יש משהו שאתה לא אוכל? אפשר לכתוב חופשי.',local:true,noAsk:true});save();draw();return}
+  ask()}
+function noDone(i,text){const m=C&&C.msgs[i];if(!m||m.used)return;
+  if(text==null){m.used='all';setProp('CHAT_EATS_ALL','1');C.msgs.push({role:'user',text:'אוכל הכל',local:true})}
+  else{const parts=String(text).split(/[,،;\n]+/).map(x=>x.trim()).filter(Boolean);if(!parts.length)return;m.used='saved';const added=memAdd(parts);C.msgs.push({role:'user',text:String(text).trim(),local:true});if(added.length)C.msgs.push({role:'assistant',text:'',local:true,learned:added})}
+  save();ask()}
+fpChat.noSave=i=>{const el=$('fpChatNo'+i);const v=el?el.value.trim():'';if(!v){if(el)el.focus();return}noDone(i,v)};
+fpChat.noAll=i=>noDone(i,null);
+fpChat.addOpen=()=>{const w=$('fpChatAddW');if(w){w.innerHTML=`<div class="fcN"><input id="fpChatAddI" type="text" maxlength="160" placeholder="למשל: בלי טונה, לא חריף"><div class="r"><button type="button" class="sv" onclick="fpChat.addSave()">שמור</button></div></div>`;const i=$('fpChatAddI');if(i)i.focus()}};
+fpChat.addSave=()=>{const el=$('fpChatAddI');const v=el?el.value.trim():'';if(!v){if(el)el.focus();return}const added=memAdd(v.split(/[,،;\n]+/).map(x=>x.trim()).filter(Boolean));C.addDone=true;if(added.length)C.msgs.push({role:'assistant',text:'',local:true,learned:added});save();draw()}
 function ask(){while(C.step<STEPS.length&&STEPS[C.step].only&&!STEPS[C.step].only(C.ch))C.step++;
   if(C.step>=STEPS.length){afterSteps();return}
   const s=STEPS[C.step];C.msgs.push({role:'assistant',text:typeof s.q==='function'?s.q():s.q,options:s.o,local:true,step:C.step});save();draw()}
@@ -128,17 +155,37 @@ async function send(text,image,thumb){if(BUSY)return;text=String(text||'').trim(
 fpChat.send=send;
 
 /* ---------- adding a dish to the diary ---------- */
-fpChat.add=async(i,j)=>{const m=C&&C.msgs[i],d=m&&m.dishes&&m.dishes[j];if(!d||d.added)return;
-  try{const cat=(typeof defaultMealSection==='function'&&defaultMealSection())||'צהריים';
-    const day=await call('saveFood',{name:d.name,date:today(),amount:1,unit:'מנה',baseQty:1,calories:Number(d.kcal)||0,protein:Number(d.protein)||0,carbs:0,fat:0,category:cat,source:'הערכה מהצ׳אט',noCache:true});
-    d.added=true;save();draw();try{if(state.date===today()&&day){applyDay(day);renderDay()}}catch(_){}toast('נוסף ליומן: '+d.name)}
-  catch(e){toast(e.message,true)}};
+/* 2.32 (sketch B): every dish can go to the day, to "my foods", or both. After a tap the card shows what happened */
+const n1c=v=>Math.round((Number(v)||0)*10)/10;
+function dishMacros(d){return {calories:Number(d.kcal)||0,protein:Number(d.protein)||0,carbs:Number(d.carbs)||0,fat:Number(d.fat)||0}}
+async function dishToDay(d){const cat=(typeof defaultMealSection==='function'&&defaultMealSection())||'צהריים',m=dishMacros(d);
+  const day=await call('saveFood',{name:d.name,date:today(),amount:1,unit:'מנה',baseQty:1,calories:m.calories,protein:m.protein,carbs:m.carbs,fat:m.fat,category:cat,source:'הערכה מהצ׳אט',noCache:true});
+  try{if(state.date===today()&&day){applyDay(day);renderDay()}}catch(_){}}
+function dishToMine(d){const m=dishMacros(d),g=Number(d.grams)||0;
+  const it=g>=20?{name:d.name,amount:100,unit:'גרם',calories:n1c(m.calories*100/g),protein:n1c(m.protein*100/g),carbs:n1c(m.carbs*100/g),fat:n1c(m.fat*100/g),units:[['מנה',Math.round(g)]]}
+    :{name:d.name,amount:1,unit:'מנה',calories:n1c(m.calories),protein:n1c(m.protein),carbs:n1c(m.carbs),fat:n1c(m.fat),units:[]};
+  if(typeof queueSaveMine==='function'){if(!queueSaveMine([it],null))throw new Error('אין ערכים לשמור');return}
+  return call('saveMyFoods',[it]).then(r=>{if(Array.isArray(r)&&state.data)state.data.myFoods=r})}
+fpChat.act=async(i,j,how)=>{const m=C&&C.msgs[i],d=m&&m.dishes&&m.dishes[j];if(!d||d.busy)return;
+  const day=(how==='day'||how==='both')&&!d.added,mine=(how==='mine'||how==='both')&&!d.saved;if(!day&&!mine)return;
+  d.busy=true;draw();
+  try{if(mine){await dishToMine(d);d.saved=true}if(day){await dishToDay(d);d.added=true}
+    toast(d.added&&d.saved&&day&&mine?'נשמר במזונות שלך ונוסף להיום ✓':day?'נוסף להיום ✓':'נשמר במזונות שלך ✓')}
+  catch(e){toast(e.message,true)}
+  finally{d.busy=false;save();draw()}};
+fpChat.add=(i,j)=>fpChat.act(i,j,'day');
 
 /* ---------- drawing ---------- */
 const RANK=['מקום ראשון','מקום שני','מקום שלישי'];
-function dishHtml(i,d,j){const meta=`${kc(d.kcal)} קל׳ · ${kc(d.protein)} ג׳ חלבון${d.price?' · '+esc(d.price):''}`,btn=`<button type="button" class="ad${d.added?' done':''}" onclick="fpChat.add(${i},${j})">${d.added?'נוסף ✓':'הוסף ליומן'}</button>`;
-  if(j<3)return `<div class="fcD"><div class="rk">${RANK[j]}</div><b>${esc(d.name)}</b><div class="m">${meta}</div>${d.why?`<p class="w">${esc(d.why)}</p>`:''}${btn}</div>`;
-  return `<div class="fcD s"><div class="t"><b>${j+1}. ${esc(d.name)}</b><div class="m">${meta}</div></div>${btn}</div>`}
+function dishBtns(i,d,j){if(d.busy)return '<div class="fcA"><span class="fcOk" style="color:#A3ADB8;border-color:#2C3640">שומר…</span></div>';
+  const at=`fpChat.act(${i},${j},`;
+  if(!d.added&&!d.saved)return `<div class="fcA"><button type="button" class="fcBig" onclick="${at}'both')">שמור והוסף ליום</button><div class="fcSm"><button type="button" onclick="${at}'day')">רק ליום</button><button type="button" onclick="${at}'mine')">רק לשמור</button></div></div>`;
+  const t=d.added&&d.saved?'נשמר ונוסף להיום ✓':d.added?'נוסף להיום ✓':'נשמר במזונות שלך ✓';
+  return `<div class="fcA"><div class="fcOk">${t}</div>${d.added&&d.saved?'':`<div class="fcSm">${d.added?`<button type="button" onclick="${at}'mine')">גם לשמור במזונות שלי</button>`:`<button type="button" onclick="${at}'day')">גם להוסיף ליום</button>`}</div>`}</div>`}
+function dishHtml(i,d,j){const macro=(Number(d.carbs)||Number(d.fat))?` · ${kc(d.carbs)} פחמ׳ · ${kc(d.fat)} שומן`:'';
+  const meta=`${kc(d.kcal)} קל׳ · ${kc(d.protein)} ג׳ חלבון${macro}${d.price?' · '+esc(d.price):''}`,btn=dishBtns(i,d,j);
+  if(j<3)return `<div class="fcD"><div class="rk">${C.msgs[i].dishes.length===1?'המנה':RANK[j]}</div><b>${esc(d.name)}</b><div class="m">${meta}</div>${d.why?`<p class="w">${esc(d.why)}</p>`:''}${btn}</div>`;
+  return `<div class="fcD"><b style="font-size:14px">${j+1}. ${esc(d.name)}</b><div class="m">${meta}</div>${btn}</div>`}
 function draw(){const b=$('fpChatBody');if(!b||!C)return;let h='';
   C.msgs.forEach((m,i)=>{
     if(m.role==='user'){h+=`<div class="fcB u">${m.thumb?`<img src="${m.thumb}" alt="תמונה ששלחת">`:m.image?'<small>[תמונה]</small><br>':''}${esc(m.text||'')}</div>`;return}
@@ -147,7 +194,9 @@ function draw(){const b=$('fpChatBody');if(!b||!C)return;let h='';
     if(m.dishes&&m.dishes.length){h+=m.dishes.map((d,j)=>dishHtml(i,d,j)).join('');if(m.dishes.length>3)h+=''}
     if(m.learned&&m.learned.length)h+=`<div class="fcL">למדתי עליך: ${m.learned.map(esc).join(' · ')}</div>`;
     const last=i===C.msgs.length-1;
-    if(m.options&&m.options.length&&(last||m.local)&&!m.used&&!BUSY)h+=`<div class="fcQ">${m.options.map((o,j)=>`<button type="button" onclick="fpChat.pick(${i},${j})">${esc(o)}</button>`).join('')}</div>`});
+    if(m.noAsk&&!m.used)h+=`<div class="fcN"><input id="fpChatNo${i}" type="text" maxlength="160" placeholder="למשל: כשר, בלי טונה, לא חריף" onkeydown="if(event.key==='Enter')fpChat.noSave(${i})"><div class="r"><button type="button" class="sv" onclick="fpChat.noSave(${i})">שמור</button><button type="button" class="al" onclick="fpChat.noAll(${i})">אוכל הכל</button></div></div>`;
+    if(m.options&&m.options.length&&(last||m.local)&&!m.used&&!BUSY)h+=`<div class="fcQ">${m.options.map((o,j)=>`<button type="button" onclick="fpChat.pick(${i},${j})">${esc(o)}</button>`).join('')}</div>`;
+    if(i===0&&!m.noAsk&&!C.addDone&&known().length&&C.msgs.length<=2&&!BUSY)h+=`<div id="fpChatAddW"><button type="button" class="fcAdd" onclick="fpChat.addOpen()">＋ משהו שאתה לא אוכל</button></div>`;});
   if(BUSY)h+='<div class="fcTy">חושב…</div>';
   if(C.limit&&C.used)h+=`<div class="fcMore">${C.used} מתוך ${C.limit} שאלות היום</div>`;
   b.innerHTML=h;b.scrollTop=b.scrollHeight;const s=$('fpChatSend');if(s)s.disabled=BUSY;

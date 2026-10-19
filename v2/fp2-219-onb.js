@@ -15,6 +15,7 @@ document.head.insertAdjacentHTML('beforeend',`<style id="fpQcss">
 #onbSheet .onb-choice.selected small{color:#c4d98a}
 #onbSheet .onb-choice.chip{flex:0 0 auto;min-height:40px;border-radius:99px;padding:7px 14px}
 #onbSheet .fpq-grid{display:grid;gap:8px}
+#onbSheet .fpq-ci{margin-top:10px;background:#171C22;border:1px solid #2C3640;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.55;color:#A3ADB8}#onbSheet .fpq-ci b{color:#F2F5F7}
 #onbSheet .fpq-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #2C3640}
 #onbSheet .fpq-row:last-child{border:0}
 #onbSheet .fpq-step{display:flex;align-items:center;gap:8px}#onbSheet .fpq-step b{min-width:22px;text-align:center;font-size:18px}
@@ -168,7 +169,7 @@ function trainHtml(){
     h+=`<div class="onb-panel"><b style="display:block;margin-bottom:6px">תוכנית שבועית</b><div class="fpq-row"><span>בשבוע</span><b>${[S?S+' כוח':'',R?R+' ריצה':'',Cc?Cc+' אירובי':''].filter(Boolean).join(' · ')}</b></div>
       <p class="muted" style="margin:6px 0">לקבוע מראש איזה יום מה? זה עוזר להתמיד.</p>
       <div class="fpq-grid">${chc('wplan','none','בלי תוכנית','כל יום מה שמתאים לך')}${chc('wplan','weekly','משתנה','כל שבוע בוחרים את הימים מחדש, עם תזכורת')}${chc('wplan','fixed','קבועה','אותם ימים כל שבוע')}</div>
-      ${d.wplan==='weekly'?`<label style="margin-top:12px">באיזה יום לשאול אותך על השבוע הבא?</label><div class="onb-options">${[['ci','ביום הצ׳ק-אין ('+DN[ci]+')']].concat(DN.map((n,i)=>[i,n])).map(([k,l])=>`<button type="button" class="onb-choice chip${String(d.ask)===String(k)?' selected':''}" onclick="fpQ.set('ask',${typeof k==='number'?k:"'ci'"})">${l}</button>`).join('')}</div>`:''}
+      ${d.wplan==='weekly'?`<label style="margin-top:12px">באיזה יום לשאול אותך על השבוע הבא?</label><div class="onb-options">${[['ci','ביום הצ׳ק-אין ('+DN[ci]+')']].concat(DN.map((n,i)=>[i,n])).map(([k,l])=>`<button type="button" class="onb-choice chip${String(d.ask)===String(k)?' selected':''}" onclick="fpQ.set('ask',${typeof k==='number'?k:"'ci'"})">${l}</button>`).join('')}</div><div class="fpq-ci"><b>צ׳ק-אין</b> = פעם בשבוע: שקילה, היקפים, תמונות וסיכום של השבוע. ככה האפליקציה יודעת אם לעדכן לך את היעד.</div>`:''}
       ${d.wplan==='none'?'':daysPicker(d)}
       <p class="muted" style="margin:6px 0 0;font-size:12px;color:#6B7682">ניתן לשינוי בהגדרות</p></div>`;
     /* 2.23.1: the warning pops up when a limit is crossed, and does not stay on the screen */

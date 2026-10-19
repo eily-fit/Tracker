@@ -199,6 +199,10 @@ defaultPortion=function(x,parsed){
       const a=Number(L.a)>0?Number(L.a):1;
       if((L.u==='גרם'||L.u==='מ״ל')&&Number(L.a)>0)return {amount:a,unit:L.u};
       if((x.units||[]).some(u=>u[0]===L.u))return {amount:a,unit:L.u};
+      /* 2.32: the food came without that unit (a recent item, my foods, or the food list still loading after the app was closed):
+         still open with what you used, the unit is added with its grams */
+      if(L.u===x.unit)return {amount:a,unit:L.u};
+      const g=Number(L.g)||0;if(g>0){x.units=(x.units||[]).concat([[L.u,g,false]]);return {amount:a,unit:L.u}}
     }}catch(_){}
   if(x&&x.fpBasic&&!(parsed&&(parsed.amount!=null||parsed.unitHint||parsed.grams))){
     if(x.fpUnit==='גרם'&&x.fpGrams)return {amount:x.fpGrams,unit:'גרם'};
@@ -257,20 +261,20 @@ let LASTU={};try{LASTU=JSON.parse(localStorage.getItem(LASTU_KEY)||'{}')||{}}cat
 const FL=()=>{try{return JSON.parse((window.FP2&&FP2.getProp&&FP2.getProp('FOOD_LAST'))||'{}')||{}}catch(_){return {}}};
 const nameKey=x=>'n:'+normHe((x&&(x.fpSrc||x.name))||'');
 function lastGet(x){const m=FL(),k=calKey(x),n=nameKey(x),n2='n:'+normHe((x&&x.name)||'');const c=[m[k],m[n],m[n2],LASTU[k],LASTU[n]].filter(Boolean);c.sort((a,b)=>(Number(b.t)||0)-(Number(a.t)||0));return c[0]||null}
-function lastPut(keys,v){try{const m=FL();let ch=false;keys.filter(Boolean).forEach(k=>{const o=m[k];if(!o||(Number(o.t)||0)<=(Number(v.t)||0)){if(!o||o.u!==v.u||o.a!==v.a)ch=true;m[k]=v}});
+function lastPut(keys,v){try{const m=FL();let ch=false;keys.filter(Boolean).forEach(k=>{const o=m[k];if(!o||(Number(o.t)||0)<=(Number(v.t)||0)){if(!o||o.u!==v.u||o.a!==v.a||(v.g&&o.g!==v.g))ch=true;if(o&&o.g&&!v.g&&o.u===v.u)v=Object.assign({},v,{g:o.g});m[k]=v}});
   if(!ch)return;const ks=Object.keys(m);if(ks.length>400)ks.sort((a,b)=>(Number(m[a].t)||0)-(Number(m[b].t)||0)).slice(0,ks.length-400).forEach(k=>delete m[k]);
   if(window.FP2&&FP2.setProp)FP2.setProp('FOOD_LAST',JSON.stringify(m))}catch(_){}}
 window.fpFoodLast={get:x=>lastGet(x),put:lastPut};
 /* what you logged (any screen: one food, a meal, a recipe, a sentence) teaches the default for next time */
 function learnDay(){try{const d=state.data&&state.data.entries;if(!Array.isArray(d)||!d.length)return;
   d.forEach(e=>{if(!e||!e.name||!(Number(e.amount)>0)||!e.unit||/^tmp/.test(String(e.id||'')))return;if(e.sourceType==='free')return;
-    const t=Date.parse(e.createdAt||'')||0;lastPut(['n:'+normHe(e.name)],{u:e.unit,a:Number(e.amount),t})})}catch(_){}}
+    const t=Date.parse(e.createdAt||'')||0;const gp=Number(e.gramsPerUnit)||0;lastPut(['n:'+normHe(e.name)],Object.assign({u:e.unit,a:Number(e.amount),t},gp>0?{g:gp}:{}))})}catch(_){}}
 window.fpLearnDay=learnDay;
 if(typeof renderDay==='function'){const oRD=renderDay;renderDay=function(){const r=oRD.apply(this,arguments);try{setTimeout(learnDay,0)}catch(_){}return r}}
 const oSave=saveFood;
 saveFood=async function(){
   try{const x=state.selectedFood,u=$('foodUnit').value,a=Number($('foodAmount').value)||0,k=calKey(x);
-    if(k&&u){LASTU[k]={u,a,t:Date.now()};const ks=Object.keys(LASTU);if(ks.length>400)delete LASTU[ks[0]];try{localStorage.setItem(LASTU_KEY,JSON.stringify(LASTU))}catch(_){}lastPut([k,nameKey(x)],{u,a,t:Date.now()})}}catch(_){}
+    const g0=Number(state.foodGramsPerUnit)||0;if(k&&u){LASTU[k]={u,a,t:Date.now(),g:g0||undefined};const ks=Object.keys(LASTU);if(ks.length>400)delete LASTU[ks[0]];try{localStorage.setItem(LASTU_KEY,JSON.stringify(LASTU))}catch(_){}lastPut([k,nameKey(x)],Object.assign({u,a,t:Date.now()},g0>0&&u!=='גרם'&&u!=='מ״ל'?{g:g0}:{}))}}catch(_){}
   try{
     const x=state.selectedFood,u=$('foodUnit').value,g=Number(state.foodGramsPerUnit);
     if(x&&u&&u!=='גרם'&&u!=='מ״ל'&&u!=='מנה מהאריזה'&&g>0){

@@ -2265,7 +2265,7 @@ function realBank_(e,events,s,today){
   raw=Math.round(raw);const amount=Math.max(0,Math.min(raw,evCap));
   return {amount,raw,cap:evCap,capped:raw>evCap,from,days};
 }
-function dayShift_(date,settings,goalBefore){
+function dayShift_(date,settings,goalBefore,depth){
   const s=settings||getSettings_(),today=getWorkingDateFromSettings_(s),out={total:0,plus:0,cut:0,toEvent:0,eventId:'',source:''};
   const base=Number(s.calorie_goal)||2200,ctx=bankContext_(s),rules=goalRules_(s),cap=Math.round(base*rules.shift/10)*10;
   const y=addDays_(date,-1),events=listBankEvents_(s),own=events.find(e=>e.date===date),mine=eventOfDay_(date,events);
@@ -2290,7 +2290,12 @@ function dayShift_(date,settings,goalBefore){
   }else if(!eventOfDay_(y,events)){
     const ucap=Math.round(base*userShift_(s)/10)*10;
     const yEvent=events.some(e=>e.date===y),extra=yEvent?Number(dayShift_(y,s,base+bankAdjust_(y,events,s).delta).toEvent)||0:0;
-    const gap=dayGap_(y,events,s,base,ucap,extra),cuts=dayCuts_(s);
+    /* 2.32: yesterday's own plus counts too (e.g. leftovers from an event): over only above the raised goal;
+       between the normal and the raised goal nothing moves; under the normal goal only that gap passes on (no double carry).
+       One level only (depth), so it never walks back through many days. */
+    let yPlus=0;if(!yEvent&&!(depth>0)){try{const ys=dayShift_(y,s,base+bankAdjust_(y,events,s).delta,1);yPlus=Math.max(0,Math.round(Number(ys.total)||0))}catch(_){yPlus=0}}
+    let gap=dayGap_(y,events,s,base,yPlus>0?1e9:ucap,extra+yPlus);const cuts=dayCuts_(s);
+    if(yPlus>0){gap=gap>0?Math.max(0,gap-yPlus):gap;gap=Math.max(-ucap,Math.min(ucap,gap))}
     // 2.12.0: 3 days in a row on the same side of the goal → it is a habit, not a single day: nothing moves, the app asks what happened
     const streak=yEvent?null:dayStreak_(y,events,s,base);
     if(streak){out.streak=streak;out.source='streak';out.total=0;out.cap=cap;return out;}

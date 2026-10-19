@@ -493,7 +493,9 @@ b.innerHTML=`<div class="row" style="justify-content:space-between;align-items:c
       draw(b,users);
     }catch(e){
       const m=String(e&&e.message||e);
-      if(/^Firebase /.test(m))b.innerHTML=`<p class="muted" style="color:var(--danger)">רשימת המשתמשים לא נטענה: ${esc(m)}</p>`;else if(!(cached&&cached.length))b.innerHTML='';
+      /* 2.32: never blank. Short line + details + retry (sketch C); a cached list stays, with the line above it */
+      if(cached&&cached.length){draw(b,cached);b.insertAdjacentHTML('afterbegin','<div class="fp232u"></div>');const x=b.querySelector('.fp232u');if(window.fpLoadErr)fpLoadErr(x,'משתמשים (מוצגת רשימה שמורה)',e,()=>{busy=false;load()})}
+      else (window.fpLoadErr?fpLoadErr(b,'משתמשים',e,()=>{busy=false;load()}):b.innerHTML='<p class="muted" style="color:var(--danger)">רשימת המשתמשים לא נטען: '+esc(String(e&&e.message||e))+'</p>');
     }finally{busy=false}
     loadReq();loadFoods();
   }
@@ -501,10 +503,10 @@ b.innerHTML=`<div class="row" style="justify-content:space-between;align-items:c
     if(!window.FP2||!FP2.push)return;let b=document.getElementById('adminFoodReq');
     if(!b){const a=document.getElementById('adminExReq');if(!a)return;a.insertAdjacentHTML('afterend','<div id="adminFoodReq"></div>');b=document.getElementById('adminFoodReq')}
     try{
-      const r=await FP2.push('adminListFoodProposals');const it=r.items||[];window.__foodProps={};it.forEach(x=>window.__foodProps[x.id]=x);
+      const r=await FP2.push('adminListFoodProposals');const it=((r&&r.items)||[]).filter(x=>x&&x.id).map(x=>x.kind==='report'||x.food?x:Object.assign({},x,{food:{name:x.name||x.code||'?',calories:0,protein:0,carbs:0,fat:0,baseQty:100,unit:'g'}}));window.__foodProps={};it.forEach(x=>window.__foodProps[x.id]=x);
       const mac=f=>`${Math.round(f.calories)} קל׳ · ח ${Math.round(f.protein*10)/10} · פ ${Math.round(f.carbs*10)/10} · ש ${Math.round(f.fat*10)/10} (ל-${f.baseQty} ${esc(f.unit)})`;
       b.innerHTML=`<div style="margin:18px 0 6px"><b>מזונות לאישור (${it.length})</b></div>`+(it.length?it.map(x=>x.kind==='report'?`<div class="manage-row"><span style="flex:1;min-width:0"><b>דיווח: ${esc(x.name||x.code)}</b><div class="muted">${esc(x.note||'ללא הערה')}${x.by&&x.by.length?' · '+esc(x.by.join(', ')):''}</div></span><button class="btn secondary" data-i="${esc(x.id)}" onclick="adminFoodAct(this,'del')">הסר מהמאגר</button><button class="btn secondary" data-i="${esc(x.id)}" onclick="adminFoodAct(this,'skip')">התעלם</button></div>`:`<div class="manage-row"><span style="flex:1;min-width:0"><b>${esc(x.food.name)}</b>${x.count>1?` <small class="muted">· ${x.count} משתמשים</small>`:''}<div class="muted">${mac(x.food)}${x.by&&x.by.length?' · '+esc(x.by.join(', ')):''}</div></span><button class="btn" data-i="${esc(x.id)}" onclick="adminFoodAct(this,'share')">שתף עם כולם</button><button class="btn secondary" data-i="${esc(x.id)}" onclick="adminFoodAct(this,'skip')">השאר פרטי</button></div>`).join(''):'<p class="muted">אין מזונות שממתינים.</p>');
-    }catch(e){b.innerHTML=''}
+    }catch(e){(window.fpLoadErr?fpLoadErr(b,'מזונות לאישור',e,loadFoods):b.innerHTML='<p class="muted" style="color:var(--danger)">מזונות לאישור לא נטען: '+esc(String(e&&e.message||e))+'</p>')}
   }
   window.adminFoodAct=async function(btn,act){
     const x=(window.__foodProps||{})[btn.dataset.i];if(!x)return;btn.disabled=true;
@@ -519,10 +521,10 @@ b.innerHTML=`<div class="row" style="justify-content:space-between;align-items:c
     try{
       const r=await FP2.push('adminListExerciseRequests');const it=r.items||[];
       b.innerHTML=`<div style="margin:18px 0 6px"><b>תרגילים שהמשתמשים הוסיפו (${it.length})</b></div>`+(it.length?it.map(x=>`<div class="manage-row"><span style="flex:1;min-width:0"><b>${esc(x.name)}</b>${x.count>1?` <small class="muted">· ${x.count} משתמשים</small>`:''}<div class="muted">${esc([x.group,x.equipment].filter(Boolean).join(' · '))}${x.by&&x.by.length?' · '+esc(x.by.join(', ')):''}</div></span><button class="btn light" style="min-height:36px;padding:6px 12px" onclick="adminResolveEx(this)" data-n="${esc(x.name)}">בוצע</button></div>`).join('')+'<p class="muted">אלה תרגילים שאין להם עדיין אנימציה. אחרי שתוסיף אנימציה באפליקציה, לחץ ״בוצע״.</p>':'<p class="muted">אין בקשות פתוחות.</p>');
-    }catch(e){b.innerHTML=`<div style="margin:18px 0 6px"><b>תרגילים שהמשתמשים ביקשו</b></div><div class="muted">לא הצלחתי לטעון: ${esc(e.message||'שגיאה')}. אם השגיאה היא unknown action, צריך לפרסם מחדש את Push.gs.</div>`}
+    }catch(e){(window.fpLoadErr?fpLoadErr(b,'תרגילים שהמשתמשים הוסיפו',e,loadReq):b.innerHTML='<p class="muted" style="color:var(--danger)">תרגילים שהמשתמשים הוסיפו לא נטען: '+esc(String(e&&e.message||e))+'</p>')}
   }
   window.adminResolveEx=async function(btn){try{await FP2.push('adminResolveExerciseRequest',{name:btn.dataset.n});loadReq()}catch(e){toast(e.message||'שגיאה',true)}};
-  window.adminLoadUsers=load;
+  window.adminLoadUsers=load;window.adminLoadFoods=loadFoods;window.adminLoadReq=loadReq;
   window.adminBlockUser=async function(uid,blocked){
     if(blocked&&!confirm('לחסום את המשתמש? הוא לא יוכל להיכנס עד שתשחרר אותו.'))return;
     try{loading()}catch(_){}

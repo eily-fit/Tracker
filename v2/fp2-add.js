@@ -34,7 +34,7 @@ function tidy(){
   add.querySelectorAll('.admin-only').forEach(s=>{if(/בתשלום/.test(s.textContent))s.remove()});
   add.querySelectorAll('details').forEach(d=>{const s=d.querySelector('summary');if(s&&/ברקוד/.test(s.textContent))d.classList.add('fp-hide')});
   const ai=add.querySelector('button[onclick="estimateWithOpenAI()"]');
-  if(ai&&!$('fpAddMoreBtn'))ai.insertAdjacentHTML('afterend','<button type="button" class="btn light full" id="fpAddMoreBtn" style="margin-top:8px" onclick="fpAddMore()">＋ עוד דרכים: צילום, ברקוד, מתכון</button>');
+  if(ai&&!$('fpAddMoreBtn'))ai.insertAdjacentHTML('afterend','<button type="button" class="btn light full" id="fpAddMoreBtn" style="margin-top:8px" onclick="fpAddMore()">＋ עוד דרכים: תמונה, קישור, ברקוד, צ׳אט</button>');
 }
 tidy();setInterval(tidy,2000);
 function sheet(id,title,body){
@@ -46,24 +46,60 @@ function sheet(id,title,body){
 const opt=(ic,t,sub,fn,ai)=>`<button type="button" class="fp-more-opt" onclick="${fn}"><span class="ic">${ic}</span><div><b>${t}${ai?' <i style="font-style:normal;font-size:10.5px;font-weight:800;color:#14190a;background:#D7F36B;border-radius:6px;padding:1px 6px;vertical-align:middle;margin-inline-start:4px">AI</i>':''}</b><span>${sub}</span></div></button>`;
 /* 2.24: a thin line icon for every way (camera, gallery, barcode, recipe, link, typing the number) */
 const MI={cam:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10.5H4z"/><circle cx="12" cy="13.3" r="3.4"/></svg>',gal:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4"/></svg>',bar:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6v12M7 6v12M9.5 6v12M13 6v12M15 6v12M18 6v12M20 6v12"/><path d="M3 4.5h3M18 4.5h3M3 19.5h3M18 19.5h3" opacity=".6"/></svg>',rec:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h9l3 3v14H6z"/><path d="M15 3.5v3h3M9 10h6M9 13h6M9 16h4"/></svg>',lnk:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg>',key:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M7 9h.01M10 9h.01M13 9h.01M16 9h.01M7 12h.01M10 12h.01M13 12h.01M16 12h.01M8 15.5h8"/></svg>'};
+/* 2.32 (approved): four ways instead of six. "תמונה, מסמך או מתכון" opens the phone's own chooser (camera, photo library, file),
+   and the AI tells by itself if it is a plate or a recipe / ingredient list. The link has its own row. The barcode row has typing inside it.
+   The food chat is here too (and stays in the small +). */
+MI.chat='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8.5 10h7M8.5 13h4"/></svg>';
 window.fpAddMore=function(){
   sheet('fpAddMoreSheet','עוד דרכים להוסיף',
-    opt(MI.cam,'לצלם את הארוחה','ה-AI מזהה מה בצלחת וכמה','fpMore(\'photo\')',1)+
-    opt(MI.gal,'תמונה של הארוחה מהגלריה','תמונה שכבר צילמת','fpMore(\'photoGal\')',1)+
-    opt(MI.bar,'לסרוק ברקוד','מוצר ארוז: הערכים מגיעים לבד','fpMore(\'barcode\')')+
-    opt(MI.rec,'תמונה של מתכון או רשימת מרכיבים','ה-AI קורא את המרכיבים ומחשב','fpMore(\'recipePhoto\')',1)+
+    opt(MI.cam,'תמונה, מסמך או מתכון','מצלמים, מהגלריה או קובץ. ה-AI מבין לבד אם זו צלחת או מתכון','fpMore(\'any\')',1)+
     opt(MI.lnk,'מתכון מקישור','מדביקים קישור לאתר מתכונים','fpMore(\'link\')',1)+
-    opt(MI.key,'להקליד מספר ברקוד','אם הסריקה לא עובדת','fpMore(\'barcodeType\')'));
+    opt(MI.bar,'ברקוד','סורקים. לא מזהה? מקלידים את המספר','fpMore(\'barcode\')')+
+    opt(MI.chat,'שיחה עם AI','במסעדה או בבית: מה כדאי, וכמה זה','fpMore(\'chat\')',1));
 };
+function anyInput(){let g=$('fpAnyFile');if(!g){document.body.insertAdjacentHTML('beforeend','<input id="fpAnyFile" type="file" accept="image/*,application/pdf" style="display:none">');g=$('fpAnyFile');
+  g.onchange=()=>{const f=g.files&&g.files[0];g.value='';if(f)fromAny(f)}}return g}
 window.fpMore=function(k){
   const s=$('fpAddMoreSheet');if(s)s.remove();
+  if(k==='any'){anyInput().click();return}
   if(k==='photo'){const i=$('mealPhotoFile');if(i)i.click();return}
   if(k==='photoGal'){let g=$('fpMealGal');if(!g){document.body.insertAdjacentHTML('beforeend','<input id="fpMealGal" type="file" accept="image/*" style="display:none">');g=$('fpMealGal');g.onchange=()=>{const f=g.files&&g.files[0];g.value='';if(f)estimateMealPhoto(f)}}g.click();return}
-  if(k==='barcode'){try{startLiveScan()}catch(e){toast(e.message,true)}return}
+  if(k==='barcode'){let blocked=false;try{blocked=localStorage.getItem('elaiLiveScanBlocked')==='1'}catch(_){}
+    if(blocked||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){sheet('fpBarSheet','ברקוד',`<button type="button" class="btn full" onclick="document.getElementById('fpBarSheet').remove();document.getElementById('barcodePhoto').click()">לצלם את הברקוד</button><button type="button" class="btn light full" style="margin-top:8px" onclick="document.getElementById('fpBarSheet').remove();fpMore('barcodeType')">להקליד את המספר</button>`);return}
+    try{startLiveScan()}catch(e){toast(e.message,true)}return}
   if(k==='barcodeType'){const d=[...document.querySelectorAll('#add details')].find(x=>/ברקוד/.test(x.textContent));if(d){d.classList.remove('fp-hide');d.open=true;const b=$('barcode');if(b)setTimeout(()=>{b.scrollIntoView({block:'center'});b.focus()},200)}return}
   if(k==='link'){try{fpRecipeOpen()}catch(e){toast(e.message,true)}return}
+  if(k==='chat'){try{fpChat.open()}catch(e){toast('הצ׳אט עוד נטען',true)}return}
   if(k==='recipePhoto')recipePhotoSheet();
 };
+/* "להקליד את המספר" inside the live scan too */
+(function scanType(n){const sh=$('scanSheet');if(!sh){if(n<20)setTimeout(()=>scanType(n+1),500);return}if($('fpScanType'))return;
+  const b=[...sh.querySelectorAll('button')].find(x=>/צלם תמונה במקום/.test(x.textContent));
+  (b||sh.querySelector('.sheet')).insertAdjacentHTML(b?'afterend':'beforeend','<button type="button" class="btn light full" id="fpScanType" style="margin-top:8px" onclick="stopLiveScan();fpMore(\'barcodeType\')">להקליד את המספר</button>')})(0);
+/* a PDF: its first pages become one picture (pdf.js only loads when needed) */
+let PDFJS=null;
+function pdfLib(){if(PDFJS)return PDFJS;PDFJS=new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  sc.onload=()=>{try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';ok(window.pdfjsLib)}catch(e){no(e)}};sc.onerror=()=>{PDFJS=null;no(new Error('לא הצלחתי לפתוח את הקובץ. נסה צילום מסך שלו'))};document.head.appendChild(sc)});return PDFJS}
+async function pdfToImage(file){const lib=await pdfLib();const doc=await lib.getDocument({data:await file.arrayBuffer()}).promise;const n=Math.min(doc.numPages,3),cs=[];
+  for(let i=1;i<=n;i++){const pg=await doc.getPage(i);const v=pg.getViewport({scale:1});const sc=Math.min(2,1400/v.width);const vp=pg.getViewport({scale:sc});const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;cs.push(c)}
+  const W=Math.max(...cs.map(c=>c.width)),H=cs.reduce((a,c)=>a+c.height,0),out=document.createElement('canvas');out.width=W;out.height=Math.min(H,W*4);const x=out.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,out.height);let y=0;cs.forEach(c=>{x.drawImage(c,0,y);y+=c.height});
+  return await new Promise(r=>out.toBlob(b=>r(new File([b],'page.jpg',{type:'image/jpeg'})),'image/jpeg',0.85))}
+const ANY_NOTE='This may be a photo of a plate, OR a photo, screenshot or document of a recipe or an ingredient list. If it is a recipe or an ingredient list: read every ingredient with the amount written next to it, convert to grams, return the whole recipe as written (all servings together), do not add ingredients that are not written, name it by the recipe name, and START the note with the word "מתכון". If it is a plate, estimate as usual.';
+async function fromAny(file){
+  const isPdf=/pdf/i.test(file.type||'')||/\.pdf$/i.test(file.name||'');
+  if(!isPdf&&!String(file.type||'image/').startsWith('image'))return toast('אפשר תמונה או PDF',true);
+  showView('add');state.dishEstimate=null;thinking(isPdf?'פותח את הקובץ…':'ה-AI מסתכל על התמונה…');let tk=state.aiToken;
+  try{if(isPdf){file=await pdfToImage(file);if(tk!==state.aiToken)return;thinking('ה-AI קורא את הקובץ…');tk=state.aiToken}
+    let image='';for(const [w,q] of [[1400,0.75],[1100,0.7],[900,0.65],[700,0.6]]){image=await shrinkImage(file,w,q);if(String(image).replace(/^data:[^,]*,/,'').length<2400000)break}
+    const ex=(($('dishExtras')||{}).value||'').trim();
+    const r=await call('estimateFoodPhoto',{image,note:(ANY_NOTE+(ex?' User note: '+ex:'')).slice(0,600)});
+    if(tk!==state.aiToken)return;
+    const recipe=/^\s*מתכון/.test(String(r.note||''));
+    state.dishEstimate=r;state.dishSkin=null;state.dishBone=null;state.dishFor=null;if($('foodQuery'))$('foodQuery').value=r.name;
+    if(recipe){r._recipe=true;r.note=String(r.note||'').replace(/^\s*מתכון[:\s.-]*/,'');setBase(r);r._units={n:1,k:1};renderDishEstimate();toast('פירקתי את המתכון. עכשיו כתוב כמה גרם אכלת מכל רכיב');try{const u=document.querySelector('.fp-parts');if(u)u.scrollIntoView({block:'center'})}catch(_){}}
+    else{renderDishEstimate();const el=$('dishPreview');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});toast('התקבל אומדן מהתמונה. בדוק את הכמויות לפני הוספה')}
+  }catch(e){done();toast(e.message||'שגיאה',true)}}
+window.fpFromAny=fromAny;
 
 /* ---------- "ה-AI חושב…" ---------- */
 /* 2.18: seconds count up, and "בטל" stops waiting */

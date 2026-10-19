@@ -61,7 +61,7 @@ function playTones(kind,oc){
 
 /* 2.27: the sound is woken silently only by the buttons that START something that will sound later
    (a set / rest, a run, cardio, a lap, recording). Lab 3: waking on every tap stopped the music from going down for the sound. */
-function wakeSound(){if(recording)return;const c=ctx();try{if(c&&!c.__fpUnlock){c.__fpUnlock=1;const bf=c.createBuffer(1,1,22050),sr=c.createBufferSource();sr.buffer=bf;sr.connect(c.destination);sr.start(0)}}catch(_){}}
+function wakeSound(){if(recording)return;try{wakeSpeech()}catch(_){}const c=ctx();try{if(c&&!c.__fpUnlock){c.__fpUnlock=1;const bf=c.createBuffer(1,1,22050),sr=c.createBufferSource();sr.buffer=bf;sr.connect(c.destination);sr.start(0)}}catch(_){}}
 const WAKE_RE=/start|Start|Go\(|go\(|fxGo|runGo|carStart|cStart|tstart|fpT\.run|fpT\.gps|qrun|sr\('lap'|saveWorkout|addSetRow|fpRestRec/;
 document.addEventListener('click',e=>{try{const b=e.target.closest&&e.target.closest('[onclick]');if(b&&WAKE_RE.test(b.getAttribute('onclick')||''))wakeSound()}catch(_){}},true);
 document.addEventListener('visibilitychange',()=>{try{if(document.visibilityState==='visible'){idle();if(state.audioCtx&&state.audioCtx.state!=='running')state.audioCtx.resume().catch(()=>{})}}catch(_){}});
@@ -72,8 +72,15 @@ window.fp2SoundInfo=()=>({ctx:state.audioCtx&&state.audioCtx.state,session:navig
 function heVoices(){try{return speechSynthesis.getVoices().filter(v=>/^he|^iw/i.test(v.lang))}catch(_){return []}}
 function speak(text){try{if(!('speechSynthesis' in window))return false;const c=cfg(),u=new SpeechSynthesisUtterance(text);u.lang='he-IL';const vs=heVoices(),pick=vs.find(v=>v.name===c.voice)||vs[0];if(pick)u.voice=pick;
   const st=STYLES.find(s=>s[0]===c.style)||STYLES[0];u.rate=st[2];u.pitch=st[3];u.volume=Math.max(0.1,Math.min(1,c.vol));
-  speaking=true;const done=()=>{speaking=false;duck(true,500)};u.onend=done;u.onerror=done;setTimeout(()=>{if(speaking)done()},9000);
-  speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(_){speaking=false;return false}}
+  /* 2.32: on the iPhone the voice sometimes did not come (it worked again after Settings → test). The speech gets stuck "paused",
+     or was never woken by a tap. Now: resume it, wake it on taps (silently, below), and if it does not start within 1.5 s, beeps instead */
+  let started=false;u.onstart=()=>{started=true};
+  speaking=true;const done=()=>{speaking=false;duck(true,500)};u.onend=done;u.onerror=()=>{if(!started)webTones('beeps');done()};setTimeout(()=>{if(speaking)done()},9000);
+  try{speechSynthesis.cancel();if(speechSynthesis.paused)speechSynthesis.resume()}catch(_){}
+  speechSynthesis.speak(u);try{speechSynthesis.resume()}catch(_){}
+  setTimeout(()=>{if(!started&&speaking){try{speechSynthesis.cancel()}catch(_){}webTones('beeps');done()}},1500);return true}catch(_){speaking=false;return false}}
+/* 2.32: wake the speech on taps that start or run a workout, with a silent empty sentence (once a minute at most) */
+let spWoke=0;function wakeSpeech(){try{if(!('speechSynthesis' in window)||speaking||Date.now()-spWoke<60000)return;if(cfg().kind!=='voice')return;spWoke=Date.now();const z=new SpeechSynthesisUtterance(' ');z.volume=0;z.lang='he-IL';if(speechSynthesis.paused)speechSynthesis.resume();speechSynthesis.speak(z)}catch(_){}}
 /* your own recording: kept as a clean WAV (cleanRec below), decoded once and played with Web Audio, louder */
 const mineBuf={src:'',buf:null};
 async function mineDecoded(c){const data=LS.get(RK());if(!data)return null;if(mineBuf.src===data&&mineBuf.buf)return mineBuf.buf;

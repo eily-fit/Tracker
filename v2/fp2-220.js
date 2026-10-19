@@ -52,7 +52,8 @@ if(typeof renderWorkoutPlanItems==='function'){const o=renderWorkoutPlanItems;re
     const hint=box.querySelector('.fp-pr-hint');if(hint)hint.after(div);else box.prepend(div);
   }catch(e){console.error(e)}return r}}
 /* a section opened from elsewhere in the app (a link, the tour) opens its folder too */
-document.addEventListener('toggle',e=>{const d=e.target;if(!d||!d.open||!d.closest)return;const f=d.parentElement&&d.parentElement.closest('details.fp-folder');if(f&&!f.open)f.open=true},true);
+/* 2.32: the training list inside ״אימונים״ is always open by itself; that must not open the folder */
+document.addEventListener('toggle',e=>{const d=e.target;if(!d||!d.open||!d.closest||d.id==='fpTrainSet')return;const f=d.parentElement&&d.parentElement.closest('details.fp-folder');if(f&&!f.open)f.open=true},true);
 window.fpSettingsOrganize=organize;
 let sig='';
 setInterval(()=>{const root=document.getElementById('settings');if(!root)return;const s=[...root.querySelectorAll(':scope > *')].map(e=>e.id||sumOf(e)||e.tagName).join('|');if(s!==sig){try{organize()}catch(e){console.error(e)}sig=[...root.querySelectorAll(':scope > *')].map(e=>e.id||sumOf(e)||e.tagName).join('|')}},800);

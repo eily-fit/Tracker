@@ -339,8 +339,7 @@ function shareHook(fn,args){
       const name=String(x.name||'').trim();if(!name)return;
       const code=String(x.sourceId||'').trim();
       if(BC.test(code)&&!/צמרת/.test(String(x.source||''))){sharedPut(code,x).catch(()=>{});return}
-      const manual=fn==='saveFood'?(!code&&x.source==='הזנה ידנית'):!!x.propose;
-      if(manual&&pushUrl())notificationAPI('submitFoodProposal',{food:{name,brand:x.brand||'',baseQty:Number(x.baseQty||x.amount)||100,unit:x.unit||'גרם',calories:+x.calories||0,protein:+x.protein||0,carbs:+x.carbs||0,fat:+x.fat||0}}).catch(()=>{});
+      /* 2.32: only a scanned barcode goes to everyone (above). A food someone types in stays theirs, and is not sent to the admin */
     });
   }catch(_){}
 }

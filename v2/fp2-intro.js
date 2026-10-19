@@ -63,6 +63,8 @@ const css=`#fpI{position:fixed;inset:0;z-index:2147482400;pointer-events:none}
 .fpI-oil{margin-top:4px;color:#C9B2FF;font-size:13px}
 .fpI-btn{display:inline-block;background:var(--brand,#D7F36B);color:#14190a;border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
 #fpI .fpI-nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));pointer-events:auto;background:linear-gradient(rgba(5,8,11,0),rgba(5,8,11,.92) 35%)}
+#fpI.fpI-low .fpI-end{display:none}
+#fpI.fpI-low .fpI-nav{top:0;bottom:auto;padding:calc(10px + env(safe-area-inset-top)) 14px 12px;background:linear-gradient(rgba(5,8,11,.92) 65%,rgba(5,8,11,0))}
 #fpI .fpI-nav button{font:inherit;font-weight:800;font-size:15.5px;border-radius:14px;padding:13px 20px;min-width:104px;cursor:pointer}
 #fpI .fpI-nav .bk{border:1px solid var(--line,#2A333C);background:var(--card,#171C22);color:inherit}#fpI .fpI-nav .bk[disabled]{visibility:hidden}
 #fpI .fpI-nav .nx{border:0;background:var(--brand,#D7F36B);color:#14190a}#fpI .fpI-nav .nx.s{background:#B693FF;color:#170f2b}
@@ -88,6 +90,9 @@ function place(){
   /* the glowing thing is clickable only when the step says so; otherwise a clear layer covers it */
   const cover=root.querySelector('.fpI-cover');if(s.tap||s.free){set(cover,0,0,0,0)}else set(cover,r.l,r.t,r.r-r.l,r.b-r.t);
   /* 2.23: the card never covers the buttons at the bottom; a folded card sits just above them */
+  /* 2.32 (Or's note, sketch A): a tab in the bottom bar glows → the card and the buttons go to the top, nothing covers the tab */
+  const low=r.t>innerHeight-NAVH()-24;root.classList.toggle('fpI-low',low);
+  if(low){const nv=root.querySelector('.fpI-nav'),nh=nv?nv.offsetHeight:70;card.style.top=(nh+8)+'px';return}
   const below=bot-r.b,above=r.t-56,gap=12;let top;
   if(FOLD)top=bot-ch;else if(below>=ch+gap)top=r.b+gap;else if(above>=ch+gap)top=r.t-ch-gap;else top=below>above?bot-ch:56;
   card.style.top=Math.max(52,Math.min(bot-ch,top))+'px';
